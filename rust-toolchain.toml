@@ -1,0 +1,5 @@
+[toolchain]
+channel = "nightly"
+targets = ["thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+profile = "complete"
+components = ["llvm-tools-preview"]

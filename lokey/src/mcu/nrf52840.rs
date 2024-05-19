@@ -1,0 +1,99 @@
+#[cfg(feature = "ble")]
+pub mod ble;
+#[cfg(feature = "usb")]
+pub mod usb;
+
+use super::{HeapSize, Mcu, McuInit};
+use alloc::boxed::Box;
+use core::{cell::UnsafeCell, mem};
+use defmt::info;
+use embassy_executor::Spawner;
+use embassy_nrf::interrupt::Priority;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use nrf_softdevice::{raw, Flash, Softdevice};
+
+pub struct Config {
+    pub name: &'static str,
+}
+
+pub struct Nrf52840 {
+    pub softdevice: &'static UnsafeCell<Softdevice>,
+    pub flash: &'static Mutex<CriticalSectionRawMutex, Flash>,
+    _private: (),
+}
+
+impl Mcu for Nrf52840 {}
+
+impl McuInit for Nrf52840 {
+    type Config = Config;
+
+    fn create(config: Self::Config, _spawner: Spawner) -> Self {
+        let mut nrf_config = embassy_nrf::config::Config::default();
+        nrf_config.gpiote_interrupt_priority = Priority::P2;
+        nrf_config.time_interrupt_priority = Priority::P2;
+        embassy_nrf::init(nrf_config);
+        let softdevice = setup_softdevice(config.name);
+        let flash = Flash::take(&softdevice);
+        // SAFETY: UnsafeCell<T> has the same in-memory layout as T.
+        let softdevice = unsafe { core::mem::transmute(softdevice) };
+        Self {
+            softdevice,
+            flash: Box::leak(Box::new(Mutex::new(flash))),
+            _private: (),
+        }
+    }
+
+    fn run(&'static self, spawner: Spawner) {
+        spawner.spawn(softdevice_task(self)).unwrap();
+    }
+}
+
+impl HeapSize for Nrf52840 {
+    // The nRF52840 has 256kB of RAM
+    const DEFAULT_HEAP_SIZE: usize = 32 * 1024; // 32kB
+}
+
+fn setup_softdevice(name: &'static str) -> &'static mut Softdevice {
+    let config = nrf_softdevice::Config {
+        clock: Some(raw::nrf_clock_lf_cfg_t {
+            source: raw::NRF_CLOCK_LF_SRC_RC as u8,
+            rc_ctiv: 16,
+            rc_temp_ctiv: 2,
+            accuracy: raw::NRF_CLOCK_LF_ACCURACY_500_PPM as u8,
+        }),
+        conn_gap: Some(raw::ble_gap_conn_cfg_t {
+            conn_count: 6,
+            event_length: 24,
+        }),
+        conn_gatt: Some(raw::ble_gatt_conn_cfg_t { att_mtu: 256 }),
+        gatts_attr_tab_size: Some(raw::ble_gatts_cfg_attr_tab_size_t {
+            attr_tab_size: raw::BLE_GATTS_ATTR_TAB_SIZE_DEFAULT,
+        }),
+        gap_role_count: Some(raw::ble_gap_cfg_role_count_t {
+            adv_set_count: 1,
+            periph_role_count: 3,
+            central_role_count: 3,
+            central_sec_count: 0,
+            _bitfield_1: raw::ble_gap_cfg_role_count_t::new_bitfield_1(0),
+        }),
+        gap_device_name: Some(raw::ble_gap_cfg_device_name_t {
+            p_value: name.as_ptr() as _,
+            current_len: name.len() as u16,
+            max_len: name.len() as u16,
+            write_perm: unsafe { mem::zeroed() },
+            _bitfield_1: raw::ble_gap_cfg_device_name_t::new_bitfield_1(
+                raw::BLE_GATTS_VLOC_STACK as u8,
+            ),
+        }),
+        ..Default::default()
+    };
+    let softdevice = Softdevice::enable(&config);
+    info!("Finished nRF softdevice setup");
+    softdevice
+}
+
+#[embassy_executor::task]
+async fn softdevice_task(mcu: &'static Nrf52840) -> ! {
+    let softdevice: &'static Softdevice = unsafe { &*mcu.softdevice.get() };
+    softdevice.run().await
+}
