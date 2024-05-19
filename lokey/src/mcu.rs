@@ -20,3 +20,32 @@ pub trait McuInit {
 pub trait HeapSize {
     const DEFAULT_HEAP_SIZE: usize;
 }
+
+#[cfg(test)]
+pub use dummy::DummyMcu;
+
+#[cfg(test)]
+mod dummy {
+    use super::*;
+
+    pub struct DummyMcu;
+
+    impl Mcu for DummyMcu {}
+
+    impl McuInit for DummyMcu {
+        type Config = ();
+
+        fn create(_config: Self::Config, _spawner: Spawner) -> Self
+        where
+            Self: Sized,
+        {
+            Self
+        }
+
+        fn run(&'static self, _spawner: Spawner) {}
+    }
+
+    impl HeapSize for DummyMcu {
+        const DEFAULT_HEAP_SIZE: usize = 0;
+    }
+}

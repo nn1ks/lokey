@@ -11,10 +11,27 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        features: ["", "usb", "ble", "usb ble"]
+        mcu: [none, nrf52840]
+        include:
+          - mcu: none
+            target: thumbv7em-none-eabihf
+            mcu_features: ""
+          - mcu: nrf52840
+            target: thumbv7em-none-eabihf
+            mcu_features: "nrf52840"
+        exclude:
+          - mcu: nrf52840
+            features: ""
+          - mcu: nrf52840
+            features: "usb"
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --target ${{ matrix.target }} --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
+    - name: Run tests
+      if: matrix.mcu != 'none'
+      run: cargo test --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --features '${{ matrix.features }} ${{ matrix.mcu_features }}'

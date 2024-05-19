@@ -99,12 +99,10 @@ pub trait Capability {}
 /// struct Keyboard;
 ///
 /// impl Device for Keyboard {
-///     # type Mcu = lokey::mcu::Nrf52840;
+///     # type Mcu = lokey::mcu::DummyMcu;
 ///     # type ExternalChannelConfig = lokey::external::empty::ChannelConfig;
 ///     # type InternalChannelConfig = lokey::internal::empty::ChannelConfig;
-///     # fn mcu_config() -> lokey::mcu::nrf52840::Config {
-///     #     todo!()
-///     # }
+///     # fn mcu_config() {}
 ///     # fn external_channel_config() -> Self::ExternalChannelConfig {
 ///     #     todo!()
 ///     # }
