@@ -1,10 +1,8 @@
 use crate::external::{self, ChannelImpl};
 use crate::{internal, mcu::Mcu};
-use alloc::boxed::Box;
-use alloc::vec;
-use alloc::vec::Vec;
-use core::future::Future;
-use defmt::error;
+use alloc::{boxed::Box, vec, vec::Vec};
+use core::{future::Future, pin::Pin};
+use defmt::{error, unwrap};
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
@@ -126,7 +124,7 @@ where
     ) -> Self::Channel {
         let active = Box::leak(Box::new(Mutex::new(ChannelSelection::Usb))); // TODO: What should be the default value?
 
-        spawner.spawn(set_active(internal_channel, active)).unwrap();
+        unwrap!(spawner.spawn(set_active(internal_channel, active)));
 
         #[embassy_executor::task]
         async fn set_active(
@@ -165,20 +163,20 @@ pub struct Channel<Usb, Ble> {
 }
 
 impl<Usb: ChannelImpl, Ble: ChannelImpl> ChannelImpl for Channel<Usb, Ble> {
-    fn send(&self, message: external::Message) -> Box<dyn Future<Output = ()> + '_> {
-        Box::new(async {
+    fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
             match *self.active.lock().await {
-                ChannelSelection::Usb => Box::into_pin(self.usb_channel.send(message)).await,
-                ChannelSelection::Ble => Box::into_pin(self.ble_channel.send(message)).await,
+                ChannelSelection::Usb => self.usb_channel.send(message).await,
+                ChannelSelection::Ble => self.ble_channel.send(message).await,
             }
         })
     }
 
-    fn request_active(&self) -> Box<dyn Future<Output = ()> + '_> {
-        Box::new(async {
+    fn request_active(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
             loop {
-                let future1 = Box::into_pin(self.usb_channel.request_active());
-                let future2 = Box::into_pin(self.ble_channel.request_active());
+                let future1 = self.usb_channel.request_active();
+                let future2 = self.ble_channel.request_active();
                 select(future1, future2).await;
             }
         })

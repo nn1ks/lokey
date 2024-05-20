@@ -1,0 +1,149 @@
+use alloc::{boxed::Box, vec};
+use core::ops::Range;
+use defmt::{panic, Format};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embedded_storage_async::nor_flash::{MultiwriteNorFlash, NorFlash};
+use sequential_storage::cache::NoCache;
+use sequential_storage::map::{fetch_item, remove_item, store_item};
+
+const ENTRY_TAG_SIZE: usize = 4;
+
+pub trait Entry {
+    /// A unique tag to identify this entry type.
+    const TAG: [u8; ENTRY_TAG_SIZE];
+
+    /// The length of the byte array that this type is serialized to.
+    const SIZE: usize;
+
+    /// Deserializes the entry from the specified bytes.
+    ///
+    /// Returns [`None`] if the entry can not be deserialized.
+    ///
+    /// The size of the bytes slice argument is guaranteed to be [`Self::SIZE`].
+    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    where
+        Self: Sized;
+
+    /// Serializes this entry to a byte array.
+    ///
+    /// The returned boxed array must have a length of [`Self::SIZE`].
+    fn to_bytes(&self) -> Box<[u8]>;
+}
+
+#[derive(Format)]
+pub enum Error<E> {
+    Flash(E),
+    FullStorage,
+    Corrupted,
+    EntryTooBig,
+}
+
+impl<E> Error<E> {
+    fn from_sequential_storage(error: sequential_storage::Error<E>) -> Self {
+        match error {
+            sequential_storage::Error::Storage { value } => Self::Flash(value),
+            sequential_storage::Error::FullStorage => Self::FullStorage,
+            sequential_storage::Error::Corrupted {} => Self::Corrupted,
+            sequential_storage::Error::BufferTooBig => {
+                // Should not be possible because the buffer is always created with the correct size
+                // in the methods of the `Storage` type
+                panic!("Unexpected storage error: BufferTooBig");
+            }
+            sequential_storage::Error::BufferTooSmall(v) => {
+                // Should not be possible because the buffer is always created with the correct size
+                // in the methods of the `Storage` type
+                panic!("Unexpected storage error: BufferTooSmall({})", v);
+            }
+            sequential_storage::Error::SerializationError(v) => {
+                // Should not be possible because a byte array is always used as the value which
+                // doesn't return serialization errors
+                panic!("Unexpected storage error: SerializationError({})", v);
+            }
+            sequential_storage::Error::ItemTooBig => Self::EntryTooBig,
+            _ => {
+                // The `sequential_storage::Error` type is marked as non-exhaustive so we have to
+                // handle this case as well in case a new error variant is added. At the moment all
+                // variants are handled so we can just panic, but this might have to be changed in
+                // the future.
+                panic!("Unexpected storage error: Other");
+            }
+        }
+    }
+}
+
+trait NorFlashExt {
+    /// The largest of the write and read word size
+    const WORD_SIZE: usize;
+}
+
+impl<F: NorFlash> NorFlashExt for F {
+    const WORD_SIZE: usize = if Self::WRITE_SIZE > Self::READ_SIZE {
+        Self::WRITE_SIZE
+    } else {
+        Self::READ_SIZE
+    };
+}
+
+const fn round_up_to_word_size<F: NorFlash>(value: usize) -> usize {
+    let remainder = value % F::WORD_SIZE;
+    value + F::WORD_SIZE - remainder
+}
+
+pub struct Storage<F> {
+    flash: Mutex<CriticalSectionRawMutex, F>,
+    flash_range: Range<u32>,
+}
+
+impl<F: MultiwriteNorFlash> Storage<F> {
+    pub fn new(flash: F, flash_range: Range<u32>) -> Self {
+        Self {
+            flash: Mutex::new(flash),
+            flash_range,
+        }
+    }
+
+    pub async fn remove<E: Entry>(&self) -> Result<(), Error<F::Error>> {
+        let buf_len = round_up_to_word_size::<F>(E::SIZE + ENTRY_TAG_SIZE);
+        let mut buf = vec![0; buf_len];
+        remove_item(
+            &mut *self.flash.lock().await,
+            self.flash_range.clone(),
+            &mut NoCache::new(),
+            &mut buf,
+            E::TAG,
+        )
+        .await
+        .map_err(Error::from_sequential_storage)
+    }
+
+    pub async fn store<E: Entry>(&self, entry: &E) -> Result<(), Error<F::Error>> {
+        let buf_len = round_up_to_word_size::<F>(E::SIZE + ENTRY_TAG_SIZE);
+        let mut buf = vec![0; buf_len];
+        let value_bytes = entry.to_bytes();
+        store_item(
+            &mut *self.flash.lock().await,
+            self.flash_range.clone(),
+            &mut NoCache::new(),
+            &mut buf,
+            E::TAG,
+            &value_bytes.as_ref(),
+        )
+        .await
+        .map_err(Error::from_sequential_storage)
+    }
+
+    pub async fn fetch<E: Entry>(&self) -> Result<Option<E>, Error<F::Error>> {
+        let buf_len = round_up_to_word_size::<F>(E::SIZE + ENTRY_TAG_SIZE);
+        let mut buf = vec![0; buf_len];
+        let data: Option<&[u8]> = fetch_item(
+            &mut *self.flash.lock().await,
+            self.flash_range.clone(),
+            &mut NoCache::new(),
+            &mut buf,
+            E::TAG,
+        )
+        .await
+        .map_err(Error::from_sequential_storage)?;
+        Ok(data.map(|data| E::from_bytes(&data)).flatten())
+    }
+}

@@ -1,7 +1,7 @@
 pub mod action;
 mod debounce;
 
-pub use action::Action;
+pub use action::{Action, DynAction};
 pub use debounce::Debounce;
 /// Macro for building a [`Layout`].
 ///
@@ -64,18 +64,19 @@ use crate::{internal, Capability, DynContext};
 use alloc::vec;
 use alloc::{boxed::Box, vec::Vec};
 use core::future::Future;
-use defmt::{debug, error, panic};
+use core::pin::Pin;
+use defmt::{debug, error, panic, unwrap};
 use embassy_time::{Duration, Timer};
 use futures_util::future::join_all;
 use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
-    actions: [Box<dyn Action>; NUM_KEYS],
+    actions: [Box<dyn DynAction>; NUM_KEYS],
 }
 
 impl<const NUM_KEYS: usize> Layout<NUM_KEYS> {
-    pub fn new(actions: [Box<dyn Action>; NUM_KEYS]) -> Self {
+    pub fn new(actions: [Box<dyn DynAction>; NUM_KEYS]) -> Self {
         Self { actions }
     }
 }
@@ -127,16 +128,13 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
     scanner.run(keys.scanner_config, context);
 
     if let Some(layout) = keys.layout {
-        context
-            .spawner
-            .spawn(handle_internal_message(
-                layout.actions.into_iter().collect(),
-                context,
-            ))
-            .unwrap();
+        unwrap!(context.spawner.spawn(handle_internal_message(
+            layout.actions.into_iter().collect(),
+            context,
+        )));
 
         #[embassy_executor::task]
-        async fn handle_internal_message(actions: Vec<Box<dyn Action>>, context: DynContext) {
+        async fn handle_internal_message(actions: Vec<Box<dyn DynAction>>, context: DynContext) {
             let mut receiver = context.internal_channel.receiver::<Message>().await;
             loop {
                 let message = receiver.next().await;
@@ -144,13 +142,13 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
                 match message {
                     Message::Press { key_index } => {
                         match actions.get(key_index as usize) {
-                            Some(action) => action.on_press(context.clone()),
+                            Some(action) => action.on_press(context.clone()).await,
                             None => error!("Layout has no action at key index {}", key_index),
                         };
                     }
                     Message::Release { key_index } => {
                         match actions.get(key_index as usize) {
-                            Some(action) => action.on_release(context.clone()),
+                            Some(action) => action.on_release(context.clone()).await,
                             None => error!("Layout has no action at key index {}", key_index),
                         };
                     }
@@ -162,9 +160,9 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
 
 pub trait DynInputSwitch {
     fn is_active(&mut self) -> bool;
-    fn wait_for_active(&mut self) -> Box<dyn Future<Output = ()> + '_>;
-    fn wait_for_inactive(&mut self) -> Box<dyn Future<Output = ()> + '_>;
-    fn wait_for_change(&mut self) -> Box<dyn Future<Output = ()> + '_>;
+    fn wait_for_active(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+    fn wait_for_inactive(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+    fn wait_for_change(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
 }
 
 impl<T: InputSwitch + WaitableInputSwitch> DynInputSwitch for T {
@@ -173,24 +171,24 @@ impl<T: InputSwitch + WaitableInputSwitch> DynInputSwitch for T {
             .unwrap_or_else(|_| panic!("failed to get active status of pin"))
     }
 
-    fn wait_for_active(&mut self) -> Box<dyn Future<Output = ()> + '_> {
-        Box::new(async {
+    fn wait_for_active(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
             WaitableInputSwitch::wait_for_active(self)
                 .await
                 .unwrap_or_else(|_| panic!("failed to get active status of pin"))
         })
     }
 
-    fn wait_for_inactive(&mut self) -> Box<dyn Future<Output = ()> + '_> {
-        Box::new(async {
+    fn wait_for_inactive(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
             WaitableInputSwitch::wait_for_inactive(self)
                 .await
                 .unwrap_or_else(|_| panic!("failed to get active status of pin"))
         })
     }
 
-    fn wait_for_change(&mut self) -> Box<dyn Future<Output = ()> + '_> {
-        Box::new(async {
+    fn wait_for_change(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
             WaitableInputSwitch::wait_for_change(self)
                 .await
                 .unwrap_or_else(|_| panic!("failed to get active status of pin"))
@@ -228,18 +226,8 @@ pub trait Scanner {
 
 /// Configuration for the [`DirectPins`] scanner.
 pub struct DirectPinsConfig {
-    debounce_key_press: Debounce,
-    debounce_key_release: Debounce,
-}
-
-impl DirectPinsConfig {
-    pub fn set_debounce_key_press(&mut self, value: Debounce) {
-        self.debounce_key_press = value;
-    }
-
-    pub fn set_debounce_key_release(&mut self, value: Debounce) {
-        self.debounce_key_release = value;
-    }
+    pub debounce_key_press: Debounce,
+    pub debounce_key_release: Debounce,
 }
 
 impl Default for DirectPinsConfig {
@@ -301,10 +289,9 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
             })
             .collect::<Vec<_>>();
 
-        context
+        unwrap!(context
             .spawner
-            .spawn(task(input_pins, context.internal_channel, config))
-            .unwrap();
+            .spawn(task(input_pins, context.internal_channel, config)));
 
         #[embassy_executor::task]
         async fn task(
@@ -354,7 +341,6 @@ pub enum Message {
 }
 
 impl internal::MessageTag for Message {
-    // TODO: Change tag value
     const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
 }
 

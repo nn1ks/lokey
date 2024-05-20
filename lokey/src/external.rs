@@ -11,6 +11,8 @@ use crate::{mcu::Mcu, Device};
 use alloc::boxed::Box;
 use core::any::Any;
 use core::future::Future;
+use core::pin::Pin;
+use defmt::unwrap;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::pubsub::{PubSubChannel, Publisher, Subscriber};
@@ -126,9 +128,9 @@ pub trait ChannelConfig<M: Mcu> {
 }
 
 pub trait ChannelImpl: Any {
-    fn send(&self, message: Message) -> Box<dyn Future<Output = ()> + '_>;
-    fn request_active(&self) -> Box<dyn Future<Output = ()> + '_> {
-        Box::new(core::future::pending())
+    fn send(&self, message: Message) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+    fn request_active(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(core::future::pending())
     }
 }
 
@@ -149,7 +151,7 @@ impl<T: ChannelImpl> Channel<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner: Box::leak(Box::new(inner)),
-            publisher: Box::leak(Box::new(INNER_CHANNEL.publisher().unwrap())),
+            publisher: Box::leak(Box::new(unwrap!(INNER_CHANNEL.publisher()))),
         }
     }
 
@@ -168,12 +170,12 @@ impl<T: ChannelImpl> Channel<T> {
 impl<T: ChannelImpl + ?Sized> Channel<T> {
     pub async fn send(&self, message: Message) {
         self.publisher.publish(message.clone()).await;
-        Box::into_pin(self.inner.send(message)).await
+        self.inner.send(message).await
     }
 
     pub fn receiver(&self) -> Receiver {
         Receiver {
-            subscriber: INNER_CHANNEL.subscriber().unwrap(),
+            subscriber: unwrap!(INNER_CHANNEL.subscriber()),
         }
     }
 }

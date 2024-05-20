@@ -1,3 +1,6 @@
+use crate::internal;
+use alloc::{vec, vec::Vec};
+
 pub struct ChannelConfig {
     pub name: &'static str,
     pub vendor_id: u16,
@@ -20,4 +23,37 @@ impl Default for ChannelConfig {
             serial_number: None,
         }
     }
+}
+
+pub enum Message {
+    Disconnect,
+    Clear,
+}
+
+impl internal::Message for Message {
+    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if bytes.len() == 1 {
+            match bytes[0] {
+                0 => Some(Self::Disconnect),
+                1 => Some(Self::Clear),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Message::Disconnect => vec![0],
+            Message::Clear => vec![1],
+        }
+    }
+}
+
+impl internal::MessageTag for Message {
+    const TAG: [u8; 4] = [0x1a, 0xbe, 0x84, 0x10];
 }

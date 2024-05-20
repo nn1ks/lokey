@@ -1,21 +1,37 @@
-use crate::{external, DynContext, LayerId, LayerInsertId, LayerManager};
-use alloc::{collections::BTreeMap, sync::Arc};
+use crate::{external, DynContext, LayerId, LayerManagerEntry};
+use alloc::{boxed::Box, collections::BTreeMap, sync::Arc};
 use core::sync::atomic::{AtomicBool, Ordering};
+use core::{future::Future, pin::Pin};
 use embassy_futures::select::{select, Either};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::{Duration, Timer};
 
 pub trait Action: 'static {
-    fn on_press(&self, context: DynContext);
-    fn on_release(&self, context: DynContext);
+    fn on_press(&self, context: DynContext) -> impl Future<Output = ()>;
+    fn on_release(&self, context: DynContext) -> impl Future<Output = ()>;
+}
+
+pub trait DynAction: 'static {
+    fn on_press(&self, context: DynContext) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+    fn on_release(&self, context: DynContext) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+}
+
+impl<A: Action> DynAction for A {
+    fn on_press(&self, context: DynContext) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(Action::on_press(self, context))
+    }
+
+    fn on_release(&self, context: DynContext) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(Action::on_release(self, context))
+    }
 }
 
 #[derive(Clone, Copy)]
 pub struct NoOp;
 
 impl Action for NoOp {
-    fn on_press(&self, _context: DynContext) {}
-    fn on_release(&self, _context: DynContext) {}
+    async fn on_press(&self, _context: DynContext) {}
+    async fn on_release(&self, _context: DynContext) {}
 }
 
 pub struct KeyCode {
@@ -29,102 +45,58 @@ impl KeyCode {
 }
 
 impl Action for KeyCode {
-    fn on_press(&self, context: DynContext) {
+    async fn on_press(&self, context: DynContext) {
         context
-            .spawner
-            .spawn(task(context.external_channel, self.key))
-            .unwrap();
-
-        #[embassy_executor::task]
-        async fn task(external_channel: external::DynChannel, key: external::Key) {
-            external_channel
-                .send(external::Message::KeyPress(key))
-                .await;
-        }
+            .external_channel
+            .send(external::Message::KeyPress(self.key))
+            .await;
     }
 
-    fn on_release(&self, context: DynContext) {
+    async fn on_release(&self, context: DynContext) {
         context
-            .spawner
-            .spawn(task(context.external_channel, self.key))
-            .unwrap();
-
-        #[embassy_executor::task]
-        async fn task(external_channel: external::DynChannel, key: external::Key) {
-            external_channel
-                .send(external::Message::KeyRelease(key))
-                .await;
-        }
+            .external_channel
+            .send(external::Message::KeyRelease(self.key))
+            .await;
     }
 }
 
 pub struct Layer {
     pub layer: LayerId,
-    layer_manager_id: Arc<Mutex<CriticalSectionRawMutex, Option<LayerInsertId>>>,
+    layer_manager_entry: Mutex<CriticalSectionRawMutex, Option<LayerManagerEntry>>,
 }
 
 impl Layer {
     pub fn new(layer: LayerId) -> Self {
         Self {
             layer,
-            layer_manager_id: Arc::new(Mutex::new(None)),
+            layer_manager_entry: Mutex::new(None),
         }
     }
 }
 
 impl Action for Layer {
-    fn on_press(&self, context: DynContext) {
-        context
-            .spawner
-            .spawn(task(
-                context.layer_manager,
-                self.layer,
-                Arc::clone(&self.layer_manager_id),
-            ))
-            .unwrap();
-
-        #[embassy_executor::task]
-        async fn task(
-            layer_manager: LayerManager,
-            layer: LayerId,
-            layer_manager_id: Arc<Mutex<CriticalSectionRawMutex, Option<LayerInsertId>>>,
-        ) {
-            let id = layer_manager.push(layer).await;
-            *layer_manager_id.lock().await = Some(id);
-        }
+    async fn on_press(&self, context: DynContext) {
+        let entry = context.layer_manager.push(self.layer).await;
+        *self.layer_manager_entry.lock().await = Some(entry);
     }
 
-    fn on_release(&self, context: DynContext) {
-        context
-            .spawner
-            .spawn(task(
-                context.layer_manager,
-                Arc::clone(&self.layer_manager_id),
-            ))
-            .unwrap();
-
-        #[embassy_executor::task]
-        async fn task(
-            layer_manager: LayerManager,
-            layer_manager_id: Arc<Mutex<CriticalSectionRawMutex, Option<LayerInsertId>>>,
-        ) {
-            if let Some(id) = *layer_manager_id.lock().await {
-                layer_manager.pop(id).await;
-            }
+    async fn on_release(&self, context: DynContext) {
+        if let Some(entry) = self.layer_manager_entry.lock().await.take() {
+            context.layer_manager.pop(entry).await;
         }
     }
 }
 
 pub struct PerLayer {
-    actions: BTreeMap<LayerId, Arc<dyn Action>>,
-    active_action: Arc<Mutex<CriticalSectionRawMutex, Option<Arc<dyn Action>>>>,
+    actions: BTreeMap<LayerId, Arc<dyn DynAction>>,
+    active_action: Mutex<CriticalSectionRawMutex, Option<Arc<dyn DynAction>>>,
 }
 
 impl PerLayer {
     pub fn new() -> Self {
         Self {
             actions: BTreeMap::new(),
-            active_action: Arc::new(Mutex::new(None)),
+            active_action: Mutex::new(None),
         }
     }
 
@@ -142,93 +114,50 @@ impl PerLayer {
 }
 
 impl Action for PerLayer {
-    fn on_press(&self, context: DynContext) {
-        context
-            .spawner
-            .spawn(task(
-                context,
-                self.actions.clone(),
-                Arc::clone(&self.active_action),
-            ))
-            .unwrap();
-
-        #[embassy_executor::task]
-        async fn task(
-            context: DynContext,
-            actions: BTreeMap<LayerId, Arc<dyn Action>>,
-            active_action: Arc<Mutex<CriticalSectionRawMutex, Option<Arc<dyn Action>>>>,
-        ) {
-            if let Some(action) = actions.get(&context.layer_manager.active().await) {
-                action.on_press(context);
-                *active_action.lock().await = Some(Arc::clone(action));
-            }
+    async fn on_press(&self, context: DynContext) {
+        if let Some(action) = self.actions.get(&context.layer_manager.active().await) {
+            action.on_press(context).await;
+            *self.active_action.lock().await = Some(Arc::clone(action));
         }
     }
 
-    fn on_release(&self, context: DynContext) {
-        context
-            .spawner
-            .spawn(task(context, Arc::clone(&self.active_action)))
-            .unwrap();
-
-        #[embassy_executor::task]
-        async fn task(
-            context: DynContext,
-            active_action: Arc<Mutex<CriticalSectionRawMutex, Option<Arc<dyn Action>>>>,
-        ) {
-            if let Some(action) = &*active_action.lock().await {
-                action.on_release(context);
-            }
+    async fn on_release(&self, context: DynContext) {
+        if let Some(action) = &*self.active_action.lock().await {
+            action.on_release(context).await;
         }
     }
 }
 
 pub struct Toggle {
-    action: Arc<dyn Action>,
-    active: Arc<Mutex<CriticalSectionRawMutex, bool>>,
+    action: Box<dyn DynAction>,
+    active: Mutex<CriticalSectionRawMutex, bool>,
 }
 
 impl Toggle {
     pub fn new<A: Action>(action: A) -> Self {
         Self {
-            action: Arc::new(action),
-            active: Arc::new(Mutex::new(false)),
+            action: Box::new(action),
+            active: Mutex::new(false),
         }
     }
 }
 
 impl Action for Toggle {
-    fn on_press(&self, context: DynContext) {
-        context
-            .spawner
-            .spawn(task(
-                Arc::clone(&self.action),
-                Arc::clone(&self.active),
-                context,
-            ))
-            .unwrap();
-
-        #[embassy_executor::task]
-        async fn task(
-            action: Arc<dyn Action>,
-            active: Arc<Mutex<CriticalSectionRawMutex, bool>>,
-            context: DynContext,
-        ) {
-            let mut active = active.lock().await;
-            if *active {
-                action.on_release(context);
-            } else {
-                action.on_press(context);
-            }
-            *active = !*active;
+    async fn on_press(&self, context: DynContext) {
+        let mut active = self.active.lock().await;
+        if *active {
+            self.action.on_release(context).await;
+        } else {
+            self.action.on_press(context).await;
         }
+        *active = !*active;
     }
 
-    fn on_release(&self, _context: DynContext) {}
+    async fn on_release(&self, _context: DynContext) {}
 }
 
 pub struct Sticky {
-    action: Arc<dyn Action>,
+    action: Arc<dyn DynAction>,
     timeout: Duration,
     lazy: bool,
     ignore_modifiers: bool,
@@ -265,7 +194,7 @@ impl Sticky {
 }
 
 impl Action for Sticky {
-    fn on_press(&self, context: DynContext) {
+    async fn on_press(&self, context: DynContext) {
         context
             .spawner
             .spawn(task(
@@ -279,10 +208,10 @@ impl Action for Sticky {
             ))
             .unwrap();
 
-        #[embassy_executor::task]
+        #[embassy_executor::task(pool_size = 10)]
         async fn task(
             context: DynContext,
-            action: Arc<dyn Action>,
+            action: Arc<dyn DynAction>,
             timeout: Duration,
             lazy: bool,
             ignore_modifiers: bool,
@@ -292,7 +221,7 @@ impl Action for Sticky {
             is_held.store(true, Ordering::SeqCst);
             let mut receiver = context.external_channel.receiver();
             if !lazy {
-                action.on_press(context.clone());
+                action.on_press(context).await;
             }
             let fut1 = async {
                 loop {
@@ -302,7 +231,7 @@ impl Action for Sticky {
                                 continue;
                             }
                             if lazy {
-                                action.on_press(context.clone());
+                                action.on_press(context).await;
                             }
                             break;
                         }
@@ -316,26 +245,26 @@ impl Action for Sticky {
                 Either::Second(()) => !lazy,
             };
             if !was_pressed {
-                action.on_press(context.clone());
+                action.on_press(context).await;
             }
             if !is_held.load(Ordering::SeqCst) {
                 was_released.store(true, Ordering::SeqCst);
-                action.on_release(context);
+                action.on_release(context).await;
             }
         }
     }
 
-    fn on_release(&self, context: DynContext) {
+    async fn on_release(&self, context: DynContext) {
         self.is_held.store(false, Ordering::SeqCst);
         if !self.was_released.load(Ordering::SeqCst) {
-            self.action.on_release(context);
+            self.action.on_release(context).await;
         }
     }
 }
 
 pub struct HoldTap {
-    hold_action: Arc<dyn Action>,
-    tap_action: Arc<dyn Action>,
+    hold_action: Arc<dyn DynAction>,
+    tap_action: Arc<dyn DynAction>,
     tapping_term: Duration,
     activated_hold_and_tap: Arc<Mutex<CriticalSectionRawMutex, (bool, bool)>>,
 }
@@ -351,14 +280,19 @@ impl HoldTap {
     }
 
     /// Sets how long a key must be pressed to trigger the hold action.
-    pub fn with_tapping_term(mut self, value: Duration) -> Self {
+    pub fn tapping_term(mut self, value: Duration) -> Self {
         self.tapping_term = value;
         self
     }
 }
 
 impl Action for HoldTap {
-    fn on_press(&self, context: DynContext) {
+    async fn on_press(&self, context: DynContext) {
+        {
+            let mut activated = self.activated_hold_and_tap.lock().await;
+            *activated = (false, false);
+        }
+
         context
             .spawner
             .spawn(task(
@@ -369,9 +303,9 @@ impl Action for HoldTap {
             ))
             .unwrap();
 
-        #[embassy_executor::task]
+        #[embassy_executor::task(pool_size = 10)]
         async fn task(
-            hold_action: Arc<dyn Action>,
+            hold_action: Arc<dyn DynAction>,
             context: DynContext,
             tapping_term: Duration,
             activated_hold_and_tap: Arc<Mutex<CriticalSectionRawMutex, (bool, bool)>>,
@@ -382,12 +316,12 @@ impl Action for HoldTap {
                 // Tap action was not activated
                 activated.0 = true;
                 drop(activated);
-                hold_action.on_press(context.clone());
+                hold_action.on_press(context).await;
             }
         }
     }
 
-    fn on_release(&self, context: DynContext) {
+    async fn on_release(&self, context: DynContext) {
         context
             .spawner
             .spawn(task(
@@ -398,25 +332,56 @@ impl Action for HoldTap {
             ))
             .unwrap();
 
-        #[embassy_executor::task]
+        #[embassy_executor::task(pool_size = 10)]
         async fn task(
-            hold_action: Arc<dyn Action>,
-            tap_action: Arc<dyn Action>,
+            hold_action: Arc<dyn DynAction>,
+            tap_action: Arc<dyn DynAction>,
             context: DynContext,
             activated_hold_and_tap: Arc<Mutex<CriticalSectionRawMutex, (bool, bool)>>,
         ) {
             let mut activated = activated_hold_and_tap.lock().await;
             if activated.0 {
                 // Hold action was activated
-                hold_action.on_release(context);
+                drop(activated);
+                hold_action.on_release(context).await;
             } else {
                 // Hold action was not activated, so run the the tap action
                 activated.1 = true;
                 drop(activated);
-                tap_action.on_press(context.clone());
-                tap_action.on_release(context);
+                tap_action.on_press(context).await;
+                Timer::after_millis(2).await;
+                tap_action.on_release(context).await;
             }
         }
+    }
+}
+
+#[cfg(feature = "ble")]
+pub use ble::{BleClear, BleDisconnect};
+
+#[cfg(feature = "ble")]
+mod ble {
+    use super::*;
+    use crate::external::ble::Message;
+
+    pub struct BleDisconnect;
+
+    impl Action for BleDisconnect {
+        async fn on_press(&self, context: DynContext) {
+            context.internal_channel.send(Message::Disconnect).await;
+        }
+
+        async fn on_release(&self, _context: DynContext) {}
+    }
+
+    pub struct BleClear;
+
+    impl Action for BleClear {
+        async fn on_press(&self, context: DynContext) {
+            context.internal_channel.send(Message::Clear).await;
+        }
+
+        async fn on_release(&self, _context: DynContext) {}
     }
 }
 
@@ -427,7 +392,6 @@ pub use usb_ble::{SwitchToBle, SwitchToUsb};
 mod usb_ble {
     use super::*;
     use crate::external::usb_ble::{ChannelSelection, Message};
-    use crate::internal;
 
     /// Switches the active output to USB.
     ///
@@ -436,21 +400,14 @@ mod usb_ble {
     pub struct SwitchToUsb;
 
     impl Action for SwitchToUsb {
-        fn on_press(&self, context: DynContext) {
+        async fn on_press(&self, context: DynContext) {
             context
-                .spawner
-                .spawn(task(context.internal_channel))
-                .unwrap();
-
-            #[embassy_executor::task]
-            async fn task(internal_channel: internal::DynChannel) {
-                internal_channel
-                    .send(Message::SetActive(ChannelSelection::Usb))
-                    .await;
-            }
+                .internal_channel
+                .send(Message::SetActive(ChannelSelection::Usb))
+                .await;
         }
 
-        fn on_release(&self, _context: DynContext) {}
+        async fn on_release(&self, _context: DynContext) {}
     }
 
     /// Switches the active output to BLE.
@@ -460,20 +417,13 @@ mod usb_ble {
     pub struct SwitchToBle;
 
     impl Action for SwitchToBle {
-        fn on_press(&self, context: DynContext) {
+        async fn on_press(&self, context: DynContext) {
             context
-                .spawner
-                .spawn(task(context.internal_channel))
-                .unwrap();
-
-            #[embassy_executor::task]
-            async fn task(internal_channel: internal::DynChannel) {
-                internal_channel
-                    .send(Message::SetActive(ChannelSelection::Ble))
-                    .await;
-            }
+                .internal_channel
+                .send(Message::SetActive(ChannelSelection::Ble))
+                .await;
         }
 
-        fn on_release(&self, _context: DynContext) {}
+        async fn on_release(&self, _context: DynContext) {}
     }
 }

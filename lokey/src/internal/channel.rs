@@ -1,6 +1,7 @@
 use super::{ChannelImpl, Message, MessageTag};
 use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
+use defmt::unwrap;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::pubsub::{PubSubChannel, Publisher, Subscriber};
@@ -29,18 +30,18 @@ impl<T: ChannelImpl> Channel<T> {
 
         #[embassy_executor::task]
         async fn task(inner: &'static dyn ChannelImpl) {
-            let publisher = INNER_CHANNEL.publisher().unwrap();
+            let publisher = unwrap!(INNER_CHANNEL.publisher());
             loop {
-                let message_bytes = Box::into_pin(inner.receive()).await;
+                let message_bytes = inner.receive().await;
                 publisher.publish(message_bytes).await;
             }
         }
 
-        spawner.spawn(task(inner)).unwrap();
+        unwrap!(spawner.spawn(task(inner)));
 
         Self {
             inner,
-            publisher: Box::leak(Box::new(INNER_CHANNEL.publisher().unwrap())),
+            publisher: Box::leak(Box::new(unwrap!(INNER_CHANNEL.publisher()))),
         }
     }
 
@@ -63,12 +64,12 @@ impl<T: ChannelImpl + ?Sized> Channel<T> {
         let mut bytes = Vec::with_capacity(message_tag.len() + message_bytes.len());
         bytes.extend(message_tag);
         bytes.extend(message_bytes);
-        Box::into_pin(self.inner.send(&bytes)).await;
+        self.inner.send(&bytes).await;
         self.publisher.publish(bytes).await;
     }
 
     pub async fn receiver<M: Message + MessageTag>(&self) -> Receiver<M> {
-        let subscriber = INNER_CHANNEL.subscriber().unwrap();
+        let subscriber = unwrap!(INNER_CHANNEL.subscriber());
         Receiver {
             subscriber,
             _phantom: PhantomData,

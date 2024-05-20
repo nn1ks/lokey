@@ -1,8 +1,10 @@
 #[cfg(feature = "nrf52840")]
 pub mod nrf52840;
+pub mod storage;
 
 #[cfg(feature = "nrf52840")]
 pub use nrf52840::Nrf52840;
+pub use storage::Storage;
 
 use core::any::Any;
 use embassy_executor::Spawner;
@@ -21,10 +23,10 @@ pub trait HeapSize {
     const DEFAULT_HEAP_SIZE: usize;
 }
 
-#[cfg(test)]
+// This is only used for doc tests
+#[doc(hidden)]
 pub use dummy::DummyMcu;
 
-#[cfg(test)]
 mod dummy {
     use super::*;
 

@@ -51,6 +51,7 @@ heapless = "0.8.0"
 lokey_macros = { path = "../lokey_macros" }
 nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice", rev = "3c53b8c454cc9331082053033485e713abcadbb5", features = ["critical-section-impl", "usable-from-interrupts", "defmt"], optional = true }
 packed_struct = { version = "0.10.1", default-features = false }
+sequential-storage = { version = "2.0.2", features = ["defmt-03"] }
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }
 static_cell = { version = "2.1.0", features = ["nightly"] }
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }

@@ -134,18 +134,18 @@ pub trait CapabilitySupport<C: Capability>: Device {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LayerId(pub u8);
 
-/// ID for identifying a push-operation in [`LayerManager`].
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LayerInsertId(u64);
+/// Handle to an entry in [`LayerManager`].
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub struct LayerManagerEntry(u64);
 
 /// Type for managing the currently active layers.
 ///
 /// Internally a stack-like datastructure is used to keep track of the order in which the layers got
 /// activated. When pushing a new layer ID to the [`LayerManager`] it will become the active one and
-/// a [`LayerInsertId`] is returned that can be used to remove deactive the layer again.
+/// a [`LayerManagerEntry`] is returned that can be used to deactive the layer again.
 #[derive(Clone, Copy)]
 pub struct LayerManager {
-    map: &'static Mutex<CriticalSectionRawMutex, BTreeMap<LayerInsertId, LayerId>>,
+    map: &'static Mutex<CriticalSectionRawMutex, BTreeMap<u64, LayerId>>,
 }
 
 impl LayerManager {
@@ -158,20 +158,20 @@ impl LayerManager {
     }
 
     /// Sets the active layer to the layer with the specified ID.
-    pub async fn push(&self, layer: LayerId) -> LayerInsertId {
+    pub async fn push(&self, layer: LayerId) -> LayerManagerEntry {
         let mut map = self.map.lock().await;
         let new_id = match map.last_key_value() {
-            Some((last_id, _)) => LayerInsertId(last_id.0 + 1),
-            None => LayerInsertId(0),
+            Some((last_id, _)) => last_id + 1,
+            None => 0,
         };
         assert!(!map.contains_key(&new_id));
         map.insert(new_id, layer);
-        new_id
+        LayerManagerEntry(new_id)
     }
 
-    /// Deactivates the layer that was pushed to the stack with the specified [`LayerInsertId`].
-    pub async fn pop(&self, id: LayerInsertId) {
-        self.map.lock().await.remove(&id);
+    /// Deactivates the layer that was pushed to the stack with the specified [`LayerManagerEntry`].
+    pub async fn pop(&self, entry: LayerManagerEntry) -> LayerId {
+        self.map.lock().await.remove(&entry.0).unwrap()
     }
 
     /// Returns the ID of the currently active layer (i.e. the layer ID that was last pushed to the stack).

@@ -3,14 +3,15 @@ pub mod ble;
 #[cfg(feature = "usb")]
 pub mod usb;
 
-use super::{HeapSize, Mcu, McuInit};
+use super::{HeapSize, Mcu, McuInit, Storage};
 use alloc::boxed::Box;
-use core::{cell::UnsafeCell, mem};
-use defmt::info;
+use core::{cell::UnsafeCell, mem, ops::Range};
+use defmt::{info, unwrap};
 use embassy_executor::Spawner;
 use embassy_nrf::interrupt::Priority;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use nrf_softdevice::{raw, Flash, Softdevice};
+
+const FLASH_RANGE: Range<u32> = 0x80000..0x100000;
 
 pub struct Config {
     pub name: &'static str,
@@ -18,7 +19,7 @@ pub struct Config {
 
 pub struct Nrf52840 {
     pub softdevice: &'static UnsafeCell<Softdevice>,
-    pub flash: &'static Mutex<CriticalSectionRawMutex, Flash>,
+    pub storage: &'static Storage<Flash>,
     _private: (),
 }
 
@@ -33,18 +34,22 @@ impl McuInit for Nrf52840 {
         nrf_config.time_interrupt_priority = Priority::P2;
         embassy_nrf::init(nrf_config);
         let softdevice = setup_softdevice(config.name);
+
         let flash = Flash::take(&softdevice);
+        let storage = Storage::new(flash, FLASH_RANGE);
+
         // SAFETY: UnsafeCell<T> has the same in-memory layout as T.
         let softdevice = unsafe { core::mem::transmute(softdevice) };
+
         Self {
             softdevice,
-            flash: Box::leak(Box::new(Mutex::new(flash))),
+            storage: Box::leak(Box::new(storage)),
             _private: (),
         }
     }
 
     fn run(&'static self, spawner: Spawner) {
-        spawner.spawn(softdevice_task(self)).unwrap();
+        unwrap!(spawner.spawn(softdevice_task(self)));
     }
 }
 

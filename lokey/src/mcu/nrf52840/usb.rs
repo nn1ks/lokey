@@ -2,7 +2,7 @@ use super::Nrf52840;
 use crate::external::{self, usb};
 use crate::internal;
 use alloc::boxed::Box;
-use core::future::Future;
+use core::{future::Future, pin::Pin};
 use defmt::{info, unwrap};
 use embassy_executor::Spawner;
 use embassy_nrf::interrupt::{InterruptExt, Priority};
@@ -33,14 +33,14 @@ impl usb::Driver for Nrf52840 {
         embassy_nrf::interrupt::POWER_CLOCK.set_priority(Priority::P2);
 
         info!("Enabling ext hfosc...");
-        nrf_softdevice::RawError::convert(unsafe { nrf_softdevice::raw::sd_clock_hfclk_request() })
-            .unwrap();
+        unwrap!(nrf_softdevice::RawError::convert(unsafe {
+            nrf_softdevice::raw::sd_clock_hfclk_request()
+        }));
         let mut is_running = 0;
         while is_running != 1 {
-            nrf_softdevice::RawError::convert(unsafe {
+            unwrap!(nrf_softdevice::RawError::convert(unsafe {
                 nrf_softdevice::raw::sd_clock_hfclk_is_running(&mut is_running)
-            })
-            .unwrap();
+            }));
         }
 
         let usbd = unsafe { USBD::steal() };
@@ -58,15 +58,15 @@ pub struct ExternalChannel {
 }
 
 impl external::ChannelImpl for ExternalChannel {
-    fn send(&self, message: external::Message) -> Box<dyn Future<Output = ()> + '_> {
-        Box::new(async {
+    fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
             CHANNEL.send(message).await;
         })
     }
 
-    fn request_active(&self) -> Box<dyn Future<Output = ()> + '_> {
+    fn request_active(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         // TODO
-        Box::new(core::future::pending())
+        Box::pin(core::future::pending())
     }
 }
 

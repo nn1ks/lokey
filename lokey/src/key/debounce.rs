@@ -23,9 +23,9 @@ impl Debounce {
         match self {
             Debounce::Defer { duration } => {
                 loop {
-                    Box::into_pin(pin.wait_for_active()).await;
+                    pin.wait_for_active().await;
                     let fut1 = Timer::after(*duration);
-                    let fut2 = Box::into_pin(pin.wait_for_inactive());
+                    let fut2 = pin.wait_for_inactive();
                     match select(fut1, fut2).await {
                         Either::First(()) => break,
                         Either::Second(()) => {}
@@ -34,11 +34,11 @@ impl Debounce {
                 Duration::from_ticks(0)
             }
             Debounce::Eager { duration } => {
-                Box::into_pin(pin.wait_for_active()).await;
+                pin.wait_for_active().await;
                 *duration
             }
             Debounce::None => {
-                Box::into_pin(pin.wait_for_active()).await;
+                pin.wait_for_active().await;
                 Duration::from_ticks(0)
             }
         }
@@ -48,9 +48,9 @@ impl Debounce {
         match self {
             Debounce::Defer { duration } => {
                 loop {
-                    Box::into_pin(pin.wait_for_inactive()).await;
+                    pin.wait_for_inactive().await;
                     let fut1 = Timer::after(*duration);
-                    let fut2 = Box::into_pin(pin.wait_for_active());
+                    let fut2 = pin.wait_for_active();
                     match select(fut1, fut2).await {
                         Either::First(()) => break,
                         Either::Second(()) => {}
@@ -59,11 +59,11 @@ impl Debounce {
                 Duration::from_ticks(0)
             }
             Debounce::Eager { duration } => {
-                Box::into_pin(pin.wait_for_inactive()).await;
+                pin.wait_for_inactive().await;
                 *duration
             }
             Debounce::None => {
-                Box::into_pin(pin.wait_for_inactive()).await;
+                pin.wait_for_inactive().await;
                 Duration::from_ticks(0)
             }
         }
@@ -72,10 +72,10 @@ impl Debounce {
     pub async fn wait_for_change(&self, pin: &mut Box<dyn DynInputSwitch>) -> Duration {
         match self {
             Debounce::Defer { duration } => {
-                Box::into_pin(pin.wait_for_change()).await;
+                pin.wait_for_change().await;
                 loop {
                     let fut1 = Timer::after(*duration);
-                    let fut2 = Box::into_pin(pin.wait_for_change());
+                    let fut2 = pin.wait_for_change();
                     match select(fut1, fut2).await {
                         Either::First(()) => break,
                         Either::Second(()) => {}
@@ -84,11 +84,11 @@ impl Debounce {
                 Duration::from_ticks(0)
             }
             Debounce::Eager { duration } => {
-                Box::into_pin(pin.wait_for_change()).await;
+                pin.wait_for_change().await;
                 *duration
             }
             Debounce::None => {
-                Box::into_pin(pin.wait_for_change()).await;
+                pin.wait_for_change().await;
                 Duration::from_ticks(0)
             }
         }

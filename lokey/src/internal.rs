@@ -7,7 +7,7 @@ pub use channel::{Channel, DynChannel, Receiver};
 
 use crate::{mcu::Mcu, Device};
 use alloc::{boxed::Box, vec::Vec};
-use core::{any::Any, future::Future};
+use core::{any::Any, future::Future, pin::Pin};
 use embassy_executor::Spawner;
 
 pub type DeviceChannel<D> =
@@ -31,6 +31,6 @@ pub trait ChannelConfig<M: Mcu> {
 }
 
 pub trait ChannelImpl: Any {
-    fn send(&self, message_bytes: &[u8]) -> Box<dyn Future<Output = ()>>;
-    fn receive(&self) -> Box<dyn Future<Output = Vec<u8>>>;
+    fn send(&self, message_bytes: &[u8]) -> Pin<Box<dyn Future<Output = ()>>>;
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>>>>;
 }

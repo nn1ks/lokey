@@ -1,8 +1,7 @@
 use crate::internal;
 use crate::mcu::Mcu;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use core::future::Future;
+use alloc::{boxed::Box, vec::Vec};
+use core::{future::Future, pin::Pin};
 use embassy_executor::Spawner;
 
 pub struct ChannelConfig;
@@ -18,11 +17,11 @@ impl<M: Mcu> internal::ChannelConfig<M> for ChannelConfig {
 pub struct Channel;
 
 impl internal::ChannelImpl for Channel {
-    fn send(&self, _message_bytes: &[u8]) -> Box<dyn Future<Output = ()>> {
-        Box::new(async {})
+    fn send(&self, _message_bytes: &[u8]) -> Pin<Box<dyn Future<Output = ()>>> {
+        Box::pin(async {})
     }
 
-    fn receive(&self) -> Box<dyn Future<Output = Vec<u8>>> {
-        Box::new(async { core::future::pending().await })
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>>>> {
+        Box::pin(async { core::future::pending().await })
     }
 }
