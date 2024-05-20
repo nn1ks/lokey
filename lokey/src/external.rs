@@ -129,7 +129,7 @@ pub trait ChannelConfig<M: Mcu> {
 
 pub trait ChannelImpl: Any {
     fn send(&self, message: Message) -> Pin<Box<dyn Future<Output = ()> + '_>>;
-    fn request_active(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(core::future::pending())
     }
 }

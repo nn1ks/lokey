@@ -2,12 +2,16 @@ use crate::external::{self, ChannelImpl};
 use crate::{internal, mcu::Mcu};
 use alloc::{boxed::Box, vec, vec::Vec};
 use core::{future::Future, pin::Pin};
-use defmt::{error, unwrap};
+use defmt::{error, unwrap, Format};
 use embassy_executor::Spawner;
-use embassy_futures::select::select;
+use embassy_futures::select::{select, Either};
+use embassy_sync::signal::Signal;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+static ACTIVE: Mutex<CriticalSectionRawMutex, ChannelSelection> = Mutex::new(ChannelSelection::Ble);
+static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Format)]
 pub enum ChannelSelection {
     Usb,
     Ble,
@@ -50,6 +54,26 @@ impl internal::Message for Message {
                 ChannelSelection::Ble => vec![1],
             },
         }
+    }
+}
+
+pub struct Channel<Usb: 'static, Ble: 'static> {
+    usb_channel: &'static Usb,
+    ble_channel: &'static Ble,
+}
+
+impl<Usb: ChannelImpl, Ble: ChannelImpl> ChannelImpl for Channel<Usb, Ble> {
+    fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
+            match *ACTIVE.lock().await {
+                ChannelSelection::Usb => self.usb_channel.send(message).await,
+                ChannelSelection::Ble => self.ble_channel.send(message).await,
+            }
+        })
+    }
+
+    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async { ACTIVATION_REQUEST.wait().await })
     }
 }
 
@@ -122,63 +146,54 @@ where
         spawner: Spawner,
         internal_channel: internal::DynChannel,
     ) -> Self::Channel {
-        let active = Box::leak(Box::new(Mutex::new(ChannelSelection::Usb))); // TODO: What should be the default value?
+        let usb_channel = Box::leak(Box::new(
+            self.to_usb_config()
+                .init(mcu, spawner, internal_channel)
+                .await,
+        ));
+        let ble_channel = Box::leak(Box::new(
+            self.to_ble_config()
+                .init(mcu, spawner, internal_channel)
+                .await,
+        ));
 
-        unwrap!(spawner.spawn(set_active(internal_channel, active)));
+        unwrap!(spawner.spawn(handle_activation_request(usb_channel, ble_channel)));
 
         #[embassy_executor::task]
-        async fn set_active(
-            internal_channel: internal::DynChannel,
-            active: &'static Mutex<CriticalSectionRawMutex, ChannelSelection>,
+        async fn handle_activation_request(
+            usb_channel: &'static dyn ChannelImpl,
+            ble_channel: &'static dyn ChannelImpl,
         ) {
+            loop {
+                let future1 = usb_channel.wait_for_activation_request();
+                let future2 = ble_channel.wait_for_activation_request();
+                let channel_selection = match select(future1, future2).await {
+                    Either::First(()) => ChannelSelection::Usb,
+                    Either::Second(()) => ChannelSelection::Ble,
+                };
+                *ACTIVE.lock().await = channel_selection;
+                ACTIVATION_REQUEST.signal(());
+            }
+        }
+
+        unwrap!(spawner.spawn(set_active(internal_channel)));
+
+        #[embassy_executor::task]
+        async fn set_active(internal_channel: internal::DynChannel) {
             let mut receiver = internal_channel.receiver::<Message>().await;
             loop {
                 let message = receiver.next().await;
                 match message {
                     Message::SetActive(channel_selection) => {
-                        *active.lock().await = channel_selection;
+                        *ACTIVE.lock().await = channel_selection;
                     }
                 }
             }
         }
 
         Channel {
-            usb_channel: self
-                .to_usb_config()
-                .init(mcu, spawner, internal_channel)
-                .await,
-            ble_channel: self
-                .to_ble_config()
-                .init(mcu, spawner, internal_channel)
-                .await,
-            active,
+            usb_channel,
+            ble_channel,
         }
-    }
-}
-
-pub struct Channel<Usb, Ble> {
-    active: &'static Mutex<CriticalSectionRawMutex, ChannelSelection>,
-    usb_channel: Usb,
-    ble_channel: Ble,
-}
-
-impl<Usb: ChannelImpl, Ble: ChannelImpl> ChannelImpl for Channel<Usb, Ble> {
-    fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            match *self.active.lock().await {
-                ChannelSelection::Usb => self.usb_channel.send(message).await,
-                ChannelSelection::Ble => self.ble_channel.send(message).await,
-            }
-        })
-    }
-
-    fn request_active(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            loop {
-                let future1 = self.usb_channel.request_active();
-                let future2 = self.ble_channel.request_active();
-                select(future1, future2).await;
-            }
-        })
     }
 }

@@ -44,6 +44,7 @@ impl From<ChannelConfig> for embassy_usb::Config<'static> {
 }
 
 static SUSPENDED: AtomicBool = AtomicBool::new(false);
+pub static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
 pub trait Driver: Mcu {
     fn driver<'a>(&'static self) -> impl embassy_usb::driver::Driver<'a>;
@@ -66,7 +67,9 @@ pub async fn common<M: Driver, const N: usize>(
     let mut bos_descriptor = [0; 256];
     let mut msos_descriptor = [0; 256];
     let mut control_buf = [0; 64];
-    let mut device_handler = DeviceHandler::new();
+    let mut device_handler = DeviceHandler {
+        configured: AtomicBool::new(false),
+    };
 
     let mut state = State::new();
 
@@ -162,14 +165,6 @@ struct DeviceHandler {
     configured: AtomicBool,
 }
 
-impl DeviceHandler {
-    pub fn new() -> Self {
-        DeviceHandler {
-            configured: AtomicBool::new(false),
-        }
-    }
-}
-
 impl Handler for DeviceHandler {
     fn enabled(&mut self, enabled: bool) {
         self.configured.store(false, Ordering::Relaxed);
@@ -189,6 +184,7 @@ impl Handler for DeviceHandler {
     fn addressed(&mut self, addr: u8) {
         self.configured.store(false, Ordering::Relaxed);
         info!("USB address set to: {}", addr);
+        ACTIVATION_REQUEST.signal(());
     }
 
     fn configured(&mut self, configured: bool) {

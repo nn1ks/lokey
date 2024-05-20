@@ -64,9 +64,10 @@ impl external::ChannelImpl for ExternalChannel {
         })
     }
 
-    fn request_active(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        // TODO
-        Box::pin(core::future::pending())
+    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Box::pin(async {
+            usb::ACTIVATION_REQUEST.wait().await;
+        })
     }
 }
 
