@@ -12,7 +12,7 @@ use nrf_softdevice::Flash;
 use storage::Storage;
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Format, Default)]
+#[derive(Clone, Debug, Format, Default)]
 pub struct BondInfo {
     peer: Peer,
     sys_attr: SystemAttribute,
@@ -32,13 +32,13 @@ impl storage::Entry for BondInfo {
     }
 
     fn to_bytes(&self) -> Box<[u8]> {
-        let bytes: [u8; Self::SIZE] = unsafe { mem::transmute(*self) };
+        let bytes: [u8; Self::SIZE] = unsafe { mem::transmute(self.clone()) };
         Box::new(bytes)
     }
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Format)]
+#[derive(Clone, Debug, Format)]
 struct Peer {
     master_id: MasterId,
     key: EncryptionInfo,
@@ -138,7 +138,7 @@ impl SecurityHandler for Bonder {
         debug!("Getting bond for {}", master_id);
 
         let bond_info = self.bond_info.borrow();
-        match *bond_info {
+        match &*bond_info {
             Some(bond_info) if bond_info.peer.master_id == master_id => Some(bond_info.peer.key),
             _ => None,
         }
@@ -149,10 +149,10 @@ impl SecurityHandler for Bonder {
         let addr = conn.peer_address();
         info!("Saving system attributes for {}", addr);
 
-        let bond_info = self.bond_info.borrow_mut();
+        let mut bond_info = self.bond_info.borrow_mut();
 
-        match *bond_info {
-            Some(mut bond_info) if bond_info.peer.peer_id.is_match(addr) => {
+        match bond_info.as_mut() {
+            Some(bond_info) if bond_info.peer.peer_id.is_match(addr) => {
                 bond_info.sys_attr.length = match get_sys_attrs(conn, &mut bond_info.sys_attr.data)
                 {
                     Ok(length) => length,

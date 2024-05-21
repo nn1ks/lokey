@@ -27,7 +27,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     let device_type_path = match function.sig.inputs.first() {
         Some(syn::FnArg::Typed(pattern)) => match &*pattern.ty {
             syn::Type::Path(ref v) => {
-                let last_segment = &v.path.segments.last().clone().unwrap();
+                let last_segment = &v.path.segments.last().unwrap();
                 match &last_segment.arguments {
                     syn::PathArguments::AngleBracketed(v) => match v.args.last() {
                         Some(syn::GenericArgument::Type(syn::Type::Path(path))) => {

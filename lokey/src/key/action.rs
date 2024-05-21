@@ -218,17 +218,14 @@ impl<A: Action> Action for Sticky<A> {
             }
             let fut1 = async {
                 loop {
-                    match receiver.next().await {
-                        external::Message::KeyPress(key) => {
-                            if ignore_modifiers && key.is_modifier() {
-                                continue;
-                            }
-                            if lazy {
-                                action.on_press(context).await;
-                            }
-                            break;
+                    if let external::Message::KeyPress(key) = receiver.next().await {
+                        if ignore_modifiers && key.is_modifier() {
+                            continue;
                         }
-                        _ => {}
+                        if lazy {
+                            action.on_press(context).await;
+                        }
+                        break;
                     }
                 }
             };

@@ -144,6 +144,6 @@ impl<F: MultiwriteNorFlash> Storage<F> {
         )
         .await
         .map_err(Error::from_sequential_storage)?;
-        Ok(data.map(|data| E::from_bytes(&data)).flatten())
+        Ok(data.and_then(|data| E::from_bytes(data)))
     }
 }

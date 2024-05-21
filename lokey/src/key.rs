@@ -61,8 +61,7 @@ pub use debounce::Debounce;
 pub use lokey_macros::layout;
 
 use crate::{internal, Capability, DynContext};
-use alloc::vec;
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use core::future::Future;
 use core::pin::Pin;
 use defmt::{debug, error, panic, unwrap};
@@ -72,22 +71,23 @@ use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
-    actions: [Box<dyn DynAction>; NUM_KEYS],
+    actions: [&'static dyn DynAction; NUM_KEYS],
 }
 
 impl<const NUM_KEYS: usize> Layout<NUM_KEYS> {
-    pub fn new(actions: [Box<dyn DynAction>; NUM_KEYS]) -> Self {
+    pub const fn new(actions: [&'static dyn DynAction; NUM_KEYS]) -> Self {
         Self { actions }
     }
 }
 
 /// The keys capability.
+#[derive(Default)]
 pub struct Keys<C, const NUM_KEYS: usize> {
     /// The layout of the keys.
     ///
     /// This only needs to be `Some` for central devices. For devices that are never directly
     /// connected to the host, this field can be set to `None`.
-    pub layout: Option<Layout<NUM_KEYS>>,
+    pub layout: Option<&'static Layout<NUM_KEYS>>,
     /// The configuration for a [`Scanner`].
     pub scanner_config: C,
 }
@@ -100,14 +100,11 @@ impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
     where
         C: Default,
     {
-        Self {
-            layout: None,
-            scanner_config: C::default(),
-        }
+        Self::default()
     }
 
     /// Sets the layout.
-    pub fn layout(mut self, value: Layout<NUM_KEYS>) -> Self {
+    pub fn layout(mut self, value: &'static Layout<NUM_KEYS>) -> Self {
         self.layout = Some(value);
         self
     }
@@ -144,13 +141,13 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
                 match message {
                     Message::Press { key_index } => {
                         match actions.get(key_index as usize) {
-                            Some(action) => action.on_press(context.clone()).await,
+                            Some(action) => action.on_press(context).await,
                             None => error!("Layout has no action at key index {}", key_index),
                         };
                     }
                     Message::Release { key_index } => {
                         match actions.get(key_index as usize) {
-                            Some(action) => action.on_release(context.clone()).await,
+                            Some(action) => action.on_release(context).await,
                             None => error!("Layout has no action at key index {}", key_index),
                         };
                     }
@@ -302,7 +299,6 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
             config: DirectPinsConfig,
         ) {
             let futures = input_pins.into_iter().enumerate().map(|(i, mut pin)| {
-                let internal_channel = internal_channel.clone();
                 let debounce_key_press = config.debounce_key_press.clone();
                 let debounce_key_release = config.debounce_key_release.clone();
                 async move {
@@ -351,7 +347,7 @@ impl internal::Message for Message {
     where
         Self: Sized,
     {
-        if bytes.len() == 0 {
+        if bytes.is_empty() {
             error!("message must not be empty");
             return None;
         }

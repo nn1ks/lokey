@@ -182,10 +182,7 @@ impl<T: ChannelImpl + ?Sized> Channel<T> {
 
 impl<T: ?Sized> Clone for Channel<T> {
     fn clone(&self) -> Self {
-        Self {
-            inner: self.inner,
-            publisher: self.publisher,
-        }
+        *self
     }
 }
 

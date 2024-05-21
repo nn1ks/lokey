@@ -38,7 +38,7 @@ impl<D: Device> Context<D> {
             mcu,
             internal_channel: self.internal_channel.as_dyn(),
             external_channel: self.external_channel.as_dyn(),
-            layer_manager: self.layer_manager.clone(),
+            layer_manager: self.layer_manager,
         }
     }
 
@@ -53,13 +53,7 @@ impl<D: Device> Context<D> {
 
 impl<D: Device> Clone for Context<D> {
     fn clone(&self) -> Self {
-        Self {
-            spawner: self.spawner,
-            mcu: self.mcu,
-            internal_channel: self.internal_channel.clone(),
-            external_channel: self.external_channel.clone(),
-            layer_manager: self.layer_manager.clone(),
-        }
+        *self
     }
 }
 
@@ -150,6 +144,7 @@ pub struct LayerManager {
 
 impl LayerManager {
     /// Creates a new [`LayerManager`].
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let mutex = Mutex::new(BTreeMap::new());
         Self {
