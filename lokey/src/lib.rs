@@ -170,7 +170,7 @@ impl LayerManager {
     }
 
     /// Deactivates the layer that was pushed to the stack with the specified [`LayerManagerEntry`].
-    pub async fn pop(&self, entry: LayerManagerEntry) -> LayerId {
+    pub async fn remove(&self, entry: LayerManagerEntry) -> LayerId {
         self.map.lock().await.remove(&entry.0).unwrap()
     }
 

@@ -82,7 +82,7 @@ impl Action for Layer {
 
     async fn on_release(&self, context: DynContext) {
         if let Some(entry) = self.layer_manager_entry.lock().await.take() {
-            context.layer_manager.pop(entry).await;
+            context.layer_manager.remove(entry).await;
         }
     }
 }
