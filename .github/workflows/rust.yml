@@ -41,7 +41,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Check formatting
-      run: cargo fmt -- --check
+      run: cargo fmt --verbose --check
   clippy:
     runs-on: ubuntu-latest
     strategy:
@@ -54,4 +54,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Run clippy
-      run: cargo clippy --target ${{ matrix.target }} --no-default-features --features "${{ matrix.mcu_features }} usb ble" -- -D warnings
+      run: cargo clippy --verbose --target ${{ matrix.target }} --no-default-features --features "${{ matrix.mcu_features }} usb ble" -- -D warnings

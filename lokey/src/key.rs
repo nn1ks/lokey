@@ -38,23 +38,39 @@ pub use debounce::Debounce;
 ///
 /// use alloc::boxed::Box;
 /// use lokey::key::{action::PerLayer, Layout};
+/// use lokey::LayerId;
 ///
 /// let layout = Layout::new([
-///     Box::new(
-///         PerLayer::new()
-///             .with(LayerId(0), KeyCode::new(Key::A))
-///             .with(LayerId(1), KeyCode::new(Key::C))
-///     ),
-///     Box::new(
-///         PerLayer::new()
-///             .with(LayerId(0), HoldTap::new(KeyCode::new(Key::LControl), KeyCode::new(Key::B)))
-///             .with(LayerId(1), KeyCode::new(Key::D))
-///     ),
-///     Box::new(
-///         PerLayer::new()
-///             .with(LayerId(0), Layer::new(LayerId(1)))
-///             .with(LayerId(1), Layer::new(LayerId(1)))
-///     ),
+///     {
+///         static ACTION1: KeyCode = KeyCode::new(Key::A);
+///         static ACTION2: KeyCode = KeyCode::new(Key::C);
+///         static PER_LAYER_ACTION: PerLayer<2> = PerLayer::new([
+///             (LayerId(0), &ACTION1),
+///             (LayerId(1), &ACTION2)
+///         ]);
+///         &PER_LAYER_ACTION
+///     },
+///     {
+///         static ACTION1: HoldTap<KeyCode, KeyCode> = HoldTap::new(
+///             KeyCode::new(Key::LControl),
+///             KeyCode::new(Key::B)
+///         );
+///         static ACTION2: KeyCode = KeyCode::new(Key::D);
+///         static PER_LAYER_ACTION: PerLayer<2> = PerLayer::new([
+///             (LayerId(0), &ACTION1),
+///             (LayerId(1), &ACTION2)
+///         ]);
+///         &PER_LAYER_ACTION
+///     },
+///     {
+///         static ACTION1: Layer = Layer::new(LayerId(1));
+///         static ACTION2: Layer = Layer::new(LayerId(1));
+///         static PER_LAYER_ACTION: PerLayer<2> = PerLayer::new([
+///             (LayerId(0), &ACTION1),
+///             (LayerId(1), &ACTION2)
+///         ]);
+///         &PER_LAYER_ACTION
+///     },
 /// ]);
 /// # }
 /// ```
