@@ -32,10 +32,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose --target ${{ matrix.target }} --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
+      run: cargo build --verbose --target ${{ matrix.target }} --no-default-features --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
     - name: Run tests
       if: matrix.mcu != 'no_mcu'
-      run: cargo test --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
+      run: cargo test --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
   format:
     runs-on: ubuntu-latest
     steps:
@@ -44,7 +44,14 @@ jobs:
       run: cargo fmt -- --check
   clippy:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mcu: [nrf52840]
+        include:
+          - mcu: nrf52840
+            target: thumbv7em-none-eabihf
+            mcu_features: "nrf52840"
     steps:
     - uses: actions/checkout@v4
     - name: Run clippy
-      run: cargo clippy --all-features -- -D warnings
+      run: cargo clippy --target ${{ matrix.target }} --no-default-features --features "${{ matrix.mcu_features }} usb ble" -- -D warnings
