@@ -169,7 +169,6 @@ impl Handler for DeviceHandler {
     fn enabled(&mut self, enabled: bool) {
         self.configured.store(false, Ordering::Relaxed);
         SUSPENDED.store(false, Ordering::Release);
-        #[allow(clippy::if_same_then_else)] // seems to be a bug in clippy
         if enabled {
             info!("Device enabled");
         } else {
@@ -190,7 +189,6 @@ impl Handler for DeviceHandler {
 
     fn configured(&mut self, configured: bool) {
         self.configured.store(configured, Ordering::Relaxed);
-        #[allow(clippy::if_same_then_else)] // seems to be a bug in clippy
         if configured {
             info!(
                 "Device configured, it may now draw up to the configured current limit from Vbus."
@@ -206,7 +204,6 @@ impl Handler for DeviceHandler {
             SUSPENDED.store(true, Ordering::Release);
         } else {
             SUSPENDED.store(false, Ordering::Release);
-            #[allow(clippy::if_same_then_else)] // seems to be a bug in clippy
             if self.configured.load(Ordering::Relaxed) {
                 info!(
                     "Device resumed, it may now draw up to the configured current limit from Vbus"

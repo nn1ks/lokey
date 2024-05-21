@@ -2,7 +2,7 @@ use crate::external::{self, ChannelImpl};
 use crate::{internal, mcu::Mcu};
 use alloc::{boxed::Box, vec, vec::Vec};
 use core::{future::Future, pin::Pin};
-use defmt::{error, unwrap, Format};
+use defmt::{error, info, unwrap, Format};
 use embassy_executor::Spawner;
 use embassy_futures::select::{select, Either};
 use embassy_sync::signal::Signal;
@@ -171,15 +171,16 @@ where
                     Either::First(()) => ChannelSelection::Usb,
                     Either::Second(()) => ChannelSelection::Ble,
                 };
+                info!("setting active channel to {}", channel_selection);
                 *ACTIVE.lock().await = channel_selection;
                 ACTIVATION_REQUEST.signal(());
             }
         }
 
-        unwrap!(spawner.spawn(set_active(internal_channel)));
+        unwrap!(spawner.spawn(handle_internal_message(internal_channel)));
 
         #[embassy_executor::task]
-        async fn set_active(internal_channel: internal::DynChannel) {
+        async fn handle_internal_message(internal_channel: internal::DynChannel) {
             let mut receiver = internal_channel.receiver::<Message>().await;
             loop {
                 let message = receiver.next().await;
