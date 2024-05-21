@@ -199,14 +199,24 @@ pub fn layout(item: TokenStream) -> TokenStream {
                 .enumerate()
                 .map(|(layer_index, action)| {
                     let layer_index = u8::try_from(layer_index).unwrap();
-                    quote! {
-                        .with(::lokey::LayerId(#layer_index), #action)
-                    }
+                    quote! {{
+                        type A = impl ::lokey::key::DynAction;
+                        // This `AtomicBool` is only used here to make the static not implement
+                        // `core::marker::Freeze`. Without it the compiler has to look up wheter `T`
+                        // implements `Freeze` which results in a cycle for the trait lookup,
+                        // causing a compilation error.
+                        static ACTION: (A, ::core::sync::atomic::AtomicBool) =
+                            (#action, ::core::sync::atomic::AtomicBool::new(false));
+                        (::lokey::LayerId(#layer_index), &ACTION.0)
+                    }}
                 })
                 .collect::<Vec<_>>();
-            quote! {
-                ::alloc::boxed::Box::new(::lokey::key::action::PerLayer::new() #(#v)*)
-            }
+            let num_actions = v.len();
+            quote! {{
+                static PER_LAYER_ACTION: ::lokey::key::action::PerLayer<#num_actions> =
+                    ::lokey::key::action::PerLayer::new([#(#v,)*]);
+                &PER_LAYER_ACTION
+            }}
         })
         .collect::<Vec<_>>();
     quote! {

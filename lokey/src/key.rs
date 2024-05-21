@@ -128,13 +128,15 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
     scanner.run(keys.scanner_config, context);
 
     if let Some(layout) = keys.layout {
-        unwrap!(context.spawner.spawn(handle_internal_message(
-            layout.actions.into_iter().collect(),
-            context,
-        )));
+        unwrap!(context
+            .spawner
+            .spawn(handle_internal_message(&layout.actions, context,)));
 
         #[embassy_executor::task]
-        async fn handle_internal_message(actions: Vec<Box<dyn DynAction>>, context: DynContext) {
+        async fn handle_internal_message(
+            actions: &'static [&'static dyn DynAction],
+            context: DynContext,
+        ) {
             let mut receiver = context.internal_channel.receiver::<Message>().await;
             loop {
                 let message = receiver.next().await;
