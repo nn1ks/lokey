@@ -1,8 +1,10 @@
 pub mod action;
 mod debounce;
+mod direct_pins;
 
 pub use action::{Action, DynAction};
 pub use debounce::Debounce;
+pub use direct_pins::{DirectPins, DirectPinsConfig};
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -81,9 +83,7 @@ use alloc::{boxed::Box, vec, vec::Vec};
 use core::future::Future;
 use core::pin::Pin;
 use defmt::{debug, error, panic, unwrap};
-use embassy_time::{Duration, Timer};
-use futures_util::future::join_all;
-use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
+// use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
@@ -173,22 +173,22 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
     }
 }
 
-pub trait DynInputSwitch {
+pub trait InputSwitch {
     fn is_active(&mut self) -> bool;
     fn wait_for_active(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
     fn wait_for_inactive(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
     fn wait_for_change(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
 }
 
-impl<T: InputSwitch + WaitableInputSwitch> DynInputSwitch for T {
+impl<T: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch> InputSwitch for T {
     fn is_active(&mut self) -> bool {
-        InputSwitch::is_active(self)
+        switch_hal::InputSwitch::is_active(self)
             .unwrap_or_else(|_| panic!("failed to get active status of pin"))
     }
 
     fn wait_for_active(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async {
-            WaitableInputSwitch::wait_for_active(self)
+            switch_hal::WaitableInputSwitch::wait_for_active(self)
                 .await
                 .unwrap_or_else(|_| panic!("failed to get active status of pin"))
         })
@@ -196,7 +196,7 @@ impl<T: InputSwitch + WaitableInputSwitch> DynInputSwitch for T {
 
     fn wait_for_inactive(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async {
-            WaitableInputSwitch::wait_for_inactive(self)
+            switch_hal::WaitableInputSwitch::wait_for_inactive(self)
                 .await
                 .unwrap_or_else(|_| panic!("failed to get active status of pin"))
         })
@@ -204,25 +204,27 @@ impl<T: InputSwitch + WaitableInputSwitch> DynInputSwitch for T {
 
     fn wait_for_change(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async {
-            WaitableInputSwitch::wait_for_change(self)
+            switch_hal::WaitableInputSwitch::wait_for_change(self)
                 .await
                 .unwrap_or_else(|_| panic!("failed to get active status of pin"))
         })
     }
 }
 
-pub trait DynOutputSwitch {
+pub trait OutputSwitch {
     fn set_active(&mut self);
     fn set_inactive(&mut self);
 }
 
-impl<T: OutputSwitch> DynOutputSwitch for T {
+impl<T: switch_hal::OutputSwitch> OutputSwitch for T {
     fn set_active(&mut self) {
-        OutputSwitch::on(self).unwrap_or_else(|_| panic!("failed to set active status of pin"))
+        switch_hal::OutputSwitch::on(self)
+            .unwrap_or_else(|_| panic!("failed to set active status of pin"))
     }
 
     fn set_inactive(&mut self) {
-        OutputSwitch::off(self).unwrap_or_else(|_| panic!("failed to set active status of pin"))
+        switch_hal::OutputSwitch::off(self)
+            .unwrap_or_else(|_| panic!("failed to set active status of pin"))
     }
 }
 
@@ -237,112 +239,6 @@ pub trait Scanner {
     /// This function should send a [`Message`] to the internal channel for each key press and key
     /// release.
     fn run(self, config: Self::Config, context: DynContext);
-}
-
-/// Configuration for the [`DirectPins`] scanner.
-pub struct DirectPinsConfig {
-    pub debounce_key_press: Debounce,
-    pub debounce_key_release: Debounce,
-}
-
-impl Default for DirectPinsConfig {
-    fn default() -> Self {
-        Self {
-            debounce_key_press: Debounce::Defer {
-                duration: Duration::from_millis(5),
-            },
-            debounce_key_release: Debounce::Defer {
-                duration: Duration::from_millis(5),
-            },
-        }
-    }
-}
-
-/// Scanner for keys that are each connected to a single pin.
-pub struct DirectPins<I, const IS: usize, const NUM_KEYS: usize> {
-    pins: [I; IS],
-    transform: [Option<usize>; NUM_KEYS],
-}
-
-impl<I, const IS: usize> DirectPins<I, IS, 0> {
-    pub fn new<const NUM_KEYS: usize>(pins: [I; IS]) -> DirectPins<I, IS, NUM_KEYS> {
-        DirectPins {
-            pins,
-            transform: [None; NUM_KEYS],
-        }
-    }
-}
-
-impl<I, const IS: usize, const NUM_KEYS: usize> DirectPins<I, IS, NUM_KEYS> {
-    pub const fn map<const INDEX_I: usize, const INDEX_KEYS: usize>(mut self) -> Self {
-        self.transform[INDEX_KEYS] = Some(INDEX_I);
-        self
-    }
-
-    pub fn continuous<const OFFSET: usize>(mut self) -> Self {
-        for i in 0..IS {
-            self.transform[i + OFFSET] = Some(i);
-        }
-        self
-    }
-}
-
-impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_KEYS: usize> Scanner
-    for DirectPins<I, IS, NUM_KEYS>
-{
-    const NUM_KEYS: usize = NUM_KEYS;
-
-    type Config = DirectPinsConfig;
-
-    fn run(self, config: Self::Config, context: DynContext) {
-        let input_pins = self
-            .pins
-            .into_iter()
-            .map(|pin| {
-                let b: Box<dyn DynInputSwitch> = Box::new(pin);
-                b
-            })
-            .collect::<Vec<_>>();
-
-        unwrap!(context
-            .spawner
-            .spawn(task(input_pins, context.internal_channel, config)));
-
-        #[embassy_executor::task]
-        async fn task(
-            input_pins: Vec<Box<dyn DynInputSwitch>>,
-            internal_channel: internal::DynChannel,
-            config: DirectPinsConfig,
-        ) {
-            let futures = input_pins.into_iter().enumerate().map(|(i, mut pin)| {
-                let debounce_key_press = config.debounce_key_press.clone();
-                let debounce_key_release = config.debounce_key_release.clone();
-                async move {
-                    let mut active = false;
-                    loop {
-                        let wait_duration = if active {
-                            let wait_duration =
-                                debounce_key_release.wait_for_inactive(&mut pin).await;
-                            active = false;
-                            wait_duration
-                        } else {
-                            let wait_duration = debounce_key_press.wait_for_active(&mut pin).await;
-                            active = true;
-                            wait_duration
-                        };
-                        let key_index = i as u8;
-                        if active {
-                            internal_channel.send(Message::Press { key_index }).await;
-                        } else {
-                            internal_channel.send(Message::Release { key_index }).await;
-                        }
-                        Timer::after(wait_duration).await;
-                    }
-                }
-            });
-            join_all(futures).await;
-        }
-    }
 }
 
 /// A message type for key press and key release events.

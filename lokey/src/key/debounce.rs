@@ -1,5 +1,4 @@
-use super::DynInputSwitch;
-use alloc::boxed::Box;
+use super::InputSwitch;
 use embassy_futures::select::{select, Either};
 use embassy_time::{Duration, Timer};
 
@@ -19,7 +18,7 @@ pub enum Debounce {
 }
 
 impl Debounce {
-    pub async fn wait_for_active(&self, pin: &mut Box<dyn DynInputSwitch>) -> Duration {
+    pub async fn wait_for_active(&self, pin: &mut dyn InputSwitch) -> Duration {
         match self {
             Debounce::Defer { duration } => {
                 loop {
@@ -44,7 +43,7 @@ impl Debounce {
         }
     }
 
-    pub async fn wait_for_inactive(&self, pin: &mut Box<dyn DynInputSwitch>) -> Duration {
+    pub async fn wait_for_inactive(&self, pin: &mut dyn InputSwitch) -> Duration {
         match self {
             Debounce::Defer { duration } => {
                 loop {
@@ -69,7 +68,7 @@ impl Debounce {
         }
     }
 
-    pub async fn wait_for_change(&self, pin: &mut Box<dyn DynInputSwitch>) -> Duration {
+    pub async fn wait_for_change(&self, pin: &mut dyn InputSwitch) -> Duration {
         match self {
             Debounce::Defer { duration } => {
                 pin.wait_for_change().await;
