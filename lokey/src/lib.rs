@@ -17,7 +17,7 @@ pub use embassy_executor;
 pub use embedded_alloc;
 pub use lokey_macros::device;
 
-use alloc::{boxed::Box, collections::BTreeMap};
+use alloc::collections::BTreeMap;
 use core::future::Future;
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
@@ -132,29 +132,27 @@ pub struct LayerId(pub u8);
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct LayerManagerEntry(u64);
 
+static LAYER_MANAGER_MAP: Mutex<CriticalSectionRawMutex, BTreeMap<u64, LayerId>> =
+    Mutex::new(BTreeMap::new());
+
 /// Type for managing the currently active layers.
 ///
 /// Internally a stack-like datastructure is used to keep track of the order in which the layers got
 /// activated. When pushing a new layer ID to the [`LayerManager`] it will become the active one and
 /// a [`LayerManagerEntry`] is returned that can be used to deactive the layer again.
-#[derive(Clone, Copy)]
-pub struct LayerManager {
-    map: &'static Mutex<CriticalSectionRawMutex, BTreeMap<u64, LayerId>>,
-}
+#[derive(Clone, Copy, Default)]
+#[non_exhaustive]
+pub struct LayerManager {}
 
 impl LayerManager {
     /// Creates a new [`LayerManager`].
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let mutex = Mutex::new(BTreeMap::new());
-        Self {
-            map: Box::leak(Box::new(mutex)),
-        }
+        Self {}
     }
 
     /// Sets the active layer to the layer with the specified ID.
     pub async fn push(&self, layer: LayerId) -> LayerManagerEntry {
-        let mut map = self.map.lock().await;
+        let mut map = LAYER_MANAGER_MAP.lock().await;
         let new_id = match map.last_key_value() {
             Some((last_id, _)) => last_id + 1,
             None => 0,
@@ -166,12 +164,12 @@ impl LayerManager {
 
     /// Deactivates the layer that was pushed to the stack with the specified [`LayerManagerEntry`].
     pub async fn remove(&self, entry: LayerManagerEntry) -> LayerId {
-        self.map.lock().await.remove(&entry.0).unwrap()
+        LAYER_MANAGER_MAP.lock().await.remove(&entry.0).unwrap()
     }
 
     /// Returns the ID of the currently active layer (i.e. the layer ID that was last pushed to the stack).
     pub async fn active(&self) -> LayerId {
-        match self.map.lock().await.last_key_value() {
+        match LAYER_MANAGER_MAP.lock().await.last_key_value() {
             Some((_, layer)) => *layer,
             None => LayerId(0),
         }
