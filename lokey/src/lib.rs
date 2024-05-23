@@ -47,7 +47,7 @@ impl<D: Device> Context<D> {
         C: Capability,
         D: CapabilitySupport<C>,
     {
-        D::enable(capability, self.as_dyn()).await
+        D::enable(capability, *self).await
     }
 }
 
@@ -87,7 +87,7 @@ pub trait Capability {}
 /// ```no_run
 #[doc = include_str!("./doctest_setup")]
 /// # use core::todo;
-/// use lokey::{CapabilitySupport, Context, Device, DynContext};
+/// use lokey::{CapabilitySupport, Context, Device};
 /// use lokey::key::{self, DirectPins, DirectPinsConfig, Keys};
 ///
 /// struct Keyboard;
@@ -108,7 +108,7 @@ pub trait Capability {}
 ///
 /// // Enables support for the Keys capability
 /// impl CapabilitySupport<Keys<DirectPinsConfig, 8>> for Keyboard {
-///     async fn enable(capability: Keys<DirectPinsConfig, 8>, context: DynContext) {
+///     async fn enable(capability: Keys<DirectPinsConfig, 8>, context: Context<Self>) {
 ///         todo!()
 ///     }
 /// }
@@ -121,7 +121,7 @@ pub trait Capability {}
 /// ```
 pub trait CapabilitySupport<C: Capability>: Device {
     /// Enables the specified capability for this device.
-    fn enable(capability: C, context: DynContext) -> impl Future<Output = ()>;
+    fn enable(capability: C, context: Context<Self>) -> impl Future<Output = ()>;
 }
 
 /// The ID of a layer.
