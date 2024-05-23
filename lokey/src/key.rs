@@ -152,7 +152,7 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
         ) {
             let mut receiver = context.internal_channel.receiver::<Message>().await;
             loop {
-                let (_, message) = receiver.next().await;
+                let message = receiver.next().await;
                 debug!("Received keys message: {}", message);
                 match message {
                     Message::Press { key_index } => {

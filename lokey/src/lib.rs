@@ -69,17 +69,10 @@ pub struct DynContext {
     pub layer_manager: LayerManager,
 }
 
-/// The ID of a device.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct DeviceId(pub u8);
-
 pub trait Device: Sized {
     type Mcu: mcu::Mcu + mcu::McuInit;
     type InternalChannelConfig: internal::ChannelConfig<Self::Mcu>;
     type ExternalChannelConfig: external::ChannelConfig<Self::Mcu>;
-
-    const ID: DeviceId;
-
     fn mcu_config() -> <Self::Mcu as mcu::McuInit>::Config;
     fn internal_channel_config() -> Self::InternalChannelConfig;
     fn external_channel_config() -> Self::ExternalChannelConfig;

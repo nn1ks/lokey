@@ -120,11 +120,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                     mcu,
                     spawner
                 ).await;
-                ::lokey::internal::Channel::new(
-                    channel_impl,
-                    <#device_type_path as ::lokey::Device>::ID,
-                    spawner
-                )
+                ::lokey::internal::Channel::new(channel_impl, spawner)
             };
 
             let external_channel = {
