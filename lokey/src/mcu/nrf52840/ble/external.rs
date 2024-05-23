@@ -143,6 +143,15 @@ async fn task(
             .await;
 
             warn!("GATT server disconnected");
+
+            let bond_info = match storage.fetch::<bonder::BondInfo>().await {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("Failed to read bond info from flash: {}", e);
+                    None
+                }
+            };
+            *bonder.bond_info.borrow_mut() = bond_info;
         }
     };
     let send_keyboard_report = async {

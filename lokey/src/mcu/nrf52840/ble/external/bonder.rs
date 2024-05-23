@@ -83,7 +83,7 @@ async fn write_bond_info_to_flash(storage: &'static Storage<Flash>, bond_info: B
 
 // Bonder aka security handler used in advertising & pairing
 pub struct Bonder {
-    bond_info: RefCell<Option<BondInfo>>,
+    pub(crate) bond_info: RefCell<Option<BondInfo>>,
     storage: &'static Storage<Flash>,
     spawner: Spawner,
 }
