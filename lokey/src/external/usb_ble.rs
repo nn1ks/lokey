@@ -183,7 +183,7 @@ where
         async fn handle_internal_message(internal_channel: internal::DynChannel) {
             let mut receiver = internal_channel.receiver::<Message>().await;
             loop {
-                let message = receiver.next().await;
+                let (_, message) = receiver.next().await;
                 match message {
                     Message::SetActive(channel_selection) => {
                         *ACTIVE.lock().await = channel_selection;

@@ -1,4 +1,5 @@
 use super::{ChannelImpl, Message, MessageTag};
+use crate::DeviceId;
 use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
 use defmt::unwrap;
@@ -11,21 +12,22 @@ use embassy_sync::pubsub::{PubSubChannel, Publisher, Subscriber};
 //   - Make a pub sub channel that only sends the relevant messages to the receivers
 
 // TODO: Replace with custom heap-allocated channel
-static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Vec<u8>, 8, 20, 2> =
+static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, (DeviceId, Vec<u8>), 8, 20, 2> =
     PubSubChannel::new();
 
 pub type DynChannel = Channel<dyn ChannelImpl>;
 
 pub struct Channel<T: ?Sized + 'static> {
     inner: &'static T,
-    publisher: &'static Publisher<'static, CriticalSectionRawMutex, Vec<u8>, 8, 20, 2>,
+    publisher: &'static Publisher<'static, CriticalSectionRawMutex, (DeviceId, Vec<u8>), 8, 20, 2>,
+    device_id: DeviceId,
 }
 
 impl<T: ChannelImpl> Channel<T> {
     /// Creates a new internal channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
-    pub fn new(inner: T, spawner: Spawner) -> Self {
+    pub fn new(inner: T, device_id: DeviceId, spawner: Spawner) -> Self {
         let inner = Box::leak(Box::new(inner));
 
         #[embassy_executor::task]
@@ -42,6 +44,7 @@ impl<T: ChannelImpl> Channel<T> {
         Self {
             inner,
             publisher: Box::leak(Box::new(unwrap!(INNER_CHANNEL.publisher()))),
+            device_id,
         }
     }
 
@@ -53,6 +56,7 @@ impl<T: ChannelImpl> Channel<T> {
         Channel {
             inner: self.inner,
             publisher: self.publisher,
+            device_id: self.device_id,
         }
     }
 }
@@ -65,7 +69,7 @@ impl<T: ChannelImpl + ?Sized> Channel<T> {
         bytes.extend(message_tag);
         bytes.extend(message_bytes);
         self.inner.send(&bytes).await;
-        self.publisher.publish(bytes).await;
+        self.publisher.publish((self.device_id, bytes)).await;
     }
 
     pub async fn receiver<M: Message + MessageTag>(&self) -> Receiver<M> {
@@ -86,17 +90,17 @@ impl<T: ?Sized> Clone for Channel<T> {
 impl<T: ?Sized> Copy for Channel<T> {}
 
 pub struct Receiver<M> {
-    subscriber: Subscriber<'static, CriticalSectionRawMutex, Vec<u8>, 8, 20, 2>,
+    subscriber: Subscriber<'static, CriticalSectionRawMutex, (DeviceId, Vec<u8>), 8, 20, 2>,
     _phantom: PhantomData<M>,
 }
 
 impl<M: Message + MessageTag> Receiver<M> {
-    pub async fn next(&mut self) -> M {
+    pub async fn next(&mut self) -> (DeviceId, M) {
         loop {
-            let message_bytes = self.subscriber.next_message_pure().await;
+            let (device_id, message_bytes) = self.subscriber.next_message_pure().await;
             if message_bytes[..4] == M::TAG {
                 if let Some(message) = M::from_bytes(&message_bytes[4..]) {
-                    return message;
+                    return (device_id, message);
                 }
             }
         }
