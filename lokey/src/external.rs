@@ -7,15 +7,14 @@ pub mod usb;
 pub mod usb_ble;
 
 use crate::internal;
+use crate::util::pubsub::{PubSubChannel, Subscriber};
 use crate::{mcu::Mcu, Device};
 use alloc::boxed::Box;
 use core::any::Any;
 use core::future::Future;
 use core::pin::Pin;
-use defmt::unwrap;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::pubsub::{PubSubChannel, Publisher, Subscriber};
 
 pub type DeviceChannel<D> =
     <<D as Device>::ExternalChannelConfig as ChannelConfig<<D as Device>::Mcu>>::Channel;
@@ -134,14 +133,12 @@ pub trait ChannelImpl: Any {
     }
 }
 
-static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Message, 8, 20, 1> =
-    PubSubChannel::new();
+static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Message> = PubSubChannel::new();
 
 pub type DynChannel = Channel<dyn ChannelImpl>;
 
 pub struct Channel<T: ?Sized + 'static> {
     inner: &'static T,
-    publisher: &'static Publisher<'static, CriticalSectionRawMutex, Message, 8, 20, 1>,
 }
 
 impl<T: ChannelImpl> Channel<T> {
@@ -151,31 +148,27 @@ impl<T: ChannelImpl> Channel<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner: Box::leak(Box::new(inner)),
-            publisher: Box::leak(Box::new(unwrap!(INNER_CHANNEL.publisher()))),
         }
     }
 
     /// Converts this channel into a dynamic one.
     ///
-    /// This can be useful if you want to pass the channel to an embassy task as they can't be
-    /// generic.
+    /// This can be useful if you want to pass the channel to an embassy task as they can't have
+    /// generic parameters.
     pub fn as_dyn(&self) -> DynChannel {
-        Channel {
-            inner: self.inner,
-            publisher: self.publisher,
-        }
+        Channel { inner: self.inner }
     }
 }
 
 impl<T: ChannelImpl + ?Sized> Channel<T> {
     pub async fn send(&self, message: Message) {
-        self.publisher.publish(message.clone()).await;
-        self.inner.send(message).await
+        INNER_CHANNEL.publish(message.clone());
+        self.inner.send(message).await;
     }
 
     pub fn receiver(&self) -> Receiver {
         Receiver {
-            subscriber: unwrap!(INNER_CHANNEL.subscriber()),
+            subscriber: INNER_CHANNEL.subscriber(),
         }
     }
 }
@@ -189,11 +182,11 @@ impl<T: ?Sized> Clone for Channel<T> {
 impl<T: ?Sized> Copy for Channel<T> {}
 
 pub struct Receiver {
-    subscriber: Subscriber<'static, CriticalSectionRawMutex, Message, 8, 20, 1>,
+    subscriber: Subscriber<'static, CriticalSectionRawMutex, Message>,
 }
 
 impl Receiver {
     pub async fn next(&mut self) -> Message {
-        self.subscriber.next_message_pure().await
+        self.subscriber.next_message().await
     }
 }

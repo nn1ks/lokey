@@ -10,6 +10,7 @@ pub mod external;
 pub mod internal;
 pub mod key;
 pub mod mcu;
+pub mod util;
 
 #[doc(hidden)]
 pub use embassy_executor;
