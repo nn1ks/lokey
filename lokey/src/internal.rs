@@ -9,6 +9,7 @@ use crate::{mcu::Mcu, Device};
 use alloc::{boxed::Box, vec::Vec};
 use core::{any::Any, future::Future, pin::Pin};
 use embassy_executor::Spawner;
+use generic_array::{ArrayLength, GenericArray};
 
 pub type DeviceChannel<D> =
     <<D as Device>::InternalChannelConfig as ChannelConfig<<D as Device>::Mcu>>::Channel;
@@ -18,11 +19,13 @@ pub trait MessageTag {
 }
 
 pub trait Message: Send + 'static {
-    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    type Size: ArrayLength;
+
+    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized;
 
-    fn to_bytes(&self) -> Vec<u8>;
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
 }
 
 pub trait ChannelConfig<M: Mcu> {

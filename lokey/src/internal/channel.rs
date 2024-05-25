@@ -1,10 +1,12 @@
 use super::{ChannelImpl, Message, MessageTag};
 use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
-use defmt::unwrap;
+use defmt::{error, unwrap};
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::pubsub::{PubSubChannel, Publisher, Subscriber};
+use generic_array::GenericArray;
+use typenum::Unsigned;
 
 // TODO: Optimization:
 //   - Don't convert local messages to bytes and then convert it back to a message
@@ -95,8 +97,17 @@ impl<M: Message + MessageTag> Receiver<M> {
         loop {
             let message_bytes = self.subscriber.next_message_pure().await;
             if message_bytes[..4] == M::TAG {
-                if let Some(message) = M::from_bytes(&message_bytes[4..]) {
-                    return message;
+                match GenericArray::try_from_slice(&message_bytes[4..]) {
+                    Ok(array) => {
+                        if let Some(message) = M::from_bytes(array) {
+                            return message;
+                        }
+                    }
+                    Err(_) => error!(
+                        "invalid message size (expected {} bytes, found {})",
+                        M::Size::USIZE,
+                        message_bytes.len() - 4
+                    ),
                 }
             }
         }

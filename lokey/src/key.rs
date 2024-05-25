@@ -79,11 +79,11 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 pub use lokey_macros::layout;
 
 use crate::{internal, Capability, DynContext};
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::boxed::Box;
 use core::future::Future;
 use core::pin::Pin;
 use defmt::{debug, error, panic, unwrap};
-// use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
+use generic_array::GenericArray;
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
@@ -255,39 +255,20 @@ impl internal::MessageTag for Message {
 }
 
 impl internal::Message for Message {
-    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    type Size = typenum::U2;
+
+    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
-        if bytes.is_empty() {
-            error!("message must not be empty");
-            return None;
-        }
+        let bytes = bytes.into_array::<2>();
         match bytes[0] {
-            0 => {
-                if bytes.len() != 2 {
-                    error!(
-                        "unexpected message length (expected 2 bytes, found {})",
-                        bytes.len()
-                    );
-                    return None;
-                }
-                Some(Message::Press {
-                    key_index: bytes[1],
-                })
-            }
-            1 => {
-                if bytes.len() != 2 {
-                    error!(
-                        "unexpected message length (expected 2 bytes, found {})",
-                        bytes.len()
-                    );
-                    return None;
-                }
-                Some(Message::Release {
-                    key_index: bytes[1],
-                })
-            }
+            0 => Some(Message::Press {
+                key_index: bytes[1],
+            }),
+            1 => Some(Message::Release {
+                key_index: bytes[1],
+            }),
             v => {
                 error!("unknown tag byte: {}", v);
                 None
@@ -295,10 +276,10 @@ impl internal::Message for Message {
         }
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         match self {
-            Message::Press { key_index } => vec![0, *key_index],
-            Message::Release { key_index } => vec![1, *key_index],
+            Message::Press { key_index } => GenericArray::from_array([0, *key_index]),
+            Message::Release { key_index } => GenericArray::from_array([1, *key_index]),
         }
     }
 }

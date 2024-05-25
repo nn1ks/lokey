@@ -1,33 +1,35 @@
-use alloc::{boxed::Box, vec};
+use alloc::{vec, vec::Vec};
 use core::ops::Range;
 use defmt::{panic, Format};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embedded_storage_async::nor_flash::{MultiwriteNorFlash, NorFlash};
+use generic_array::{ArrayLength, GenericArray};
 use sequential_storage::cache::NoCache;
 use sequential_storage::map::{fetch_item, remove_item, store_item};
+use typenum::Unsigned;
 
 const ENTRY_TAG_SIZE: usize = 4;
 
 pub trait Entry {
+    /// The length of the byte array that this type is serialized to.
+    type Size: ArrayLength;
+
     /// A unique tag to identify this entry type.
     const TAG: [u8; ENTRY_TAG_SIZE];
-
-    /// The length of the byte array that this type is serialized to.
-    const SIZE: usize;
 
     /// Deserializes the entry from the specified bytes.
     ///
     /// Returns [`None`] if the entry can not be deserialized.
     ///
     /// The size of the bytes slice argument is guaranteed to be [`Self::SIZE`].
-    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized;
 
     /// Serializes this entry to a byte array.
     ///
     /// The returned boxed array must have a length of [`Self::SIZE`].
-    fn to_bytes(&self) -> Box<[u8]>;
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
 }
 
 #[derive(Format)]
@@ -102,9 +104,13 @@ impl<F: MultiwriteNorFlash> Storage<F> {
         }
     }
 
+    fn create_buffer<E: Entry>(&self) -> Vec<u8> {
+        let buf_len = round_up_to_word_size::<F>(E::Size::USIZE + ENTRY_TAG_SIZE);
+        vec![0; buf_len]
+    }
+
     pub async fn remove<E: Entry>(&self) -> Result<(), Error<F::Error>> {
-        let buf_len = round_up_to_word_size::<F>(E::SIZE + ENTRY_TAG_SIZE);
-        let mut buf = vec![0; buf_len];
+        let mut buf = self.create_buffer::<E>();
         remove_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
@@ -117,8 +123,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
     }
 
     pub async fn store<E: Entry>(&self, entry: &E) -> Result<(), Error<F::Error>> {
-        let buf_len = round_up_to_word_size::<F>(E::SIZE + ENTRY_TAG_SIZE);
-        let mut buf = vec![0; buf_len];
+        let mut buf = self.create_buffer::<E>();
         let value_bytes = entry.to_bytes();
         store_item(
             &mut *self.flash.lock().await,
@@ -133,8 +138,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
     }
 
     pub async fn fetch<E: Entry>(&self) -> Result<Option<E>, Error<F::Error>> {
-        let buf_len = round_up_to_word_size::<F>(E::SIZE + ENTRY_TAG_SIZE);
-        let mut buf = vec![0; buf_len];
+        let mut buf = self.create_buffer::<E>();
         let data: Option<&[u8]> = fetch_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
@@ -144,6 +148,9 @@ impl<F: MultiwriteNorFlash> Storage<F> {
         )
         .await
         .map_err(Error::from_sequential_storage)?;
-        Ok(data.and_then(|data| E::from_bytes(data)))
+        Ok(data.and_then(|data| {
+            let data = GenericArray::try_from_slice(data).unwrap();
+            E::from_bytes(data)
+        }))
     }
 }

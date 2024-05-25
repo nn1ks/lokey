@@ -1,8 +1,8 @@
 use crate::mcu::storage;
-use alloc::boxed::Box;
 use core::{cell::RefCell, mem};
 use defmt::{debug, error, info, Format};
 use embassy_executor::Spawner;
+use generic_array::GenericArray;
 use nrf_softdevice::ble::gatt_server::{get_sys_attrs, set_sys_attrs};
 use nrf_softdevice::ble::security::{IoCapabilities, SecurityHandler};
 use nrf_softdevice::ble::{
@@ -19,21 +19,22 @@ pub struct BondInfo {
 }
 
 impl storage::Entry for BondInfo {
-    const TAG: [u8; 4] = [0x68, 0xb6, 0xa9, 0xff];
-    const SIZE: usize = 120;
+    type Size = typenum::U120;
 
-    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    const TAG: [u8; 4] = [0x68, 0xb6, 0xa9, 0xff];
+
+    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
-        let bytes: &[u8; Self::SIZE] = bytes.try_into().unwrap();
-        let bond_info: BondInfo = unsafe { mem::transmute(*bytes) };
+        let bytes = bytes.into_array::<120>();
+        let bond_info: BondInfo = unsafe { mem::transmute(bytes) };
         Some(bond_info)
     }
 
-    fn to_bytes(&self) -> Box<[u8]> {
-        let bytes: [u8; Self::SIZE] = unsafe { mem::transmute(self.clone()) };
-        Box::new(bytes)
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
+        let bytes: [u8; 120] = unsafe { mem::transmute(self.clone()) };
+        GenericArray::from_array(bytes)
     }
 }
 

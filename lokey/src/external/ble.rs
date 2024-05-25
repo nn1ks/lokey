@@ -1,5 +1,6 @@
 use crate::internal;
-use alloc::{vec, vec::Vec};
+use defmt::error;
+use generic_array::GenericArray;
 
 pub struct ChannelConfig {
     pub name: &'static str,
@@ -31,26 +32,29 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    type Size = typenum::U1;
+
+    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
-        if bytes.len() == 1 {
-            match bytes[0] {
-                0 => Some(Self::Disconnect),
-                1 => Some(Self::Clear),
-                _ => None,
+        let bytes = bytes.into_array::<1>();
+        match bytes[0] {
+            0 => Some(Self::Disconnect),
+            1 => Some(Self::Clear),
+            v => {
+                error!("invalid byte {}", v);
+                None
             }
-        } else {
-            None
         }
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        match self {
-            Message::Disconnect => vec![0],
-            Message::Clear => vec![1],
-        }
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
+        let bytes = match self {
+            Message::Disconnect => [0],
+            Message::Clear => [1],
+        };
+        GenericArray::from_array(bytes)
     }
 }
 

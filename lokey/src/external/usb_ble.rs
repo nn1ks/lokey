@@ -1,12 +1,13 @@
 use crate::external::{self, ChannelImpl};
 use crate::{internal, mcu::Mcu};
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::boxed::Box;
 use core::{future::Future, pin::Pin};
 use defmt::{error, info, unwrap, Format};
 use embassy_executor::Spawner;
 use embassy_futures::select::{select, Either};
 use embassy_sync::signal::Signal;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use generic_array::GenericArray;
 
 static ACTIVE: Mutex<CriticalSectionRawMutex, ChannelSelection> = Mutex::new(ChannelSelection::Ble);
 static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
@@ -26,16 +27,13 @@ impl internal::MessageTag for Message {
 }
 
 impl internal::Message for Message {
-    fn from_bytes(bytes: &[u8]) -> Option<Self>
+    type Size = typenum::U1;
+
+    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
-        if bytes.len() != 1 {
-            error!(
-                "unexpected message length (expected 1 byte, found {})",
-                bytes.len()
-            );
-        }
+        let bytes = bytes.into_array::<1>();
         let channel_selection = match bytes[0] {
             0 => ChannelSelection::Usb,
             1 => ChannelSelection::Ble,
@@ -47,13 +45,14 @@ impl internal::Message for Message {
         Some(Self::SetActive(channel_selection))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        match self {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
+        let bytes = match self {
             Message::SetActive(v) => match v {
-                ChannelSelection::Usb => vec![0],
-                ChannelSelection::Ble => vec![1],
+                ChannelSelection::Usb => [0],
+                ChannelSelection::Ble => [1],
             },
-        }
+        };
+        GenericArray::from_array(bytes)
     }
 }
 
