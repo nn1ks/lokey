@@ -1,4 +1,4 @@
-use super::{ChannelImpl, Message, MessageTag};
+use super::{ChannelImpl, Message};
 use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
 use defmt::{error, unwrap};
@@ -60,7 +60,7 @@ impl<T: ChannelImpl> Channel<T> {
 }
 
 impl<T: ChannelImpl + ?Sized> Channel<T> {
-    pub async fn send<M: Message + MessageTag>(&self, message: M) {
+    pub async fn send<M: Message>(&self, message: M) {
         let message_tag = M::TAG;
         let message_bytes = message.to_bytes();
         let mut bytes = Vec::with_capacity(message_tag.len() + message_bytes.len());
@@ -70,7 +70,7 @@ impl<T: ChannelImpl + ?Sized> Channel<T> {
         self.publisher.publish(bytes).await;
     }
 
-    pub async fn receiver<M: Message + MessageTag>(&self) -> Receiver<M> {
+    pub async fn receiver<M: Message>(&self) -> Receiver<M> {
         let subscriber = unwrap!(INNER_CHANNEL.subscriber());
         Receiver {
             subscriber,
@@ -92,7 +92,7 @@ pub struct Receiver<M> {
     _phantom: PhantomData<M>,
 }
 
-impl<M: Message + MessageTag> Receiver<M> {
+impl<M: Message> Receiver<M> {
     pub async fn next(&mut self) -> M {
         loop {
             let message_bytes = self.subscriber.next_message_pure().await;

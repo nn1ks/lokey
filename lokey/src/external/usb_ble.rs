@@ -22,12 +22,10 @@ pub enum Message {
     SetActive(ChannelSelection),
 }
 
-impl internal::MessageTag for Message {
-    const TAG: [u8; 4] = [0x73, 0xe2, 0x8c, 0xcf];
-}
-
 impl internal::Message for Message {
     type Size = typenum::U1;
+
+    const TAG: [u8; 4] = [0x73, 0xe2, 0x8c, 0xcf];
 
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where

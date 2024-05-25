@@ -14,12 +14,10 @@ use generic_array::{ArrayLength, GenericArray};
 pub type DeviceChannel<D> =
     <<D as Device>::InternalChannelConfig as ChannelConfig<<D as Device>::Mcu>>::Channel;
 
-pub trait MessageTag {
-    const TAG: [u8; 4];
-}
-
 pub trait Message: Send + 'static {
     type Size: ArrayLength;
+
+    const TAG: [u8; 4];
 
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where

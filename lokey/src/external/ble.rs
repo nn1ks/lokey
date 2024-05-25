@@ -34,6 +34,8 @@ pub enum Message {
 impl internal::Message for Message {
     type Size = typenum::U1;
 
+    const TAG: [u8; 4] = [0x1a, 0xbe, 0x84, 0x10];
+
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
@@ -56,8 +58,4 @@ impl internal::Message for Message {
         };
         GenericArray::from_array(bytes)
     }
-}
-
-impl internal::MessageTag for Message {
-    const TAG: [u8; 4] = [0x1a, 0xbe, 0x84, 0x10];
 }

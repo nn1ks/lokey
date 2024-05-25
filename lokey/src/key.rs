@@ -250,12 +250,10 @@ pub enum Message {
     Release { key_index: u8 },
 }
 
-impl internal::MessageTag for Message {
-    const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
-}
-
 impl internal::Message for Message {
     type Size = typenum::U2;
+
+    const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
 
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where

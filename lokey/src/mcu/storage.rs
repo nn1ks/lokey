@@ -20,15 +20,11 @@ pub trait Entry {
     /// Deserializes the entry from the specified bytes.
     ///
     /// Returns [`None`] if the entry can not be deserialized.
-    ///
-    /// The size of the bytes slice argument is guaranteed to be [`Self::SIZE`].
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized;
 
     /// Serializes this entry to a byte array.
-    ///
-    /// The returned boxed array must have a length of [`Self::SIZE`].
     fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
 }
 
