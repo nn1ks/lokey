@@ -157,14 +157,12 @@ where
         let active = Arc::new(Mutex::new(ChannelSelection::Ble));
         let activation_request = Arc::new(Signal::new());
 
-        let dyn_usb_channel = Arc::clone(&usb_channel);
-        let dyn_usb_channel: Arc<dyn external::ChannelImpl> = dyn_usb_channel;
-        let dyn_ble_channel = Arc::clone(&ble_channel);
-        let dyn_ble_channel: Arc<dyn external::ChannelImpl> = dyn_ble_channel;
+        let usb_channel_clone = Arc::clone(&usb_channel);
+        let ble_channel_clone = Arc::clone(&ble_channel);
 
         unwrap!(spawner.spawn(handle_activation_request(
-            dyn_usb_channel,
-            dyn_ble_channel,
+            usb_channel_clone,
+            ble_channel_clone,
             Arc::clone(&active),
             Arc::clone(&activation_request)
         )));

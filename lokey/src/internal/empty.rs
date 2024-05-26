@@ -1,5 +1,4 @@
-use crate::internal;
-use crate::mcu::Mcu;
+use crate::{internal, mcu::Mcu};
 use alloc::{boxed::Box, vec::Vec};
 use core::{future::Future, pin::Pin};
 use embassy_executor::Spawner;

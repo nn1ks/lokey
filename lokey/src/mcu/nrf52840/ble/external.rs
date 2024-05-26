@@ -120,7 +120,13 @@ async fn task(
                 scan_data: &scan_data,
             };
             let new_connection =
-                unwrap!(peripheral::advertise_pairable(softdevice, adv, &config, bonder).await);
+                match peripheral::advertise_pairable(softdevice, adv, &config, bonder).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("Failed to advertise: {}", e);
+                        continue;
+                    }
+                };
             *connection.lock().await = Some(new_connection.clone());
 
             info!("Advertising done, found connection");
