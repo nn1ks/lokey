@@ -21,6 +21,10 @@ impl<M: RawMutex, T: Clone> PubSubChannel<M, T> {
         self.inner.lock(|inner| inner.borrow_mut().publish(message))
     }
 
+    pub fn publisher(&self) -> Publisher<'_, M, T> {
+        Publisher { channel: self }
+    }
+
     pub fn subscriber(&self) -> Subscriber<'_, M, T> {
         self.inner.lock(|inner| {
             let mut s = inner.borrow_mut();
@@ -185,6 +189,16 @@ impl<T: Clone> PubSubState<T> {
 enum WaitResult<T> {
     Lagged(u64),
     Message(T),
+}
+
+pub struct Publisher<'a, M: RawMutex, T: Clone> {
+    channel: &'a PubSubChannel<M, T>,
+}
+
+impl<'a, M: RawMutex, T: Clone> Publisher<'a, M, T> {
+    pub fn publish(&self, message: T) {
+        self.channel.publish(message);
+    }
 }
 
 pub struct Subscriber<'a, M: RawMutex, T: Clone> {
