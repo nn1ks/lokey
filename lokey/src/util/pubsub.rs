@@ -1,8 +1,10 @@
 use alloc::{collections::VecDeque, vec::Vec};
+use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
 use core::{cell::RefCell, future::poll_fn};
 use defmt::warn;
 use embassy_sync::blocking_mutex::{raw::RawMutex, Mutex};
+use futures_util::Stream;
 
 pub struct PubSubChannel<M: RawMutex, T: Clone> {
     inner: Mutex<M, RefCell<PubSubState<T>>>,
@@ -219,5 +221,23 @@ impl<'a, M: RawMutex, T: Clone> Subscriber<'a, M, T> {
 impl<'a, M: RawMutex, T: Clone> Drop for Subscriber<'a, M, T> {
     fn drop(&mut self) {
         self.channel.unregister_subscriber(self.next_message_id)
+    }
+}
+
+impl<'a, M: RawMutex, T: Clone> Stream for Subscriber<'a, M, T> {
+    type Item = T;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match self
+            .channel
+            .get_message_with_context(&mut self.next_message_id, Some(cx))
+        {
+            Poll::Ready(WaitResult::Message(message)) => Poll::Ready(Some(message)),
+            Poll::Ready(WaitResult::Lagged(_)) => {
+                cx.waker().wake_by_ref();
+                Poll::Pending
+            }
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
