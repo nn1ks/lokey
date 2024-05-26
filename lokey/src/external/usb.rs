@@ -1,14 +1,14 @@
 use crate::{external, mcu::Mcu};
 use alloc::sync::Arc;
+use core::pin::pin;
 use core::sync::atomic::{AtomicBool, Ordering};
 use defmt::{debug, info, unwrap, warn};
 use embassy_futures::join::join;
 use embassy_futures::select::{select, Either};
-use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver, signal::Signal,
-};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_usb::class::hid::{HidReaderWriter, ReportId, State};
 use embassy_usb::control::OutResponse;
+use futures_util::{Stream, StreamExt};
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 
 pub struct ChannelConfig {
@@ -76,10 +76,7 @@ impl<M: CreateDriver> Handler<M> {
         (handler, activation_request)
     }
 
-    pub async fn run<const N: usize>(
-        self,
-        receiver: Receiver<'_, CriticalSectionRawMutex, external::Message, N>,
-    ) -> ! {
+    pub async fn run<S: Stream<Item = external::Message>>(self, message_stream: S) -> ! {
         let driver = self.mcu.create_driver();
 
         let mut config = embassy_usb::Config::from(self.config);
@@ -148,18 +145,20 @@ impl<M: CreateDriver> Handler<M> {
                 leds: 0,
                 keycodes: [0; 6],
             };
+            let mut message_stream = pin!(message_stream);
             loop {
-                let message = receiver.receive().await;
-                if suspended.load(Ordering::Acquire) {
-                    info!("Triggering remote wakeup");
-                    remote_wakeup.signal(());
-                } else {
-                    let report_changed = message.update_keyboard_report(&mut report);
-                    if report_changed {
-                        match writer.write_serialize(&report).await {
-                            Ok(()) => {}
-                            Err(e) => warn!("Failed to send report: {:?}", e),
-                        };
+                if let Some(message) = message_stream.next().await {
+                    if suspended.load(Ordering::Acquire) {
+                        info!("Triggering remote wakeup");
+                        remote_wakeup.signal(());
+                    } else {
+                        let report_changed = message.update_keyboard_report(&mut report);
+                        if report_changed {
+                            match writer.write_serialize(&report).await {
+                                Ok(()) => {}
+                                Err(e) => warn!("Failed to send report: {:?}", e),
+                            };
+                        }
                     }
                 }
             }
