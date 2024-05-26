@@ -22,7 +22,7 @@ Lokey is an extensible keyboard firmware written in Rust.
 - Custom key behaviours
 - Custom keyboard features
 
-See [issues tagged as feature](https://github.com/nn1ks/lokey/issues?q=is%3Aissue+is%3Aopen+label%3Afeature) for planned and work-in-progress features.
+See [issues tagged as enhancement](https://github.com/nn1ks/lokey/labels/enhancement) for planned and work-in-progress features.
 
 #### Comparison to [ZMK](https://zmk.dev) and [QMK](https://qmk.fm)
 
