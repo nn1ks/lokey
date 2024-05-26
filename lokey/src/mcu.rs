@@ -6,17 +6,27 @@ pub mod storage;
 pub use nrf52840::Nrf52840;
 pub use storage::Storage;
 
+use crate::DynContext;
 use core::any::Any;
 use embassy_executor::Spawner;
 
 pub trait Mcu: Any {}
 
 pub trait McuInit {
+    /// The configuration for this MCU.
     type Config;
+
+    /// Creates the MCU.
+    ///
+    /// This function must be called only once for a MCU type.
     fn create(config: Self::Config, spawner: Spawner) -> Self
     where
         Self: Sized;
-    fn run(&'static self, spawner: Spawner);
+
+    /// Runs MCU specific tasks.
+    ///
+    /// This function must be called only once for a MCU type.
+    fn run(&'static self, context: DynContext);
 }
 
 pub trait HeapSize {
@@ -44,7 +54,7 @@ mod dummy {
             Self
         }
 
-        fn run(&'static self, _spawner: Spawner) {}
+        fn run(&'static self, _context: DynContext) {}
     }
 
     impl HeapSize for DummyMcu {

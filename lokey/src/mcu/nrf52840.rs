@@ -4,6 +4,7 @@ pub mod ble;
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, Storage};
+use crate::DynContext;
 use alloc::boxed::Box;
 use core::{cell::UnsafeCell, mem, ops::Range};
 use defmt::{info, unwrap};
@@ -86,8 +87,8 @@ impl McuInit for Nrf52840 {
         }
     }
 
-    fn run(&'static self, spawner: Spawner) {
-        unwrap!(spawner.spawn(softdevice_task(self)));
+    fn run(&'static self, context: DynContext) {
+        unwrap!(context.spawner.spawn(softdevice_task(self)));
     }
 }
 

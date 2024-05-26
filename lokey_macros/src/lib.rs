@@ -137,8 +137,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 ::lokey::external::Channel::new(channel_impl)
             };
 
-            ::lokey::mcu::McuInit::run(mcu, spawner);
-
             let context = ::lokey::Context {
                 spawner,
                 mcu,
@@ -146,6 +144,8 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 internal_channel,
                 layer_manager: ::lokey::LayerManager::new(),
             };
+
+            ::lokey::mcu::McuInit::run(mcu, context.as_dyn());
 
             #function
 
