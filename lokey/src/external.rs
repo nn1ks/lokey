@@ -145,10 +145,8 @@ impl<T: ChannelImpl> Channel<T> {
     /// Creates a new external channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
-    pub fn new(inner: T) -> Self {
-        Self {
-            inner: Box::leak(Box::new(inner)),
-        }
+    pub fn new(inner: &'static T) -> Self {
+        Self { inner }
     }
 
     /// Converts this channel into a dynamic one.

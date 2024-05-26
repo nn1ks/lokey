@@ -48,6 +48,7 @@ futures-util = { version = "0.3.30", default-features = false, features = ["allo
 generic-array = "1.0.0"
 lokey_macros = { path = "../lokey_macros" }
 nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice", rev = "3c53b8c454cc9331082053033485e713abcadbb5", features = ["critical-section-impl", "usable-from-interrupts", "defmt"], optional = true }
+once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
 sequential-storage = { version = "2.0.2", features = ["defmt-03"] }
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }
 static_cell = { version = "2.1.0", features = ["nightly"] }

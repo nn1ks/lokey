@@ -120,6 +120,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                     mcu,
                     spawner
                 ).await;
+                let channel_impl = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(channel_impl));
                 ::lokey::internal::Channel::new(channel_impl, spawner)
             };
 
@@ -132,6 +133,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                     spawner,
                     internal_channel.as_dyn()
                 ).await;
+                let channel_impl = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(channel_impl));
                 ::lokey::external::Channel::new(channel_impl)
             };
 

@@ -1,6 +1,7 @@
 use crate::external::{self, ChannelImpl};
 use crate::{internal, mcu::Mcu};
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 use core::{future::Future, pin::Pin};
 use defmt::{error, info, unwrap, Format};
 use embassy_executor::Spawner;
@@ -8,9 +9,6 @@ use embassy_futures::select::{select, Either};
 use embassy_sync::signal::Signal;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use generic_array::GenericArray;
-
-static ACTIVE: Mutex<CriticalSectionRawMutex, ChannelSelection> = Mutex::new(ChannelSelection::Ble);
-static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Format)]
 pub enum ChannelSelection {
@@ -54,15 +52,17 @@ impl internal::Message for Message {
     }
 }
 
-pub struct Channel<Usb: 'static, Ble: 'static> {
-    usb_channel: &'static Usb,
-    ble_channel: &'static Ble,
+pub struct Channel<Usb, Ble> {
+    usb_channel: Arc<Usb>,
+    ble_channel: Arc<Ble>,
+    active: Arc<Mutex<CriticalSectionRawMutex, ChannelSelection>>,
+    activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
 }
 
 impl<Usb: ChannelImpl, Ble: ChannelImpl> ChannelImpl for Channel<Usb, Ble> {
     fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async {
-            match *ACTIVE.lock().await {
+            match *self.active.lock().await {
                 ChannelSelection::Usb => self.usb_channel.send(message).await,
                 ChannelSelection::Ble => self.ble_channel.send(message).await,
             }
@@ -70,7 +70,7 @@ impl<Usb: ChannelImpl, Ble: ChannelImpl> ChannelImpl for Channel<Usb, Ble> {
     }
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async { ACTIVATION_REQUEST.wait().await })
+        Box::pin(async { self.activation_request.wait().await })
     }
 }
 
@@ -143,23 +143,38 @@ where
         spawner: Spawner,
         internal_channel: internal::DynChannel,
     ) -> Self::Channel {
-        let usb_channel = Box::leak(Box::new(
+        let usb_channel = Arc::new(
             self.to_usb_config()
                 .init(mcu, spawner, internal_channel)
                 .await,
-        ));
-        let ble_channel = Box::leak(Box::new(
+        );
+        let ble_channel = Arc::new(
             self.to_ble_config()
                 .init(mcu, spawner, internal_channel)
                 .await,
-        ));
+        );
 
-        unwrap!(spawner.spawn(handle_activation_request(usb_channel, ble_channel)));
+        let active = Arc::new(Mutex::new(ChannelSelection::Ble));
+        let activation_request = Arc::new(Signal::new());
+
+        let dyn_usb_channel = Arc::clone(&usb_channel);
+        let dyn_usb_channel: Arc<dyn external::ChannelImpl> = dyn_usb_channel;
+        let dyn_ble_channel = Arc::clone(&ble_channel);
+        let dyn_ble_channel: Arc<dyn external::ChannelImpl> = dyn_ble_channel;
+
+        unwrap!(spawner.spawn(handle_activation_request(
+            dyn_usb_channel,
+            dyn_ble_channel,
+            Arc::clone(&active),
+            Arc::clone(&activation_request)
+        )));
 
         #[embassy_executor::task]
         async fn handle_activation_request(
-            usb_channel: &'static dyn ChannelImpl,
-            ble_channel: &'static dyn ChannelImpl,
+            usb_channel: Arc<dyn ChannelImpl>,
+            ble_channel: Arc<dyn ChannelImpl>,
+            active: Arc<Mutex<CriticalSectionRawMutex, ChannelSelection>>,
+            activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
         ) {
             loop {
                 let future1 = usb_channel.wait_for_activation_request();
@@ -168,22 +183,28 @@ where
                     Either::First(()) => ChannelSelection::Usb,
                     Either::Second(()) => ChannelSelection::Ble,
                 };
-                info!("setting active channel to {}", channel_selection);
-                *ACTIVE.lock().await = channel_selection;
-                ACTIVATION_REQUEST.signal(());
+                info!("Setting active channel to {}", channel_selection);
+                *active.lock().await = channel_selection;
+                activation_request.signal(());
             }
         }
 
-        unwrap!(spawner.spawn(handle_internal_message(internal_channel)));
+        unwrap!(spawner.spawn(handle_internal_message(
+            internal_channel,
+            Arc::clone(&active)
+        )));
 
         #[embassy_executor::task]
-        async fn handle_internal_message(internal_channel: internal::DynChannel) {
+        async fn handle_internal_message(
+            internal_channel: internal::DynChannel,
+            active: Arc<Mutex<CriticalSectionRawMutex, ChannelSelection>>,
+        ) {
             let mut receiver = internal_channel.receiver::<Message>().await;
             loop {
                 let message = receiver.next().await;
                 match message {
                     Message::SetActive(channel_selection) => {
-                        *ACTIVE.lock().await = channel_selection;
+                        *active.lock().await = channel_selection;
                     }
                 }
             }
@@ -192,6 +213,8 @@ where
         Channel {
             usb_channel,
             ble_channel,
+            active,
+            activation_request,
         }
     }
 }

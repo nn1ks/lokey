@@ -1,6 +1,6 @@
 use super::{ChannelImpl, Message};
 use crate::util::pubsub::{PubSubChannel, Subscriber};
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use defmt::{error, unwrap};
 use embassy_executor::Spawner;
@@ -24,9 +24,7 @@ impl<T: ChannelImpl> Channel<T> {
     /// Creates a new internal channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
-    pub fn new(inner: T, spawner: Spawner) -> Self {
-        let inner = Box::leak(Box::new(inner));
-
+    pub fn new(inner: &'static T, spawner: Spawner) -> Self {
         #[embassy_executor::task]
         async fn task(inner: &'static dyn ChannelImpl) {
             loop {

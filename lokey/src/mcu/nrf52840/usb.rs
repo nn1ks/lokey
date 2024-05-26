@@ -9,6 +9,7 @@ use embassy_nrf::interrupt::{InterruptExt, Priority};
 use embassy_nrf::usb::vbus_detect::{SoftwareVbusDetect, VbusDetect};
 use embassy_nrf::{bind_interrupts, peripherals::USBD};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use once_cell::sync::OnceCell;
 
 struct SoftwareVbusDetectWrapper(SoftwareVbusDetect);
 
@@ -52,10 +53,10 @@ impl usb::CreateDriver for Nrf52840 {
 
 static CHANNEL: embassy_sync::channel::Channel<CriticalSectionRawMutex, external::Message, 8> =
     embassy_sync::channel::Channel::new();
+static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
 
-pub struct ExternalChannel {
-    activation_request: usb::ActivationRequest,
-}
+#[non_exhaustive]
+pub struct ExternalChannel {}
 
 impl external::ChannelImpl for ExternalChannel {
     fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
@@ -66,7 +67,9 @@ impl external::ChannelImpl for ExternalChannel {
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async {
-            self.activation_request.wait().await;
+            if let Some(activation_request) = ACTIVATION_REQUEST.get() {
+                activation_request.wait().await;
+            }
         })
     }
 }
@@ -80,9 +83,15 @@ impl external::ChannelConfig<Nrf52840> for usb::ChannelConfig {
         spawner: Spawner,
         _internal_channel: internal::DynChannel,
     ) -> Self::Channel {
+        if ACTIVATION_REQUEST.get().is_some() {
+            // Channel was already intialized
+            return ExternalChannel {};
+        }
+
         let (handler, activation_request) = usb::Handler::new(self, mcu);
         unwrap!(spawner.spawn(task(handler)));
-        ExternalChannel { activation_request }
+        let _ = ACTIVATION_REQUEST.set(activation_request);
+        ExternalChannel {}
     }
 }
 

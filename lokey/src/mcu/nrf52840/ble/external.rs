@@ -4,6 +4,7 @@ mod server;
 use crate::{external, external::ble::Message, internal, mcu::Nrf52840, mcu::Storage};
 use alloc::boxed::Box;
 use bonder::Bonder;
+use core::sync::atomic::{AtomicBool, Ordering};
 use core::{future::Future, pin::Pin};
 use defmt::{debug, error, info, unwrap, warn};
 use embassy_executor::Spawner;
@@ -23,9 +24,8 @@ use usbd_hid::descriptor::KeyboardReport;
 static CHANNEL: embassy_sync::channel::Channel<CriticalSectionRawMutex, external::Message, 8> =
     embassy_sync::channel::Channel::new();
 
-pub struct Channel {
-    _private: (),
-}
+#[non_exhaustive]
+pub struct Channel {}
 
 impl external::ChannelImpl for Channel {
     fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
@@ -43,6 +43,12 @@ impl external::ChannelConfig<Nrf52840> for external::ble::ChannelConfig {
         spawner: Spawner,
         internal_channel: internal::DynChannel,
     ) -> Self::Channel {
+        static INITIALIZED: AtomicBool = AtomicBool::new(false);
+
+        if INITIALIZED.load(Ordering::SeqCst) {
+            return Channel {};
+        }
+
         let name = self.name;
         let softdevice: &'static mut Softdevice = unsafe { &mut *mcu.softdevice.get() };
         let server = unwrap!(Server::new(softdevice, self));
@@ -55,7 +61,8 @@ impl external::ChannelConfig<Nrf52840> for external::ble::ChannelConfig {
             internal_channel,
             spawner
         )));
-        Channel { _private: () }
+        INITIALIZED.store(true, Ordering::SeqCst);
+        Channel {}
     }
 }
 
