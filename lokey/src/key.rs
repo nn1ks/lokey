@@ -245,13 +245,13 @@ pub trait Scanner {
 #[derive(defmt::Format)]
 pub enum Message {
     /// The key at the specified index was pressed.
-    Press { key_index: u8 },
+    Press { key_index: u16 },
     /// The key at the specified index was released.
-    Release { key_index: u8 },
+    Release { key_index: u16 },
 }
 
 impl internal::Message for Message {
-    type Size = typenum::U2;
+    type Size = typenum::U3;
 
     const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
 
@@ -259,13 +259,13 @@ impl internal::Message for Message {
     where
         Self: Sized,
     {
-        let bytes = bytes.into_array::<2>();
+        let bytes = bytes.into_array::<3>();
         match bytes[0] {
             0 => Some(Message::Press {
-                key_index: bytes[1],
+                key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
             }),
             1 => Some(Message::Release {
-                key_index: bytes[1],
+                key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
             }),
             v => {
                 error!("unknown tag byte: {}", v);
@@ -275,9 +275,16 @@ impl internal::Message for Message {
     }
 
     fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        match self {
-            Message::Press { key_index } => GenericArray::from_array([0, *key_index]),
-            Message::Release { key_index } => GenericArray::from_array([1, *key_index]),
-        }
+        let array = match self {
+            Message::Press { key_index } => {
+                let bytes = key_index.to_be_bytes();
+                [0, bytes[0], bytes[1]]
+            }
+            Message::Release { key_index } => {
+                let bytes = key_index.to_be_bytes();
+                [1, bytes[0], bytes[1]]
+            }
+        };
+        GenericArray::from_array(array)
     }
 }
