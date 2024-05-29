@@ -54,7 +54,7 @@ pub struct ActivationRequest {
 
 impl ActivationRequest {
     pub async fn wait(&self) {
-        self.signal.wait().await
+        self.signal.wait().await;
     }
 }
 
@@ -228,7 +228,7 @@ impl embassy_usb::Handler for DeviceHandler {
         if configured {
             debug!(
                 "USB device configured, it may now draw up to the configured current limit from Vbus."
-            )
+            );
         } else {
             debug!("USB device is no longer configured, the Vbus current limit is 100mA.");
         }

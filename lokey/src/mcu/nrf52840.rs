@@ -12,7 +12,7 @@ use embassy_executor::Spawner;
 use embassy_nrf::interrupt::Priority;
 use nrf_softdevice::{raw, Flash, Softdevice};
 
-const FLASH_RANGE: Range<u32> = 0x80000..0x100000;
+const FLASH_RANGE: Range<u32> = 0x8_0000..0x10_0000;
 
 pub struct Config {
     pub name: &'static str,

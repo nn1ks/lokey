@@ -49,8 +49,8 @@ struct Peer {
 impl Default for Peer {
     fn default() -> Self {
         Self {
-            master_id: Default::default(),
-            key: Default::default(),
+            master_id: MasterId::default(),
+            key: EncryptionInfo::default(),
             peer_id: IdentityKey {
                 addr: Address::new(AddressType::Public, [0; 6]),
                 irk: IdentityResolutionKey::default(),

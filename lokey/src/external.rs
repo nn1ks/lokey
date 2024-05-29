@@ -51,14 +51,14 @@ impl Key {
 
     pub fn to_hid_report_byte(&self) -> HidReportByte {
         match self {
-            Key::LControl => HidReportByte::Modifier(0b00000001),
-            Key::RControl => HidReportByte::Modifier(0b00010000),
-            Key::LShift => HidReportByte::Modifier(0b00000010),
-            Key::RShift => HidReportByte::Modifier(0b00100000),
-            Key::LAlt => HidReportByte::Modifier(0b00000100),
-            Key::RAlt => HidReportByte::Modifier(0b01000000),
-            Key::LGui => HidReportByte::Modifier(0b00001000),
-            Key::RGui => HidReportByte::Modifier(0b10000000),
+            Key::LControl => HidReportByte::Modifier(0b0000_0001),
+            Key::RControl => HidReportByte::Modifier(0b0001_0000),
+            Key::LShift => HidReportByte::Modifier(0b0000_0010),
+            Key::RShift => HidReportByte::Modifier(0b0010_0000),
+            Key::LAlt => HidReportByte::Modifier(0b0000_0100),
+            Key::RAlt => HidReportByte::Modifier(0b0100_0000),
+            Key::LGui => HidReportByte::Modifier(0b0000_1000),
+            Key::RGui => HidReportByte::Modifier(0b1000_0000),
             Key::A => HidReportByte::Key(0x04),
             Key::B => HidReportByte::Key(0x05),
             Key::C => HidReportByte::Key(0x06),

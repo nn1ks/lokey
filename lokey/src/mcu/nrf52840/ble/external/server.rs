@@ -48,7 +48,7 @@ impl DeviceInformationService {
     fn new(
         softdevice: &mut Softdevice,
         pnp_id: &PnPID,
-        info: DeviceInformation,
+        info: &DeviceInformation,
     ) -> Result<Self, RegisterError> {
         let mut service_builder = ServiceBuilder::new(softdevice, DEVICE_INFORMATION)?;
 
@@ -154,7 +154,7 @@ pub struct Server {
 impl Server {
     pub fn new(
         softdevice: &mut Softdevice,
-        config: external::ble::ChannelConfig,
+        config: &external::ble::ChannelConfig,
     ) -> Result<Self, RegisterError> {
         let dis = DeviceInformationService::new(
             softdevice,
@@ -164,7 +164,7 @@ impl Server {
                 product_id: config.product_id,
                 product_version: config.product_version,
             },
-            DeviceInformation {
+            &DeviceInformation {
                 manufacturer_name: config.manufacturer,
                 model_number: config.model_number,
                 serial_number: config.serial_number,

@@ -18,7 +18,7 @@ impl<M: RawMutex, T: Clone> PubSubChannel<M, T> {
     }
 
     pub fn publish(&self, message: T) {
-        self.inner.lock(|inner| inner.borrow_mut().publish(message))
+        self.inner.lock(|inner| inner.borrow_mut().publish(message));
     }
 
     pub fn publisher(&self) -> Publisher<'_, M, T> {
@@ -96,8 +96,8 @@ impl<M: RawMutex, T: Clone> PubSubChannel<M, T> {
     fn unregister_subscriber(&self, subscriber_next_message_id: u64) {
         self.inner.lock(|s| {
             let mut s = s.borrow_mut();
-            s.unregister_subscriber(subscriber_next_message_id)
-        })
+            s.unregister_subscriber(subscriber_next_message_id);
+        });
     }
 }
 
@@ -234,7 +234,7 @@ impl<'a, M: RawMutex, T: Clone> Subscriber<'a, M, T> {
 
 impl<'a, M: RawMutex, T: Clone> Drop for Subscriber<'a, M, T> {
     fn drop(&mut self) {
-        self.channel.unregister_subscriber(self.next_message_id)
+        self.channel.unregister_subscriber(self.next_message_id);
     }
 }
 

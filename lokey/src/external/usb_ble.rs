@@ -197,7 +197,7 @@ where
             internal_channel: internal::DynChannel,
             active: Arc<Mutex<CriticalSectionRawMutex, ChannelSelection>>,
         ) {
-            let mut receiver = internal_channel.receiver::<Message>().await;
+            let mut receiver = internal_channel.receiver::<Message>();
             loop {
                 let message = receiver.next().await;
                 match message {

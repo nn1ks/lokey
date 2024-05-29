@@ -150,7 +150,7 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
             actions: &'static [&'static dyn DynAction],
             context: DynContext,
         ) {
-            let mut receiver = context.internal_channel.receiver::<Message>().await;
+            let mut receiver = context.internal_channel.receiver::<Message>();
             loop {
                 let message = receiver.next().await;
                 debug!("Received keys message: {}", message);
@@ -190,7 +190,7 @@ impl<T: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch> InputSwitch f
         Box::pin(async {
             switch_hal::WaitableInputSwitch::wait_for_active(self)
                 .await
-                .unwrap_or_else(|_| panic!("failed to get active status of pin"))
+                .unwrap_or_else(|_| panic!("failed to get active status of pin"));
         })
     }
 
@@ -198,7 +198,7 @@ impl<T: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch> InputSwitch f
         Box::pin(async {
             switch_hal::WaitableInputSwitch::wait_for_inactive(self)
                 .await
-                .unwrap_or_else(|_| panic!("failed to get active status of pin"))
+                .unwrap_or_else(|_| panic!("failed to get active status of pin"));
         })
     }
 
@@ -206,7 +206,7 @@ impl<T: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch> InputSwitch f
         Box::pin(async {
             switch_hal::WaitableInputSwitch::wait_for_change(self)
                 .await
-                .unwrap_or_else(|_| panic!("failed to get active status of pin"))
+                .unwrap_or_else(|_| panic!("failed to get active status of pin"));
         })
     }
 }
@@ -219,12 +219,12 @@ pub trait OutputSwitch {
 impl<T: switch_hal::OutputSwitch> OutputSwitch for T {
     fn set_active(&mut self) {
         switch_hal::OutputSwitch::on(self)
-            .unwrap_or_else(|_| panic!("failed to set active status of pin"))
+            .unwrap_or_else(|_| panic!("failed to set active status of pin"));
     }
 
     fn set_inactive(&mut self) {
         switch_hal::OutputSwitch::off(self)
-            .unwrap_or_else(|_| panic!("failed to set active status of pin"))
+            .unwrap_or_else(|_| panic!("failed to set active status of pin"));
     }
 }
 

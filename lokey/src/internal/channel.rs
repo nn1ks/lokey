@@ -58,7 +58,7 @@ impl<T: ChannelImpl + ?Sized> Channel<T> {
         INNER_CHANNEL.publish(bytes);
     }
 
-    pub async fn receiver<M: Message>(&self) -> Receiver<M> {
+    pub fn receiver<M: Message>(&self) -> Receiver<M> {
         Receiver {
             subscriber: INNER_CHANNEL.subscriber(),
             _phantom: PhantomData,

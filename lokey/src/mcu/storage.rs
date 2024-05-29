@@ -100,13 +100,13 @@ impl<F: MultiwriteNorFlash> Storage<F> {
         }
     }
 
-    fn create_buffer<E: Entry>(&self) -> Vec<u8> {
+    fn create_buffer<E: Entry>() -> Vec<u8> {
         let buf_len = round_up_to_word_size::<F>(E::Size::USIZE + ENTRY_TAG_SIZE);
         vec![0; buf_len]
     }
 
     pub async fn remove<E: Entry>(&self) -> Result<(), Error<F::Error>> {
-        let mut buf = self.create_buffer::<E>();
+        let mut buf = Self::create_buffer::<E>();
         remove_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
@@ -119,7 +119,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
     }
 
     pub async fn store<E: Entry>(&self, entry: &E) -> Result<(), Error<F::Error>> {
-        let mut buf = self.create_buffer::<E>();
+        let mut buf = Self::create_buffer::<E>();
         let value_bytes = entry.to_bytes();
         store_item(
             &mut *self.flash.lock().await,
@@ -134,7 +134,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
     }
 
     pub async fn fetch<E: Entry>(&self) -> Result<Option<E>, Error<F::Error>> {
-        let mut buf = self.create_buffer::<E>();
+        let mut buf = Self::create_buffer::<E>();
         let data: Option<&[u8]> = fetch_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),

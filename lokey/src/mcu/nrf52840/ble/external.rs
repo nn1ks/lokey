@@ -51,7 +51,7 @@ impl external::ChannelConfig<Nrf52840> for external::ble::ChannelConfig {
 
         let name = self.name;
         let softdevice: &'static mut Softdevice = unsafe { &mut *mcu.softdevice.get() };
-        let server = unwrap!(Server::new(softdevice, self));
+        let server = unwrap!(Server::new(softdevice, &self));
         let softdevice: &'static Softdevice = softdevice;
         unwrap!(spawner.spawn(task(
             server,
@@ -197,7 +197,7 @@ async fn task(
         }
     };
     let handle_internal_messages = async {
-        let mut receiver = internal_channel.receiver::<Message>().await;
+        let mut receiver = internal_channel.receiver::<Message>();
         loop {
             let message = receiver.next().await;
             match message {

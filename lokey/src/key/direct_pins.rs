@@ -96,7 +96,7 @@ impl<
                             active = true;
                             wait_duration
                         };
-                        let key_index = i as u8;
+                        let key_index = u8::try_from(i).expect("too many keys");
                         if active {
                             internal_channel.send(Message::Press { key_index }).await;
                         } else {
