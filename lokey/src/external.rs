@@ -171,6 +171,13 @@ impl<T: ChannelImpl + ?Sized> Channel<T> {
     }
 }
 
+impl Channel<dyn ChannelImpl> {
+    pub fn downcast<T>(self) -> Option<Channel<T>> {
+        let inner: &dyn Any = self.inner;
+        inner.downcast_ref::<T>().map(|inner| Channel { inner })
+    }
+}
+
 impl<T: ?Sized> Clone for Channel<T> {
     fn clone(&self) -> Self {
         *self
