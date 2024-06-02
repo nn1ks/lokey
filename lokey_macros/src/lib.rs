@@ -76,19 +76,19 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #[::lokey::embassy_executor::main]
         async fn main(spawner: ::lokey::embassy_executor::Spawner) {
-            fn modify_mcu_config(
+            fn __modify_mcu_config(
                 __config: &mut <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::Config
             ) {
                 #modify_mcu_config
             }
 
-            fn modify_internal_channel_config(
+            fn __modify_internal_channel_config(
                 __config: &mut <#device_type_path as ::lokey::Device>::InternalChannelConfig
             ) {
                 #modify_internal_channel_config
             }
 
-            fn modify_external_channel_config(
+            fn __modify_external_channel_config(
                 __config: &mut <#device_type_path as ::lokey::Device>::ExternalChannelConfig
             ) {
                 #modify_external_channel_config
@@ -104,7 +104,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             // Create MCU
             let mut mcu_config = <#device_type_path as ::lokey::Device>::mcu_config();
-            modify_mcu_config(&mut mcu_config);
+            __modify_mcu_config(&mut mcu_config);
             let mcu = <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(
                 mcu_config,
                 spawner
@@ -114,7 +114,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             // Create channels
             let internal_channel = {
                 let mut config = <#device_type_path as ::lokey::Device>::internal_channel_config();
-                modify_internal_channel_config(&mut config);
+                __modify_internal_channel_config(&mut config);
                 let channel_impl = ::lokey::internal::ChannelConfig::init(
                     config,
                     mcu,
@@ -126,7 +126,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             let external_channel = {
                 let mut config = <#device_type_path as ::lokey::Device>::external_channel_config();
-                modify_external_channel_config(&mut config);
+                __modify_external_channel_config(&mut config);
                 let channel_impl = ::lokey::external::ChannelConfig::init(
                     config,
                     mcu,
