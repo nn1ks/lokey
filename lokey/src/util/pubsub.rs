@@ -201,6 +201,14 @@ impl<'a, M: RawMutex, T: Clone> Publisher<'a, M, T> {
     }
 }
 
+impl<'a, M: RawMutex, T: Clone> Copy for Publisher<'a, M, T> {}
+
+impl<'a, M: RawMutex, T: Clone> Clone for Publisher<'a, M, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 pub struct Subscriber<'a, M: RawMutex, T: Clone> {
     channel: &'a PubSubChannel<M, T>,
     next_message_id: u64,
@@ -252,6 +260,15 @@ impl<'a, M: RawMutex, T: Clone> Stream for Subscriber<'a, M, T> {
                 Poll::Pending
             }
             Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl<'a, M: RawMutex, T: Clone> Clone for Subscriber<'a, M, T> {
+    fn clone(&self) -> Self {
+        Self {
+            channel: self.channel,
+            next_message_id: self.next_message_id,
         }
     }
 }

@@ -83,6 +83,14 @@ impl<'a, M: RawMutex, T> Sender<'a, M, T> {
     }
 }
 
+impl<'a, M: RawMutex, T> Copy for Sender<'a, M, T> {}
+
+impl<'a, M: RawMutex, T> Clone for Sender<'a, M, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 pub struct Receiver<'a, M, T> {
     channel: &'a Channel<M, T>,
 }
@@ -98,5 +106,13 @@ impl<'a, M: RawMutex, T> Stream for Receiver<'a, M, T> {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.channel.poll_receive(cx).map(Some)
+    }
+}
+
+impl<'a, M: RawMutex, T> Copy for Receiver<'a, M, T> {}
+
+impl<'a, M: RawMutex, T> Clone for Receiver<'a, M, T> {
+    fn clone(&self) -> Self {
+        *self
     }
 }
