@@ -32,6 +32,6 @@ pub trait ChannelConfig<M: Mcu> {
 }
 
 pub trait ChannelImpl: Any {
-    fn send(&self, message_bytes: &[u8]) -> Pin<Box<dyn Future<Output = ()>>>;
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>>>>;
+    fn send(&self, message_bytes: &[u8]) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>>;
 }

@@ -16,11 +16,11 @@ impl<M: Mcu> internal::ChannelConfig<M> for ChannelConfig {
 pub struct Channel;
 
 impl internal::ChannelImpl for Channel {
-    fn send(&self, _message_bytes: &[u8]) -> Pin<Box<dyn Future<Output = ()>>> {
+    fn send(&self, _message_bytes: &[u8]) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async {})
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>>>> {
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {
         Box::pin(async { core::future::pending().await })
     }
 }

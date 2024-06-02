@@ -1,3 +1,3 @@
 pub struct ChannelConfig {
-    // TODO
+    pub central: bool,
 }
