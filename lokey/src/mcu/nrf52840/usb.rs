@@ -1,6 +1,6 @@
 use super::Nrf52840;
 use crate::external::{self, usb};
-use crate::internal;
+use crate::{internal, util};
 use alloc::boxed::Box;
 use core::task::{Context, Poll};
 use core::{future::Future, pin::Pin};
@@ -53,18 +53,16 @@ impl usb::CreateDriver for Nrf52840 {
     }
 }
 
-static CHANNEL: embassy_sync::channel::Channel<CriticalSectionRawMutex, external::Message, 8> =
-    embassy_sync::channel::Channel::new();
+static CHANNEL: util::channel::Channel<CriticalSectionRawMutex, external::Message> =
+    util::channel::Channel::new();
 static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
 
 #[non_exhaustive]
 pub struct ExternalChannel {}
 
 impl external::ChannelImpl for ExternalChannel {
-    fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            CHANNEL.send(message).await;
-        })
+    fn send(&self, message: external::Message) {
+        CHANNEL.send(message);
     }
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
@@ -101,17 +99,15 @@ impl external::ChannelConfig<Nrf52840> for usb::ChannelConfig {
 async fn task(handler: usb::Handler<Nrf52840>) {
     // The `embassy_sync::channel::Receiver` type doesn't implement `Stream` so we have to wrap the
     // type and implement it ourselves.
-    struct ReceiverStream(
-        embassy_sync::channel::Receiver<'static, CriticalSectionRawMutex, external::Message, 8>,
-    );
+    struct ReceiverStream;
 
     impl Stream for ReceiverStream {
         type Item = external::Message;
 
         fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-            self.0.poll_receive(cx).map(Some)
+            CHANNEL.poll_receive(cx).map(Some)
         }
     }
 
-    handler.run(ReceiverStream(CHANNEL.receiver())).await
+    handler.run(ReceiverStream).await
 }

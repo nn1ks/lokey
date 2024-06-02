@@ -100,9 +100,9 @@ impl<
                         };
                         let key_index = u16::try_from(i).expect("too many keys");
                         if active {
-                            internal_channel.send(Message::Press { key_index }).await;
+                            internal_channel.send(Message::Press { key_index });
                         } else {
-                            internal_channel.send(Message::Release { key_index }).await;
+                            internal_channel.send(Message::Release { key_index });
                         }
                         Timer::after(wait_duration).await;
                     }

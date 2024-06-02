@@ -48,13 +48,13 @@ impl<T: ChannelImpl> Channel<T> {
 }
 
 impl<T: ChannelImpl + ?Sized> Channel<T> {
-    pub async fn send<M: Message>(&self, message: M) {
+    pub fn send<M: Message>(&self, message: M) {
         let message_tag = M::TAG;
         let message_bytes = message.to_bytes();
         let mut bytes = Vec::with_capacity(message_tag.len() + message_bytes.len());
         bytes.extend(message_tag);
         bytes.extend(message_bytes);
-        self.inner.send(&bytes).await;
+        self.inner.send(&bytes);
         INNER_CHANNEL.publish(bytes);
     }
 

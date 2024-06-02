@@ -61,10 +61,9 @@ static RECV_CHANNEL: util::channel::Channel<CriticalSectionRawMutex, Message> =
 pub struct Channel {}
 
 impl internal::ChannelImpl for Channel {
-    fn send(&self, message_bytes: &[u8]) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+    fn send(&self, message_bytes: &[u8]) {
         let message = Message(Vec::from(message_bytes));
         SEND_CHANNEL.send(message);
-        Box::pin(async {})
     }
 
     fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {

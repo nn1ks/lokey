@@ -48,6 +48,10 @@ impl<M: RawMutex, T> Channel<M, T> {
         })
     }
 
+    pub fn poll_receive(&self, cx: &Context) -> Poll<T> {
+        self.inner.lock(|state| state.borrow_mut().poll_receive(cx))
+    }
+
     pub async fn receive(&self) -> T {
         poll_fn(|cx| self.inner.lock(|state| state.borrow_mut().poll_receive(cx))).await
     }

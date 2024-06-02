@@ -127,7 +127,7 @@ pub trait ChannelConfig<M: Mcu> {
 }
 
 pub trait ChannelImpl: Any {
-    fn send(&self, message: Message) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+    fn send(&self, message: Message);
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(core::future::pending())
     }
@@ -159,9 +159,9 @@ impl<T: ChannelImpl> Channel<T> {
 }
 
 impl<T: ChannelImpl + ?Sized> Channel<T> {
-    pub async fn send(&self, message: Message) {
+    pub fn send(&self, message: Message) {
         INNER_CHANNEL.publish(message.clone());
-        self.inner.send(message).await;
+        self.inner.send(message);
     }
 
     pub fn receiver(&self) -> Receiver {

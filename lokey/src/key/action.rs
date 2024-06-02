@@ -48,15 +48,13 @@ impl Action for KeyCode {
     async fn on_press(&'static self, context: DynContext) {
         context
             .external_channel
-            .send(external::Message::KeyPress(self.key))
-            .await;
+            .send(external::Message::KeyPress(self.key));
     }
 
     async fn on_release(&'static self, context: DynContext) {
         context
             .external_channel
-            .send(external::Message::KeyRelease(self.key))
-            .await;
+            .send(external::Message::KeyRelease(self.key));
     }
 }
 
@@ -358,7 +356,7 @@ mod ble {
 
     impl Action for BleDisconnect {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::Disconnect).await;
+            context.internal_channel.send(Message::Disconnect);
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -368,7 +366,7 @@ mod ble {
 
     impl Action for BleClear {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::Clear).await;
+            context.internal_channel.send(Message::Clear);
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -393,8 +391,7 @@ mod usb_ble {
         async fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SetActive(ChannelSelection::Usb))
-                .await;
+                .send(Message::SetActive(ChannelSelection::Usb));
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -410,8 +407,7 @@ mod usb_ble {
         async fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SetActive(ChannelSelection::Ble))
-                .await;
+                .send(Message::SetActive(ChannelSelection::Ble));
         }
 
         async fn on_release(&'static self, _context: DynContext) {}

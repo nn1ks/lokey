@@ -1,11 +1,10 @@
 mod bonder;
 mod server;
 
-use crate::{external, external::ble::Message, internal, mcu::Nrf52840, mcu::Storage};
-use alloc::boxed::Box;
+use crate::mcu::{Nrf52840, Storage};
+use crate::{external, external::ble::Message, internal, util};
 use bonder::Bonder;
 use core::sync::atomic::{AtomicBool, Ordering};
-use core::{future::Future, pin::Pin};
 use defmt::{debug, error, info, unwrap, warn};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
@@ -21,17 +20,15 @@ use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
 use static_cell::StaticCell;
 use usbd_hid::descriptor::KeyboardReport;
 
-static CHANNEL: embassy_sync::channel::Channel<CriticalSectionRawMutex, external::Message, 8> =
-    embassy_sync::channel::Channel::new();
+static CHANNEL: util::channel::Channel<CriticalSectionRawMutex, external::Message> =
+    util::channel::Channel::new();
 
 #[non_exhaustive]
 pub struct Channel {}
 
 impl external::ChannelImpl for Channel {
-    fn send(&self, message: external::Message) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            CHANNEL.send(message).await;
-        })
+    fn send(&self, message: external::Message) {
+        CHANNEL.send(message);
     }
 }
 
