@@ -3,8 +3,9 @@ mod server;
 
 use crate::mcu::{Nrf52840, Storage};
 use crate::{external, external::ble::Message, internal, util};
+use alloc::boxed::Box;
 use bonder::Bonder;
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::Ordering;
 use defmt::{debug, error, info, unwrap, warn};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
@@ -16,8 +17,8 @@ use nrf_softdevice::ble::advertisement_builder::{
 };
 use nrf_softdevice::ble::{gatt_server, peripheral};
 use nrf_softdevice::{Flash, Softdevice};
+use portable_atomic::AtomicBool;
 use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
-use static_cell::StaticCell;
 use usbd_hid::descriptor::KeyboardReport;
 
 static CHANNEL: util::channel::Channel<CriticalSectionRawMutex, external::Message> =
@@ -105,8 +106,7 @@ async fn task(
         }
     };
 
-    static BONDER: StaticCell<Bonder> = StaticCell::new();
-    let bonder = BONDER.init(Bonder::new(bond_info, storage, spawner));
+    let bonder = Box::leak(Box::new(Bonder::new(bond_info, storage, spawner)));
 
     let connection = Mutex::<CriticalSectionRawMutex, _>::new(None);
     let run_ble_server = async {

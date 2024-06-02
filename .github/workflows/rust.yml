@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mcu: [no_mcu, nrf52840]
+        mcu: [no_mcu, nrf52840, rp2040]
         features: ["", "usb", "ble", "usb ble"]
         include:
           - mcu: no_mcu
@@ -25,6 +25,9 @@ jobs:
           - mcu: nrf52840
             target: thumbv7em-none-eabihf
             mcu_features: "nrf52840"
+          - mcu: rp2040
+            target: thumbv6m-none-eabi
+            mcu_features: "rp2040"
         exclude:
           - mcu: nrf52840
             features: ""
@@ -47,11 +50,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mcu: [nrf52840]
+        mcu: [nrf52840, rp2040]
         include:
           - mcu: nrf52840
             target: thumbv7em-none-eabihf
             mcu_features: "nrf52840"
+          - mcu: rp2040
+            target: thumbv6m-none-eabi
+            mcu_features: "rp2040"
     steps:
     - uses: actions/checkout@v4
     - name: Run clippy

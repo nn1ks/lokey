@@ -1,7 +1,6 @@
 use crate::{external, mcu::Mcu};
-use alloc::sync::Arc;
 use core::pin::pin;
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::Ordering;
 use defmt::{debug, info, unwrap, warn};
 use embassy_futures::join::join;
 use embassy_futures::select::{select, Either};
@@ -9,6 +8,8 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal}
 use embassy_usb::class::hid::{HidReaderWriter, ReportId, State};
 use embassy_usb::control::OutResponse;
 use futures_util::{Stream, StreamExt};
+use portable_atomic::AtomicBool;
+use portable_atomic_util::Arc;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 
 pub struct ChannelConfig {
@@ -131,8 +132,12 @@ impl<M: CreateDriver> Handler<M> {
             loop {
                 usb.run_until_suspend().await;
                 match select(usb.wait_resume(), remote_wakeup.wait()).await {
-                    Either::First(()) => {}
-                    Either::Second(()) => unwrap!(usb.remote_wakeup().await),
+                    Either::First(()) => {
+                        suspended.store(false, Ordering::Release);
+                    }
+                    Either::Second(()) => {
+                        unwrap!(usb.remote_wakeup().await);
+                    }
                 }
             }
         };

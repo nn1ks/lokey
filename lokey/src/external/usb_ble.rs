@@ -1,6 +1,6 @@
 use crate::external::{self, ChannelImpl};
 use crate::{internal, mcu::Mcu};
-use alloc::{boxed::Box, sync::Arc};
+use alloc::boxed::Box;
 use core::{cell::Cell, future::Future, pin::Pin};
 use defmt::{error, info, unwrap, Format};
 use embassy_executor::Spawner;
@@ -8,6 +8,7 @@ use embassy_futures::select::{select, Either};
 use embassy_sync::blocking_mutex::{raw::CriticalSectionRawMutex, Mutex};
 use embassy_sync::signal::Signal;
 use generic_array::GenericArray;
+use portable_atomic_util::Arc;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Format)]
 pub enum ChannelSelection {
@@ -154,8 +155,18 @@ where
         let active = Arc::new(Mutex::new(Cell::new(ChannelSelection::Ble)));
         let activation_request = Arc::new(Signal::new());
 
-        let usb_channel_clone = Arc::clone(&usb_channel);
-        let ble_channel_clone = Arc::clone(&ble_channel);
+        let usb_channel_clone = {
+            let arc = Arc::clone(&usb_channel);
+            let ptr: *const _ = Arc::into_raw(arc);
+            let ptr: *const dyn ChannelImpl = ptr;
+            unsafe { Arc::from_raw(ptr) }
+        };
+        let ble_channel_clone = {
+            let arc = Arc::clone(&ble_channel);
+            let ptr: *const _ = Arc::into_raw(arc);
+            let ptr: *const dyn ChannelImpl = ptr;
+            unsafe { Arc::from_raw(ptr) }
+        };
 
         unwrap!(spawner.spawn(handle_activation_request(
             usb_channel_clone,

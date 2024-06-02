@@ -1,9 +1,10 @@
 use crate::{external, DynContext, LayerId, LayerManagerEntry};
 use core::cell::{Cell, RefCell};
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::Ordering;
 use embassy_futures::select::{select, Either};
 use embassy_sync::blocking_mutex::{raw::CriticalSectionRawMutex, Mutex};
 use embassy_time::{Duration, Timer};
+use portable_atomic::AtomicBool;
 
 pub trait Action: Send + Sync + 'static {
     fn on_press(&'static self, context: DynContext);

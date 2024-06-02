@@ -31,12 +31,17 @@ nrf52840 = [
   "nrf-softdevice?/nrf52840",
   "nrf-softdevice?/s140"
 ]
+rp2040 = [
+  "embassy-executor/arch-cortex-m",
+  "dep:embassy-rp"
+]
 
 [dependencies]
 defmt = { version = "0.3.5", features = ["alloc"] }
 embassy-executor = { version = "0.5.0", features = ["executor-thread", "executor-interrupt", "integrated-timers", "nightly", "defmt"] }
 embassy-futures = { version = "0.1.1", features = ["defmt"] }
 embassy-nrf = { version = "0.1.0", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio", "defmt"], optional = true }
+embassy-rp = { version = "0.1.0", features = ["critical-section-impl", "time-driver", "defmt"], optional = true }
 embassy-sync = { version = "0.5.0", features = ["defmt"] }
 embassy-time = { version = "0.3.0", features = ["defmt"] }
 embassy-usb = { version = "0.1.0", features = ["usbd-hid", "defmt"], optional = true }
@@ -49,9 +54,10 @@ generic-array = "1.0.0"
 lokey_macros = { path = "../lokey_macros" }
 nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice", rev = "3c53b8c454cc9331082053033485e713abcadbb5", features = ["critical-section-impl", "usable-from-interrupts", "defmt"], optional = true }
 once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
+portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
+portable-atomic-util = { version = "0.2.0", features = ["alloc"] }
 sequential-storage = { version = "2.0.2", features = ["defmt-03"] }
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }
-static_cell = { version = "2.1.0", features = ["nightly"] }
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
 typenum = "1.17.0"
 usbd-hid = { version = "0.6.0", features = ["defmt"], optional = true }
