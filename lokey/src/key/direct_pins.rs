@@ -31,7 +31,7 @@ pub struct DirectPins<I, const IS: usize, const NUM_KEYS: usize> {
 }
 
 impl<I, const IS: usize> DirectPins<I, IS, 0> {
-    pub fn new<const NUM_KEYS: usize>(pins: [I; IS]) -> DirectPins<I, IS, NUM_KEYS> {
+    pub const fn new<const NUM_KEYS: usize>(pins: [I; IS]) -> DirectPins<I, IS, NUM_KEYS> {
         DirectPins {
             pins,
             transform: [None; NUM_KEYS],
@@ -45,9 +45,11 @@ impl<I, const IS: usize, const NUM_KEYS: usize> DirectPins<I, IS, NUM_KEYS> {
         self
     }
 
-    pub fn continuous<const OFFSET: usize>(mut self) -> Self {
-        for i in 0..IS {
+    pub const fn continuous<const OFFSET: usize>(mut self) -> Self {
+        let mut i = 0;
+        while i < IS {
             self.transform[i + OFFSET] = Some(i);
+            i += 1;
         }
         self
     }
