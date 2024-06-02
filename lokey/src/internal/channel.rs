@@ -1,7 +1,7 @@
 use super::{ChannelImpl, Message};
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use alloc::vec::Vec;
-use core::{any::Any, marker::PhantomData};
+use core::marker::PhantomData;
 use defmt::{error, unwrap};
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -63,13 +63,6 @@ impl<T: ChannelImpl + ?Sized> Channel<T> {
             subscriber: INNER_CHANNEL.subscriber(),
             _phantom: PhantomData,
         }
-    }
-}
-
-impl Channel<dyn ChannelImpl> {
-    pub fn downcast<T>(self) -> Option<Channel<T>> {
-        let inner: &dyn Any = self.inner;
-        inner.downcast_ref::<T>().map(|inner| Channel { inner })
     }
 }
 

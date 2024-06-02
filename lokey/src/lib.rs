@@ -3,7 +3,6 @@
 #![no_std]
 #![feature(doc_auto_cfg)]
 #![feature(type_alias_impl_trait)]
-#![feature(trait_upcasting)]
 
 extern crate alloc;
 
