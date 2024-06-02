@@ -38,7 +38,6 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 ///
 /// // The layout built with the macro is equivalent to this layout:
 ///
-/// use alloc::boxed::Box;
 /// use lokey::key::{action::PerLayer, Layout};
 /// use lokey::LayerId;
 ///
