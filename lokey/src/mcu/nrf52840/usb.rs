@@ -2,7 +2,6 @@ use super::Nrf52840;
 use crate::external::{self, usb};
 use crate::{internal, util};
 use alloc::boxed::Box;
-use core::task::{Context, Poll};
 use core::{future::Future, pin::Pin};
 use defmt::{info, unwrap};
 use embassy_executor::Spawner;
@@ -10,7 +9,6 @@ use embassy_nrf::interrupt::{InterruptExt, Priority};
 use embassy_nrf::usb::vbus_detect::{SoftwareVbusDetect, VbusDetect};
 use embassy_nrf::{bind_interrupts, peripherals::USBD};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use futures_util::Stream;
 use once_cell::sync::OnceCell;
 
 struct SoftwareVbusDetectWrapper(SoftwareVbusDetect);
@@ -97,17 +95,5 @@ impl external::ChannelConfig<Nrf52840> for usb::ChannelConfig {
 
 #[embassy_executor::task]
 async fn task(handler: usb::Handler<Nrf52840>) {
-    // The `embassy_sync::channel::Receiver` type doesn't implement `Stream` so we have to wrap the
-    // type and implement it ourselves.
-    struct ReceiverStream;
-
-    impl Stream for ReceiverStream {
-        type Item = external::Message;
-
-        fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-            CHANNEL.poll_receive(cx).map(Some)
-        }
-    }
-
-    handler.run(ReceiverStream).await
+    handler.run(CHANNEL.receiver()).await
 }
