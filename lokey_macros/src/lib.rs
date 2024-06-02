@@ -202,7 +202,7 @@ pub fn layout(item: TokenStream) -> TokenStream {
                 .map(|(layer_index, action)| {
                     let layer_index = u8::try_from(layer_index).unwrap();
                     quote! {{
-                        type A = impl ::lokey::key::DynAction;
+                        type A = impl ::lokey::key::Action;
                         // This `AtomicBool` is only used here to make the static not implement
                         // `core::marker::Freeze`. Without it the compiler has to look up wheter `T`
                         // implements `Freeze` which results in a cycle for the trait lookup,

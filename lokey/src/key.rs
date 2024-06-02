@@ -2,7 +2,7 @@ pub mod action;
 mod debounce;
 mod direct_pins;
 
-pub use action::{Action, DynAction};
+pub use action::Action;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 /// Macro for building a [`Layout`].
@@ -87,11 +87,11 @@ use generic_array::GenericArray;
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
-    actions: [&'static dyn DynAction; NUM_KEYS],
+    actions: [&'static dyn Action; NUM_KEYS],
 }
 
 impl<const NUM_KEYS: usize> Layout<NUM_KEYS> {
-    pub const fn new(actions: [&'static dyn DynAction; NUM_KEYS]) -> Self {
+    pub const fn new(actions: [&'static dyn Action; NUM_KEYS]) -> Self {
         Self { actions }
     }
 }
@@ -147,7 +147,7 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
 
         #[embassy_executor::task]
         async fn handle_internal_message(
-            actions: &'static [&'static dyn DynAction],
+            actions: &'static [&'static dyn Action],
             context: DynContext,
         ) {
             let mut receiver = context.internal_channel.receiver::<Message>();
@@ -157,13 +157,13 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
                 match message {
                     Message::Press { key_index } => {
                         match actions.get(key_index as usize) {
-                            Some(action) => action.on_press(context).await,
+                            Some(action) => action.on_press(context),
                             None => error!("Layout has no action at key index {}", key_index),
                         };
                     }
                     Message::Release { key_index } => {
                         match actions.get(key_index as usize) {
-                            Some(action) => action.on_release(context).await,
+                            Some(action) => action.on_release(context),
                             None => error!("Layout has no action at key index {}", key_index),
                         };
                     }
