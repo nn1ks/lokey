@@ -1,4 +1,4 @@
-# Lokey
+# <img src="logo.png" width="50px;" style="margin-bottom: -7px;"/> Lokey
 
 [![Crate](https://img.shields.io/crates/v/lokey)](https://crates.io/crates/lokey)
 [![Docs](https://img.shields.io/static/v1?label=docs&message=latest&color=yellow)](https://docs.rs/lokey)
