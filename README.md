@@ -1,16 +1,26 @@
-# <img src="logo.png" width="50px;" style="margin-bottom: -7px;"/> Lokey
+<div align="center">
+  <img src="logo.png" width="100"/>
+  <h1>Lokey</h1>
+</div>
 
-[![Crate](https://img.shields.io/crates/v/lokey)](https://crates.io/crates/lokey)
-[![Docs](https://img.shields.io/static/v1?label=docs&message=latest&color=yellow)](https://docs.rs/lokey)
+<div align="center">
+
+[![Crate](https://img.shields.io/crates/v/lokey?logo=rust)](https://crates.io/crates/lokey)
+[![Docs](https://img.shields.io/static/v1?label=docs&message=latest&color=yellow&logo=docs.rs)](https://docs.rs/lokey)
 [![License](https://img.shields.io/crates/l/lokey)](https://github.com/nn1ks/lokey#license)
 
+</div>
+
+<div align="center">
 Lokey is an extensible keyboard firmware written in Rust.
+</div>
 
 ---
 
 #### Supported microcontrollers
 
 - nRF52840
+- RP2040
 
 #### Features
 
