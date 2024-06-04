@@ -8,8 +8,8 @@ use syn::{parse::Parser, spanned::Spanned};
 struct DeviceArgs {
     heap_size: Option<syn::Expr>,
     mcu_config: Option<syn::Expr>,
-    internal_channel_config: Option<syn::Expr>,
-    external_channel_config: Option<syn::Expr>,
+    internal_transport_config: Option<syn::Expr>,
+    external_transport_config: Option<syn::Expr>,
 }
 
 #[proc_macro_error]
@@ -24,21 +24,26 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     let invalid_device_type_error = "Parameter must be of type `Context`";
     let invalid_device_argument_error = "Expected device type as argument";
 
-    let device_type_path = match function.sig.inputs.first() {
+    let (device_type_path, transports_type_path) = match function.sig.inputs.first() {
         Some(syn::FnArg::Typed(pattern)) => match &*pattern.ty {
             syn::Type::Path(ref v) => {
                 let last_segment = &v.path.segments.last().unwrap();
                 match &last_segment.arguments {
-                    syn::PathArguments::AngleBracketed(v) => match v.args.last() {
-                        Some(syn::GenericArgument::Type(syn::Type::Path(path))) => {
-                            if v.args.len() == 1 {
-                                path
-                            } else {
-                                abort!(v.args.span(), "Expected only one type argument");
-                            }
+                    syn::PathArguments::AngleBracketed(v) => {
+                        if v.args.len() != 2 {
+                            abort!(v.args.span(), "Expected two type arguments");
                         }
-                        Some(_) | None => abort!(v.span(), invalid_device_argument_error),
-                    },
+                        let mut iter = v.args.iter();
+                        let a = match iter.next().unwrap() {
+                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                            _ => abort!(v.span(), invalid_device_argument_error),
+                        };
+                        let b = match iter.next().unwrap() {
+                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                            _ => abort!(v.span(), invalid_device_argument_error),
+                        };
+                        (a, b)
+                    }
                     _ => abort!(v.span(), invalid_device_argument_error),
                 }
             }
@@ -59,11 +64,11 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         Some(v) => quote! { #v(__config); },
         None => quote! {},
     };
-    let modify_internal_channel_config = match args.internal_channel_config {
+    let modify_internal_transport_config = match args.internal_transport_config {
         Some(v) => quote! { #v(__config); },
         None => quote! {},
     };
-    let modify_external_channel_config = match args.external_channel_config {
+    let modify_external_transport_config = match args.external_transport_config {
         Some(v) => quote! { #v(__config); },
         None => quote! {},
     };
@@ -82,16 +87,16 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 #modify_mcu_config
             }
 
-            fn __modify_internal_channel_config(
-                __config: &mut <#device_type_path as ::lokey::Device>::InternalChannelConfig
+            fn __modify_internal_transport_config(
+                __config: &mut <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::InternalTransportConfig
             ) {
-                #modify_internal_channel_config
+                #modify_internal_transport_config
             }
 
-            fn __modify_external_channel_config(
-                __config: &mut <#device_type_path as ::lokey::Device>::ExternalChannelConfig
+            fn __modify_external_transport_config(
+                __config: &mut <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::ExternalTransportConfig
             ) {
-                #modify_external_channel_config
+                #modify_external_transport_config
             }
 
             // Initialize allocator
@@ -113,28 +118,28 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             // Create channels
             let internal_channel = {
-                let mut config = <#device_type_path as ::lokey::Device>::internal_channel_config();
-                __modify_internal_channel_config(&mut config);
-                let channel_impl = ::lokey::internal::ChannelConfig::init(
+                let mut config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::internal_transport_config();
+                __modify_internal_transport_config(&mut config);
+                let transport = ::lokey::internal::TransportConfig::init(
                     config,
                     mcu,
                     spawner
                 ).await;
-                let channel_impl = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(channel_impl));
-                ::lokey::internal::Channel::new(channel_impl, spawner)
+                let transport = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(transport));
+                ::lokey::internal::Channel::new(transport, spawner)
             };
 
             let external_channel = {
-                let mut config = <#device_type_path as ::lokey::Device>::external_channel_config();
-                __modify_external_channel_config(&mut config);
-                let channel_impl = ::lokey::external::ChannelConfig::init(
+                let mut config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::external_transport_config();
+                __modify_external_transport_config(&mut config);
+                let transport = ::lokey::external::TransportConfig::init(
                     config,
                     mcu,
                     spawner,
                     internal_channel.as_dyn()
                 ).await;
-                let channel_impl = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(channel_impl));
-                ::lokey::external::Channel::new(channel_impl)
+                let transport = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(transport));
+                ::lokey::external::Channel::new(transport)
             };
 
             let context = ::lokey::Context {

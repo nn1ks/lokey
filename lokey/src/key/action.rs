@@ -369,19 +369,19 @@ pub use usb_ble::{SwitchToBle, SwitchToUsb};
 #[cfg(all(feature = "usb", feature = "ble"))]
 mod usb_ble {
     use super::*;
-    use crate::external::usb_ble::{ChannelSelection, Message};
+    use crate::external::usb_ble::{Message, TransportSelection};
 
     /// Switches the active output to USB.
     ///
-    /// Only has an effect if [`external::usb_ble::Channel`](crate::external::usb_ble::Channel) is
-    /// used as the external channel.
+    /// Only has an effect if [`external::usb_ble::Transport`](crate::external::usb_ble::Transport)
+    /// is used as the external transport.
     pub struct SwitchToUsb;
 
     impl Action for SwitchToUsb {
         fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SetActive(ChannelSelection::Usb));
+                .send(Message::SetActive(TransportSelection::Usb));
         }
 
         fn on_release(&'static self, _context: DynContext) {}
@@ -389,15 +389,15 @@ mod usb_ble {
 
     /// Switches the active output to BLE.
     ///
-    /// Only has an effect if [`external::usb_ble::Channel`](crate::external::usb_ble::Channel) is
-    /// used as the external channel.
+    /// Only has an effect if [`external::usb_ble::Transport`](crate::external::usb_ble::Transport)
+    /// is used as the external transport.
     pub struct SwitchToBle;
 
     impl Action for SwitchToBle {
         fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SetActive(ChannelSelection::Ble));
+                .send(Message::SetActive(TransportSelection::Ble));
         }
 
         fn on_release(&'static self, _context: DynContext) {}

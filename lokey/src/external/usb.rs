@@ -12,7 +12,7 @@ use portable_atomic::AtomicBool;
 use portable_atomic_util::Arc;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 
-pub struct ChannelConfig {
+pub struct TransportConfig {
     pub vendor_id: u16,
     pub product_id: u16,
     pub manufacturer: Option<&'static str>,
@@ -21,7 +21,7 @@ pub struct ChannelConfig {
     pub self_powered: bool,
 }
 
-impl Default for ChannelConfig {
+impl Default for TransportConfig {
     fn default() -> Self {
         Self {
             vendor_id: 0x1d51,
@@ -34,8 +34,8 @@ impl Default for ChannelConfig {
     }
 }
 
-impl From<ChannelConfig> for embassy_usb::Config<'static> {
-    fn from(value: ChannelConfig) -> Self {
+impl From<TransportConfig> for embassy_usb::Config<'static> {
+    fn from(value: TransportConfig) -> Self {
         let mut config = embassy_usb::Config::new(value.vendor_id, value.product_id);
         config.manufacturer = value.manufacturer;
         config.product = value.product;
@@ -60,13 +60,13 @@ impl ActivationRequest {
 }
 
 pub struct Handler<M: 'static> {
-    config: ChannelConfig,
+    config: TransportConfig,
     mcu: &'static M,
     activation_request_signal: Arc<Signal<CriticalSectionRawMutex, ()>>,
 }
 
 impl<M: CreateDriver> Handler<M> {
-    pub fn new(config: ChannelConfig, mcu: &'static M) -> (Self, ActivationRequest) {
+    pub fn new(config: TransportConfig, mcu: &'static M) -> (Self, ActivationRequest) {
         let signal = Arc::new(Signal::new());
         let handler = Self {
             config,

@@ -1,4 +1,4 @@
-use super::{ChannelImpl, Message};
+use super::{Message, Transport};
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -14,19 +14,19 @@ use typenum::Unsigned;
 
 static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Vec<u8>> = PubSubChannel::new();
 
-pub type DynChannel = Channel<dyn ChannelImpl>;
+pub type DynChannel = Channel<dyn Transport>;
 
 pub struct Channel<T: ?Sized + 'static> {
     inner: &'static T,
 }
 
-impl<T: ChannelImpl> Channel<T> {
+impl<T: Transport> Channel<T> {
     /// Creates a new internal channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
     pub fn new(inner: &'static T, spawner: Spawner) -> Self {
         #[embassy_executor::task]
-        async fn task(inner: &'static dyn ChannelImpl) {
+        async fn task(inner: &'static dyn Transport) {
             loop {
                 let message_bytes = inner.receive().await;
                 INNER_CHANNEL.publish(message_bytes);
@@ -47,7 +47,7 @@ impl<T: ChannelImpl> Channel<T> {
     }
 }
 
-impl<T: ChannelImpl + ?Sized> Channel<T> {
+impl<T: Transport + ?Sized> Channel<T> {
     pub fn send<M: Message>(&self, message: M) {
         let message_tag = M::TAG;
         let message_bytes = message.to_bytes();

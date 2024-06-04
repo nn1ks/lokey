@@ -2,7 +2,7 @@ mod bonder;
 mod server;
 
 use crate::mcu::{Nrf52840, Storage};
-use crate::{external, external::ble::Message, internal, util};
+use crate::{external, external::ble::Message, internal, util::channel::Channel};
 use alloc::boxed::Box;
 use bonder::Bonder;
 use core::sync::atomic::Ordering;
@@ -21,30 +21,29 @@ use portable_atomic::AtomicBool;
 use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
 use usbd_hid::descriptor::KeyboardReport;
 
-static CHANNEL: util::channel::Channel<CriticalSectionRawMutex, external::Message> =
-    util::channel::Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, external::Message> = Channel::new();
 
 #[non_exhaustive]
-pub struct Channel {}
+pub struct Transport {}
 
-impl external::ChannelImpl for Channel {
+impl external::Transport for Transport {
     fn send(&self, message: external::Message) {
         CHANNEL.send(message);
     }
 }
 
-impl external::ChannelConfig<Nrf52840> for external::ble::ChannelConfig {
-    type Channel = Channel;
+impl external::TransportConfig<Nrf52840> for external::ble::TransportConfig {
+    type Transport = Transport;
     async fn init(
         self,
         mcu: &'static Nrf52840,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
-    ) -> Self::Channel {
+    ) -> Self::Transport {
         static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
         if INITIALIZED.load(Ordering::SeqCst) {
-            return Channel {};
+            return Transport {};
         }
 
         let name = self.name;
@@ -60,7 +59,7 @@ impl external::ChannelConfig<Nrf52840> for external::ble::ChannelConfig {
             spawner
         )));
         INITIALIZED.store(true, Ordering::SeqCst);
-        Channel {}
+        Transport {}
     }
 }
 

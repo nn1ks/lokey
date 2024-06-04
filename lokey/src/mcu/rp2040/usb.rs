@@ -1,6 +1,6 @@
 use super::Rp2040;
 use crate::external::{self, usb};
-use crate::{internal, util};
+use crate::{internal, util::channel::Channel};
 use alloc::boxed::Box;
 use core::{future::Future, pin::Pin};
 use defmt::unwrap;
@@ -21,13 +21,12 @@ impl usb::CreateDriver for Rp2040 {
     }
 }
 
-static CHANNEL: util::channel::Channel<CriticalSectionRawMutex, external::Message> =
-    util::channel::Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, external::Message> = Channel::new();
 static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
 
-pub struct ExternalChannel {}
+pub struct ExternalTransport {}
 
-impl external::ChannelImpl for ExternalChannel {
+impl external::Transport for ExternalTransport {
     fn send(&self, message: external::Message) {
         CHANNEL.send(message);
     }
@@ -41,24 +40,24 @@ impl external::ChannelImpl for ExternalChannel {
     }
 }
 
-impl external::ChannelConfig<Rp2040> for usb::ChannelConfig {
-    type Channel = ExternalChannel;
+impl external::TransportConfig<Rp2040> for usb::TransportConfig {
+    type Transport = ExternalTransport;
 
     async fn init(
         self,
         mcu: &'static Rp2040,
         spawner: Spawner,
         _internal_channel: internal::DynChannel,
-    ) -> Self::Channel {
+    ) -> Self::Transport {
         if ACTIVATION_REQUEST.get().is_some() {
             // Channel was already intialized
-            return ExternalChannel {};
+            return ExternalTransport {};
         }
 
         let (handler, activation_request) = usb::Handler::new(self, mcu);
         unwrap!(spawner.spawn(task(handler)));
         let _ = ACTIVATION_REQUEST.set(activation_request);
-        ExternalChannel {}
+        ExternalTransport {}
     }
 }
 

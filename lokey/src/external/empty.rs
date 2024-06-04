@@ -3,18 +3,18 @@ use crate::internal;
 use crate::mcu::Mcu;
 use embassy_executor::Spawner;
 
-pub struct ChannelConfig;
+pub struct TransportConfig;
 
-impl<M: Mcu> external::ChannelConfig<M> for ChannelConfig {
-    type Channel = Channel;
+impl<M: Mcu> external::TransportConfig<M> for TransportConfig {
+    type Transport = Transport;
 
-    async fn init(self, _: &'static M, _: Spawner, _: internal::DynChannel) -> Self::Channel {
-        Channel
+    async fn init(self, _: &'static M, _: Spawner, _: internal::DynChannel) -> Self::Transport {
+        Transport
     }
 }
 
-pub struct Channel;
+pub struct Transport;
 
-impl external::ChannelImpl for Channel {
+impl external::Transport for Transport {
     fn send(&self, _: Message) {}
 }

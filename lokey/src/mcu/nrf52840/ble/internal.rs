@@ -1,4 +1,4 @@
-use crate::{internal, mcu::Nrf52840, util};
+use crate::{internal, mcu::Nrf52840, util::channel::Channel};
 use alloc::{boxed::Box, vec::Vec};
 use core::{future::Future, pin::Pin};
 use defmt::{debug, error, info, unwrap, warn};
@@ -52,15 +52,13 @@ struct Client {
     message: Message,
 }
 
-static SEND_CHANNEL: util::channel::Channel<CriticalSectionRawMutex, Message> =
-    util::channel::Channel::new();
-static RECV_CHANNEL: util::channel::Channel<CriticalSectionRawMutex, Message> =
-    util::channel::Channel::new();
+static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
+static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
 
 #[non_exhaustive]
-pub struct Channel {}
+pub struct Transport {}
 
-impl internal::ChannelImpl for Channel {
+impl internal::Transport for Transport {
     fn send(&self, message_bytes: &[u8]) {
         let message = Message(Vec::from(message_bytes));
         SEND_CHANNEL.send(message);
@@ -71,10 +69,10 @@ impl internal::ChannelImpl for Channel {
     }
 }
 
-impl internal::ChannelConfig<Nrf52840> for internal::ble::ChannelConfig {
-    type Channel = Channel;
+impl internal::TransportConfig<Nrf52840> for internal::ble::TransportConfig {
+    type Transport = Transport;
 
-    async fn init(self, mcu: &'static Nrf52840, spawner: Spawner) -> Self::Channel {
+    async fn init(self, mcu: &'static Nrf52840, spawner: Spawner) -> Self::Transport {
         let softdevice: &'static mut Softdevice = unsafe { &mut *mcu.softdevice.get() };
         if self.central {
             unwrap!(spawner.spawn(central(softdevice)));
@@ -82,7 +80,7 @@ impl internal::ChannelConfig<Nrf52840> for internal::ble::ChannelConfig {
             let server = unwrap!(Server::new(softdevice));
             unwrap!(spawner.spawn(peripheral(softdevice, server)));
         }
-        Channel {}
+        Transport {}
     }
 }
 

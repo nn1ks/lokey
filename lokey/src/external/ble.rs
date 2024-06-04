@@ -2,7 +2,7 @@ use crate::internal;
 use defmt::error;
 use generic_array::GenericArray;
 
-pub struct ChannelConfig {
+pub struct TransportConfig {
     pub name: &'static str,
     pub vendor_id: u16,
     pub product_id: u16,
@@ -12,7 +12,7 @@ pub struct ChannelConfig {
     pub serial_number: Option<&'static str>,
 }
 
-impl Default for ChannelConfig {
+impl Default for TransportConfig {
     fn default() -> Self {
         Self {
             name: "Lokey Keyboard",

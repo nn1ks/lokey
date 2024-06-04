@@ -23,15 +23,15 @@ pub use lokey_macros::device;
 use core::future::Future;
 use embassy_executor::Spawner;
 
-pub struct Context<D: Device> {
+pub struct Context<D: Device, T: Transports<D::Mcu>> {
     pub spawner: Spawner,
     pub mcu: &'static D::Mcu,
-    pub internal_channel: internal::Channel<internal::DeviceChannel<D>>,
-    pub external_channel: external::Channel<external::DeviceChannel<D>>,
+    pub internal_channel: internal::Channel<internal::DeviceTransport<D, T>>,
+    pub external_channel: external::Channel<external::DeviceTransport<D, T>>,
     pub layer_manager: LayerManager,
 }
 
-impl<D: Device> Context<D> {
+impl<D: Device, T: Transports<D::Mcu>> Context<D, T> {
     pub fn as_dyn(&self) -> DynContext {
         let mcu = self.mcu;
         DynContext {
@@ -48,17 +48,17 @@ impl<D: Device> Context<D> {
         C: Capability,
         D: CapabilitySupport<C>,
     {
-        D::enable(capability, *self).await
+        D::enable::<T>(capability, *self).await
     }
 }
 
-impl<D: Device> Clone for Context<D> {
+impl<D: Device, T: Transports<D::Mcu>> Clone for Context<D, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<D: Device> Copy for Context<D> {}
+impl<D: Device, T: Transports<D::Mcu>> Copy for Context<D, T> {}
 
 /// A dynamic dispatch version of [`Context`].
 #[derive(Clone, Copy)]
@@ -72,55 +72,23 @@ pub struct DynContext {
 
 pub trait Device: Sized {
     type Mcu: mcu::Mcu + mcu::McuInit;
-    type InternalChannelConfig: internal::ChannelConfig<Self::Mcu>;
-    type ExternalChannelConfig: external::ChannelConfig<Self::Mcu>;
     fn mcu_config() -> <Self::Mcu as mcu::McuInit>::Config;
-    fn internal_channel_config() -> Self::InternalChannelConfig;
-    fn external_channel_config() -> Self::ExternalChannelConfig;
+}
+
+pub trait Transports<M: mcu::Mcu> {
+    type InternalTransportConfig: internal::TransportConfig<M>;
+    type ExternalTransportConfig: external::TransportConfig<M>;
+    fn internal_transport_config() -> Self::InternalTransportConfig;
+    fn external_transport_config() -> Self::ExternalTransportConfig;
 }
 
 pub trait Capability {}
 
 /// Trait for enabling support of a capability for a device.
-///
-/// # Example
-///
-/// ```no_run
-#[doc = include_str!("./doctest_setup")]
-/// # use core::todo;
-/// use lokey::{CapabilitySupport, Context, Device};
-/// use lokey::key::{self, DirectPins, DirectPinsConfig, Keys};
-///
-/// struct Keyboard;
-///
-/// impl Device for Keyboard {
-///     # type Mcu = lokey::mcu::DummyMcu;
-///     # type ExternalChannelConfig = lokey::external::empty::ChannelConfig;
-///     # type InternalChannelConfig = lokey::internal::empty::ChannelConfig;
-///     # fn mcu_config() {}
-///     # fn external_channel_config() -> Self::ExternalChannelConfig {
-///     #     todo!()
-///     # }
-///     # fn internal_channel_config() -> Self::InternalChannelConfig {
-///     #     todo!()
-///     # }
-///     // ...
-/// }
-///
-/// // Enables support for the Keys capability
-/// impl CapabilitySupport<Keys<DirectPinsConfig, 8>> for Keyboard {
-///     async fn enable(capability: Keys<DirectPinsConfig, 8>, context: Context<Self>) {
-///         todo!()
-///     }
-/// }
-///
-/// #[lokey::device]
-/// async fn main(context: Context<Keyboard>) {
-///     // The capability can then be enabled with the Context type
-///     context.enable(Keys::new()).await;
-/// }
-/// ```
 pub trait CapabilitySupport<C: Capability>: Device {
     /// Enables the specified capability for this device.
-    fn enable(capability: C, context: Context<Self>) -> impl Future<Output = ()>;
+    fn enable<T: Transports<Self::Mcu>>(
+        capability: C,
+        context: Context<Self, T>,
+    ) -> impl Future<Output = ()>;
 }

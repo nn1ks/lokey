@@ -1,16 +1,16 @@
-use super::{ChannelImpl, Message};
+use super::{Message, Transport};
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
 static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Message> = PubSubChannel::new();
 
-pub type DynChannel = Channel<dyn ChannelImpl>;
+pub type DynChannel = Channel<dyn Transport>;
 
 pub struct Channel<T: ?Sized + 'static> {
     inner: &'static T,
 }
 
-impl<T: ChannelImpl> Channel<T> {
+impl<T: Transport> Channel<T> {
     /// Creates a new external channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
@@ -27,7 +27,7 @@ impl<T: ChannelImpl> Channel<T> {
     }
 }
 
-impl<T: ChannelImpl + ?Sized> Channel<T> {
+impl<T: Transport + ?Sized> Channel<T> {
     pub fn send(&self, message: Message) {
         INNER_CHANNEL.publish(message.clone());
         self.inner.send(message);

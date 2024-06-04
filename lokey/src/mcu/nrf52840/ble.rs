@@ -1,5 +1,5 @@
 mod external;
 mod internal;
 
-pub use external::Channel as ExternalChannel;
-pub use internal::Channel as InternalChannel;
+pub use external::Transport as ExternalTransport;
+pub use internal::Transport as InternalTransport;

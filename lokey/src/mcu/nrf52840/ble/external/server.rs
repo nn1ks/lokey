@@ -154,7 +154,7 @@ pub struct Server {
 impl Server {
     pub fn new(
         softdevice: &mut Softdevice,
-        config: &external::ble::ChannelConfig,
+        config: &external::ble::TransportConfig,
     ) -> Result<Self, RegisterError> {
         let dis = DeviceInformationService::new(
             softdevice,

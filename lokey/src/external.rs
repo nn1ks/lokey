@@ -9,16 +9,17 @@ pub mod usb_ble;
 
 pub use channel::{Channel, DynChannel};
 
-use crate::internal;
-use crate::{mcu::Mcu, Device};
+use crate::{internal, mcu::Mcu, Device, Transports};
 use alloc::boxed::Box;
 use core::any::Any;
 use core::future::Future;
 use core::pin::Pin;
 use embassy_executor::Spawner;
 
-pub type DeviceChannel<D> =
-    <<D as Device>::ExternalChannelConfig as ChannelConfig<<D as Device>::Mcu>>::Channel;
+pub type DeviceTransport<D, T> =
+    <<T as Transports<<D as Device>::Mcu>>::ExternalTransportConfig as TransportConfig<
+        <D as Device>::Mcu,
+    >>::Transport;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Key {
@@ -361,17 +362,17 @@ impl Message {
     }
 }
 
-pub trait ChannelConfig<M: Mcu> {
-    type Channel: ChannelImpl;
+pub trait TransportConfig<M: Mcu> {
+    type Transport: Transport;
     fn init(
         self,
         mcu: &'static M,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
-    ) -> impl Future<Output = Self::Channel>;
+    ) -> impl Future<Output = Self::Transport>;
 }
 
-pub trait ChannelImpl: Any {
+pub trait Transport: Any {
     fn send(&self, message: Message);
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(core::future::pending())
