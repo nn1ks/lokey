@@ -1,7 +1,7 @@
 [package]
 name = "lokey_macros"
 version = "0.0.0"
-edition = "2021"
+edition = "2024"
 authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"

@@ -9,7 +9,7 @@ pub mod usb_ble;
 
 pub use channel::{Channel, DynChannel, Receiver};
 
-use crate::{internal, mcu::Mcu, Device, Transports};
+use crate::{Device, Transports, internal, mcu::Mcu};
 use alloc::boxed::Box;
 use core::any::Any;
 use core::future::Future;

@@ -1,8 +1,8 @@
-use crate::{external, DynContext, LayerId, LayerManagerEntry};
+use crate::{DynContext, LayerId, LayerManagerEntry, external};
 use core::cell::{Cell, RefCell};
 use core::sync::atomic::Ordering;
-use embassy_futures::select::{select, Either};
-use embassy_sync::blocking_mutex::{raw::CriticalSectionRawMutex, Mutex};
+use embassy_futures::select::{Either, select};
+use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use embassy_time::{Duration, Timer};
 use portable_atomic::AtomicBool;
 

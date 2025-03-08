@@ -63,7 +63,7 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 /// ```
 pub use lokey_macros::layout;
 
-use crate::{internal, Component, DynContext};
+use crate::{Component, DynContext, internal};
 use alloc::boxed::Box;
 use core::future::Future;
 use core::pin::Pin;
@@ -126,9 +126,11 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
     scanner.run(keys.scanner_config, context);
 
     if let Some(layout) = keys.layout {
-        unwrap!(context
-            .spawner
-            .spawn(handle_internal_message(&layout.actions, context,)));
+        unwrap!(
+            context
+                .spawner
+                .spawn(handle_internal_message(&layout.actions, context,))
+        );
 
         #[embassy_executor::task]
         async fn handle_internal_message(

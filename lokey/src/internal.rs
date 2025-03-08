@@ -5,7 +5,7 @@ pub mod empty;
 
 pub use channel::{Channel, DynChannel, Receiver};
 
-use crate::{mcu::Mcu, Device, Transports};
+use crate::{Device, Transports, mcu::Mcu};
 use alloc::{boxed::Box, vec::Vec};
 use core::{any::Any, future::Future, pin::Pin};
 use embassy_executor::Spawner;

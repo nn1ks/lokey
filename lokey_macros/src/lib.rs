@@ -1,7 +1,7 @@
-use darling::{ast::NestedMeta, FromMeta};
+use darling::{FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use proc_macro_error::{abort, proc_macro_error};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{parse::Parser, spanned::Spanned};
 
 #[derive(FromMeta)]
@@ -26,7 +26,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let (device_type_path, transports_type_path) = match function.sig.inputs.first() {
         Some(syn::FnArg::Typed(pattern)) => match &*pattern.ty {
-            syn::Type::Path(ref v) => {
+            syn::Type::Path(v) => {
                 let last_segment = &v.path.segments.last().unwrap();
                 match &last_segment.arguments {
                     syn::PathArguments::AngleBracketed(v) => {

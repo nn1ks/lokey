@@ -5,11 +5,11 @@ use defmt::{debug, error, info, unwrap, warn};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use nrf_softdevice::Softdevice;
 use nrf_softdevice::ble::advertisement_builder::{Flag, LegacyAdvertisementBuilder, ServiceList};
 use nrf_softdevice::ble::{
-    central, gatt_client, gatt_server, peripheral, Address, AddressType, Connection,
+    Address, AddressType, Connection, central, gatt_client, gatt_server, peripheral,
 };
-use nrf_softdevice::Softdevice;
 use nrf_softdevice::{ble::GattValue, gatt_client, gatt_server, gatt_service};
 
 const PERIPHERAL_SERVICE_UUID: [u8; 16] = [

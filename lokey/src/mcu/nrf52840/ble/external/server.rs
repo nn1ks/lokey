@@ -1,10 +1,10 @@
 use crate::external;
+use nrf_softdevice::Softdevice;
 use nrf_softdevice::ble::gatt_server::characteristic::{Attribute, Metadata, Properties};
 use nrf_softdevice::ble::gatt_server::{
-    self, builder::ServiceBuilder, CharacteristicHandles, RegisterError, Service, WriteOp,
+    self, CharacteristicHandles, RegisterError, Service, WriteOp, builder::ServiceBuilder,
 };
 use nrf_softdevice::ble::{Connection, Uuid};
-use nrf_softdevice::Softdevice;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 
 const DEVICE_INFORMATION: Uuid = Uuid::new_16(0x180a);

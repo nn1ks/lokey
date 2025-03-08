@@ -1,6 +1,6 @@
 use alloc::{vec, vec::Vec};
 use core::ops::Range;
-use defmt::{panic, Format};
+use defmt::{Format, panic};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embedded_storage_async::nor_flash::{MultiwriteNorFlash, NorFlash};
 use generic_array::{ArrayLength, GenericArray};

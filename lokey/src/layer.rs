@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 use core::cell::RefCell;
-use embassy_sync::blocking_mutex::{raw::CriticalSectionRawMutex, Mutex};
+use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 
 /// The ID of a layer.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

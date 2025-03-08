@@ -3,7 +3,7 @@ use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
 use core::{cell::RefCell, future::poll_fn};
 use defmt::warn;
-use embassy_sync::blocking_mutex::{raw::RawMutex, Mutex};
+use embassy_sync::blocking_mutex::{Mutex, raw::RawMutex};
 use futures_util::Stream;
 
 pub struct PubSubChannel<M: RawMutex, T: Clone> {

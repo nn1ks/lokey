@@ -10,7 +10,7 @@ use core::{cell::UnsafeCell, mem, ops::Range};
 use defmt::{info, unwrap};
 use embassy_executor::Spawner;
 use embassy_nrf::interrupt::Priority;
-use nrf_softdevice::{raw, Flash, Softdevice};
+use nrf_softdevice::{Flash, Softdevice, raw};
 
 const FLASH_RANGE: Range<u32> = 0x8_0000..0x10_0000;
 

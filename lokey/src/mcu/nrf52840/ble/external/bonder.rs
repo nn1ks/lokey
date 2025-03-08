@@ -1,14 +1,14 @@
 use crate::mcu::storage;
 use core::{cell::RefCell, mem};
-use defmt::{debug, error, info, Format};
+use defmt::{Format, debug, error, info};
 use embassy_executor::Spawner;
 use generic_array::GenericArray;
+use nrf_softdevice::Flash;
 use nrf_softdevice::ble::gatt_server::{get_sys_attrs, set_sys_attrs};
 use nrf_softdevice::ble::security::{IoCapabilities, SecurityHandler};
 use nrf_softdevice::ble::{
     Address, AddressType, Connection, EncryptionInfo, IdentityKey, IdentityResolutionKey, MasterId,
 };
-use nrf_softdevice::Flash;
 use storage::Storage;
 
 #[repr(C)]

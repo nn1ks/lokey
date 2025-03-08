@@ -1,10 +1,10 @@
 use crate::{external, internal, mcu::Mcu};
 use alloc::boxed::Box;
 use core::{cell::Cell, future::Future, pin::Pin};
-use defmt::{error, info, unwrap, Format};
+use defmt::{Format, error, info, unwrap};
 use embassy_executor::Spawner;
-use embassy_futures::select::{select, Either};
-use embassy_sync::blocking_mutex::{raw::CriticalSectionRawMutex, Mutex};
+use embassy_futures::select::{Either, select};
+use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use embassy_sync::signal::Signal;
 use generic_array::GenericArray;
 use portable_atomic_util::Arc;

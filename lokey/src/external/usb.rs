@@ -3,7 +3,7 @@ use core::pin::pin;
 use core::sync::atomic::Ordering;
 use defmt::{debug, info, unwrap, warn};
 use embassy_futures::join::join;
-use embassy_futures::select::{select, Either};
+use embassy_futures::select::{Either, select};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_usb::class::hid::{HidReaderWriter, ReportId, State};
 use embassy_usb::control::OutResponse;
@@ -239,7 +239,9 @@ impl embassy_usb::Handler for DeviceHandler {
 
     fn suspended(&mut self, suspended: bool) {
         if suspended {
-            debug!("USB device suspended, the Vbus current limit is 500µA (or 2.5mA for high-power devices with remote wakeup enabled).");
+            debug!(
+                "USB device suspended, the Vbus current limit is 500µA (or 2.5mA for high-power devices with remote wakeup enabled)."
+            );
             self.suspended.store(true, Ordering::Release);
         } else {
             self.suspended.store(false, Ordering::Release);

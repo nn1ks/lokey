@@ -1,5 +1,5 @@
 use super::InputSwitch;
-use embassy_futures::select::{select, Either};
+use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Timer};
 
 /// Configuration for debouncing key switches.

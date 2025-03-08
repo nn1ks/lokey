@@ -1,5 +1,5 @@
 use super::{Debounce, InputSwitch, Scanner};
-use crate::{internal, key::Message, DynContext};
+use crate::{DynContext, internal, key::Message};
 use alloc::boxed::Box;
 use defmt::unwrap;
 use embassy_time::{Duration, Timer};
@@ -56,10 +56,10 @@ impl<I, const IS: usize, const NUM_KEYS: usize> DirectPins<I, IS, NUM_KEYS> {
 }
 
 impl<
-        I: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch + 'static,
-        const IS: usize,
-        const NUM_KEYS: usize,
-    > Scanner for DirectPins<I, IS, NUM_KEYS>
+    I: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch + 'static,
+    const IS: usize,
+    const NUM_KEYS: usize,
+> Scanner for DirectPins<I, IS, NUM_KEYS>
 {
     const NUM_KEYS: usize = NUM_KEYS;
 
@@ -71,9 +71,11 @@ impl<
             b
         }));
 
-        unwrap!(context
-            .spawner
-            .spawn(task(input_pins, context.internal_channel, config)));
+        unwrap!(
+            context
+                .spawner
+                .spawn(task(input_pins, context.internal_channel, config))
+        );
 
         #[embassy_executor::task]
         async fn task(
