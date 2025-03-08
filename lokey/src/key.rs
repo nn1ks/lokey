@@ -38,41 +38,27 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 ///
 /// // The layout built with the macro is equivalent to this layout:
 ///
+/// use alloc::boxed::Box;
 /// use lokey::key::{action::PerLayer, Layout};
 /// use lokey::LayerId;
 ///
-/// let layout = Layout::new([
-///     {
-///         static ACTION1: KeyCode = KeyCode::new(Key::A);
-///         static ACTION2: KeyCode = KeyCode::new(Key::C);
-///         static PER_LAYER_ACTION: PerLayer<2> = PerLayer::new([
-///             (LayerId(0), &ACTION1),
-///             (LayerId(1), &ACTION2)
-///         ]);
-///         &PER_LAYER_ACTION
-///     },
-///     {
-///         static ACTION1: HoldTap<KeyCode, KeyCode> = HoldTap::new(
+/// let layout = Box::leak(Box::new(Layout::new([
+///     Box::leak(Box::new(PerLayer::new([
+///         (LayerId(0), Box::leak(Box::new(KeyCode::new(Key::A)))),
+///         (LayerId(1), Box::leak(Box::new(KeyCode::new(Key::C)))),
+///     ]))),
+///     Box::leak(Box::new(PerLayer::new([
+///         (LayerId(0), Box::leak(Box::new(HoldTap::new(
 ///             KeyCode::new(Key::LControl),
 ///             KeyCode::new(Key::B)
-///         );
-///         static ACTION2: KeyCode = KeyCode::new(Key::D);
-///         static PER_LAYER_ACTION: PerLayer<2> = PerLayer::new([
-///             (LayerId(0), &ACTION1),
-///             (LayerId(1), &ACTION2)
-///         ]);
-///         &PER_LAYER_ACTION
-///     },
-///     {
-///         static ACTION1: Layer = Layer::new(LayerId(1));
-///         static ACTION2: Layer = Layer::new(LayerId(1));
-///         static PER_LAYER_ACTION: PerLayer<2> = PerLayer::new([
-///             (LayerId(0), &ACTION1),
-///             (LayerId(1), &ACTION2)
-///         ]);
-///         &PER_LAYER_ACTION
-///     },
-/// ]);
+///         )))),
+///         (LayerId(1), Box::leak(Box::new(KeyCode::new(Key::D)))),
+///     ]))),
+///     Box::leak(Box::new(PerLayer::new([
+///         (LayerId(0), Box::leak(Box::new(Layer::new(LayerId(1))))),
+///         (LayerId(1), Box::leak(Box::new(Layer::new(LayerId(1))))),
+///     ]))),
+/// ])));
 /// # }
 /// ```
 pub use lokey_macros::layout;
