@@ -112,7 +112,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
             self.flash_range.clone(),
             &mut NoCache::new(),
             &mut buf,
-            E::TAG,
+            &E::TAG,
         )
         .await
         .map_err(Error::from_sequential_storage)
@@ -126,7 +126,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
             self.flash_range.clone(),
             &mut NoCache::new(),
             &mut buf,
-            E::TAG,
+            &E::TAG,
             &value_bytes.as_ref(),
         )
         .await
@@ -140,7 +140,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
             self.flash_range.clone(),
             &mut NoCache::new(),
             &mut buf,
-            E::TAG,
+            &E::TAG,
         )
         .await
         .map_err(Error::from_sequential_storage)?;

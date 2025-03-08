@@ -27,11 +27,11 @@ impl usb::CreateDriver for Nrf52840 {
     fn create_driver<'a>(&'static self) -> impl embassy_usb::driver::Driver<'a> {
         bind_interrupts!(struct Irqs {
             USBD => embassy_nrf::usb::InterruptHandler<embassy_nrf::peripherals::USBD>;
-            POWER_CLOCK => embassy_nrf::usb::vbus_detect::InterruptHandler;
+            CLOCK_POWER => embassy_nrf::usb::vbus_detect::InterruptHandler;
         });
 
         embassy_nrf::interrupt::USBD.set_priority(Priority::P2);
-        embassy_nrf::interrupt::POWER_CLOCK.set_priority(Priority::P2);
+        embassy_nrf::interrupt::CLOCK_POWER.set_priority(Priority::P2);
 
         info!("Enabling ext hfosc...");
         unwrap!(nrf_softdevice::RawError::convert(unsafe {

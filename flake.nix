@@ -16,15 +16,15 @@
         };
         rustToolchain = fenix.packages.${system}.fromToolchainFile {
           file = ./rust-toolchain.toml;
-          sha256 = "sha256-X/iddhGjxD/eE1Xep2jeA5M+xq6l0ti9T3Zzrpk2Q5k=";
+          sha256 = "sha256-sfz/L5xfR+ltvPiC4TnCUhsBjzi7I25Mj7DC8YyNATM=";
         };
         buildInputs = with pkgs; [
           pkg-config
           rustToolchain
           rust-analyzer
           probe-rs
-          libusb
-          libusb.dev
+          libusb1
+          libusb1.dev
         ];
       in {
         # `nix develop`

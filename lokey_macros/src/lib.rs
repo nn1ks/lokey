@@ -77,7 +77,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         extern crate alloc;
 
         #[global_allocator]
-        static HEAP: ::lokey::embedded_alloc::Heap = ::lokey::embedded_alloc::Heap::empty();
+        static HEAP: ::lokey::embedded_alloc::LlffHeap = ::lokey::embedded_alloc::LlffHeap::empty();
 
         #[::lokey::embassy_executor::main]
         async fn main(spawner: ::lokey::embassy_executor::Spawner) {
