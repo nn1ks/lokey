@@ -18,9 +18,8 @@ pub struct Config {
     pub name: &'static str,
 }
 
-#[non_exhaustive]
 pub struct Nrf52840 {
-    pub softdevice: &'static UnsafeCell<Softdevice>,
+    softdevice: &'static UnsafeCell<Softdevice>,
     pub storage: &'static Storage<Flash>,
 }
 
