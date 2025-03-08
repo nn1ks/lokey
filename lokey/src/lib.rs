@@ -43,12 +43,12 @@ impl<D: Device, T: Transports<D::Mcu>> Context<D, T> {
         }
     }
 
-    pub async fn enable<C>(&self, capability: C)
+    pub async fn enable<C>(&self, component: C)
     where
-        C: Capability,
-        D: CapabilitySupport<C>,
+        C: Component,
+        D: ComponentSupport<C>,
     {
-        D::enable::<T>(capability, *self).await
+        D::enable::<T>(component, *self).await
     }
 }
 
@@ -82,13 +82,13 @@ pub trait Transports<M: mcu::Mcu> {
     fn external_transport_config() -> Self::ExternalTransportConfig;
 }
 
-pub trait Capability {}
+pub trait Component {}
 
-/// Trait for enabling support of a capability for a device.
-pub trait CapabilitySupport<C: Capability>: Device {
-    /// Enables the specified capability for this device.
+/// Trait for adding support of a component to a device.
+pub trait ComponentSupport<C: Component>: Device {
+    /// Enables the specified component for this device.
     fn enable<T: Transports<Self::Mcu>>(
-        capability: C,
+        component: C,
         context: Context<Self, T>,
     ) -> impl Future<Output = ()>;
 }

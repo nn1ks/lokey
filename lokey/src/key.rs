@@ -63,7 +63,7 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 /// ```
 pub use lokey_macros::layout;
 
-use crate::{internal, Capability, DynContext};
+use crate::{internal, Component, DynContext};
 use alloc::boxed::Box;
 use core::future::Future;
 use core::pin::Pin;
@@ -81,7 +81,7 @@ impl<const NUM_KEYS: usize> Layout<NUM_KEYS> {
     }
 }
 
-/// The keys capability.
+/// The keys component.
 #[derive(Default)]
 pub struct Keys<C, const NUM_KEYS: usize> {
     /// The layout of the keys.
@@ -93,10 +93,10 @@ pub struct Keys<C, const NUM_KEYS: usize> {
     pub scanner_config: C,
 }
 
-impl<C, const NUM_KEYS: usize> Capability for Keys<C, NUM_KEYS> {}
+impl<C, const NUM_KEYS: usize> Component for Keys<C, NUM_KEYS> {}
 
 impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
-    /// Creates a new [`Keys`] capability without a layout and with a default scanner configuration.
+    /// Creates a new [`Keys`] component without a layout and with a default scanner configuration.
     pub fn new() -> Self
     where
         C: Default,
@@ -117,7 +117,7 @@ impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
     }
 }
 
-/// Initializes the capability.
+/// Initializes the component.
 pub fn init<S: Scanner, const NUM_KEYS: usize>(
     keys: Keys<S::Config, NUM_KEYS>,
     scanner: S,
