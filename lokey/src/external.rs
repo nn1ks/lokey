@@ -329,7 +329,7 @@ impl Message {
         match self {
             Self::KeyPress(key) => match key.to_hid_report_byte() {
                 HidReportByte::Key(v) => {
-                    if !report.keycodes.iter().any(|keycode| *keycode == v) {
+                    if !report.keycodes.contains(&v) {
                         if let Some(i) = report.keycodes.iter().position(|keycode| *keycode == 0) {
                             report.keycodes[i] = v;
                         }
