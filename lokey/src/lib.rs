@@ -1,54 +1,4 @@
 //! Lokey is an extensible keyboard firmware.
-//!
-//! # Example
-//!
-//! ```no_run
-#![doc = include_str!("./doctest_setup")]
-//! # use core::unimplemented;
-//! use lokey::{ComponentSupport, Context, Device, Transports, mcu::DummyMcu};
-//! use lokey::key::{self, DirectPins, DirectPinsConfig, Keys};
-//!
-//! struct Keyboard;
-//!
-//! impl Device for Keyboard {
-//!     type Mcu = lokey::mcu::DummyMcu;
-//!     fn mcu_config() {
-//!        // ...
-//!     }
-//! }
-//!
-//! // Adds support for the Keys component
-//! impl ComponentSupport<Keys<DirectPinsConfig, 8>> for Keyboard {
-//!     async fn enable<T: Transports<DummyMcu>>(
-//!         component: Keys<DirectPinsConfig, 8>,
-//!         context: Context<Self, T>,
-//!     ) {
-//!         # unimplemented!()
-//!         // ...
-//!     }
-//! }
-//!
-//! struct Central;
-//!
-//! impl Transports<DummyMcu> for Central {
-//!     type ExternalTransportConfig = lokey::external::empty::TransportConfig;
-//!     type InternalTransportConfig = lokey::internal::empty::TransportConfig;
-//!     fn external_transport_config() -> Self::ExternalTransportConfig {
-//!         # unimplemented!()
-//!         // ...
-//!     }
-//!     fn internal_transport_config() -> Self::InternalTransportConfig {
-//!         # unimplemented!()
-//!         // ...
-//!     }
-//! }
-//!
-//! #[lokey::device]
-//! async fn main(context: Context<Keyboard, Central>) {
-//!     // The component can then be enabled with the Context type
-//!     context.enable(Keys::new()).await;
-//! }
-//! ```
 
 #![no_std]
 #![feature(doc_auto_cfg)]
@@ -58,7 +8,6 @@ extern crate alloc;
 
 pub mod external;
 pub mod internal;
-pub mod key;
 mod layer;
 pub mod mcu;
 pub mod util;

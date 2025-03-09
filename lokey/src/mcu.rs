@@ -1,11 +1,7 @@
-#[cfg(feature = "nrf52840")]
-pub mod nrf52840;
 #[cfg(feature = "rp2040")]
 pub mod rp2040;
 pub mod storage;
 
-#[cfg(feature = "nrf52840")]
-pub use nrf52840::Nrf52840;
 #[cfg(feature = "rp2040")]
 pub use rp2040::Rp2040;
 pub use storage::Storage;
