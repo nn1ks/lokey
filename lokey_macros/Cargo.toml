@@ -1,10 +1,11 @@
 [package]
 name = "lokey_macros"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2024"
 authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
+description = "An extensible keyboard firmware (macro crate)"
 
 [lib]
 proc-macro = true
