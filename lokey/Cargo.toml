@@ -6,6 +6,7 @@ authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
 description = "An extensible keyboard firmware"
+readme = "../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["keyboard", "firmware"]
 
