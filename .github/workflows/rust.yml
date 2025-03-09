@@ -47,6 +47,19 @@ jobs:
     - name: Run tests
       if: matrix.mcu != 'no_mcu'
       run: cargo test --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
+  examples:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: [keyboard_nrf52840, keyboard_rp2040]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
+        working-directory: examples/${{ matrix.example }}
+      - name: Run clippy
+        run: cargo clippy --verbose
+        working-directory: examples/${{ matrix.example }}
   format:
     runs-on: ubuntu-latest
     steps:
