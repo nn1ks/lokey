@@ -56,6 +56,7 @@
 
 extern crate alloc;
 
+pub mod blink;
 pub mod external;
 pub mod internal;
 pub mod key;
