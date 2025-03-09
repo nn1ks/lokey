@@ -4,10 +4,11 @@ pub mod ble;
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, Storage};
-use crate::DynContext;
+use crate::{DynContext, util::unwrap};
 use alloc::boxed::Box;
 use core::{cell::UnsafeCell, mem, ops::Range};
-use defmt::{info, unwrap};
+#[cfg(feature = "defmt")]
+use defmt::info;
 use embassy_executor::Spawner;
 use embassy_nrf::interrupt::Priority;
 use nrf_softdevice::{Flash, Softdevice, raw};
@@ -68,6 +69,7 @@ impl McuInit for Nrf52840 {
             ..Default::default()
         };
         let softdevice = Softdevice::enable(&config);
+        #[cfg(feature = "defmt")]
         info!("Finished nRF softdevice setup");
 
         let flash = Flash::take(softdevice);

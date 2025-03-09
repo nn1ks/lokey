@@ -1,12 +1,13 @@
 use super::{Message, Transport};
 use crate::util::pubsub::{PubSubChannel, Subscriber};
+use crate::util::unwrap;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use defmt::{error, unwrap};
+#[cfg(feature = "defmt")]
+use defmt::error;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use generic_array::GenericArray;
-use typenum::Unsigned;
 
 // TODO: Optimization:
 //   - Don't convert local messages to bytes and then convert it back to a message
@@ -84,17 +85,21 @@ impl<M: Message> Receiver<M> {
         loop {
             let message_bytes = self.subscriber.next_message().await;
             if message_bytes[..4] == M::TAG {
+                #[allow(clippy::single_match)]
                 match GenericArray::try_from_slice(&message_bytes[4..]) {
                     Ok(array) => {
                         if let Some(message) = M::from_bytes(array) {
                             return message;
                         }
                     }
-                    Err(_) => error!(
-                        "invalid message size (expected {} bytes, found {})",
-                        M::Size::USIZE,
-                        message_bytes.len() - 4
-                    ),
+                    Err(_) => {
+                        #[cfg(feature = "defmt")]
+                        error!(
+                            "invalid message size (expected {} bytes, found {})",
+                            <M::Size as typenum::Unsigned>::USIZE,
+                            message_bytes.len() - 4
+                        )
+                    }
                 }
             }
         }

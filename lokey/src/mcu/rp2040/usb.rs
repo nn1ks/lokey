@@ -1,9 +1,8 @@
 use super::Rp2040;
 use crate::external::{self, usb};
-use crate::{internal, util::channel::Channel};
+use crate::{internal, util::channel::Channel, util::unwrap};
 use alloc::boxed::Box;
 use core::{future::Future, pin::Pin};
-use defmt::unwrap;
 use embassy_executor::Spawner;
 use embassy_rp::bind_interrupts;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;

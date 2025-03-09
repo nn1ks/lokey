@@ -1,7 +1,9 @@
-use crate::{internal, mcu::Nrf52840, util::channel::Channel};
+use crate::util::{channel::Channel, unwrap};
+use crate::{internal, mcu::Nrf52840};
 use alloc::{boxed::Box, vec::Vec};
 use core::{future::Future, pin::Pin};
-use defmt::{debug, error, info, unwrap, warn};
+#[cfg(feature = "defmt")]
+use defmt::{debug, error, info, warn};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
@@ -98,11 +100,13 @@ async fn central(softdevice: &'static Softdevice) {
                 };
                 let address_type = match AddressType::try_from(params.peer_addr.addr_type()) {
                     Ok(AddressType::Anonymous) => {
+                        #[cfg(feature = "defmt")]
                         debug!("Ignoring advertisment from anonymous peer");
                         return None;
                     }
                     Ok(v) => v,
                     Err(_) => {
+                        #[cfg(feature = "defmt")]
                         warn!(
                             "Unknown peer address type \"{}\"",
                             params.peer_addr.addr_type()
@@ -113,6 +117,7 @@ async fn central(softdevice: &'static Softdevice) {
                 while !data.is_empty() {
                     let len = data[0] as usize;
                     if data.len() < len + 1 || len < 1 {
+                        #[cfg(feature = "defmt")]
                         warn!("Invalid advertisement data");
                         break;
                     }
@@ -120,6 +125,7 @@ async fn central(softdevice: &'static Softdevice) {
                     let value = &data[2..len + 1];
                     if key == 0x06 || key == 0x07 {
                         if value.len() % 128 != 0 {
+                            #[cfg(feature = "defmt")]
                             warn!("Invalid data length for list of 128-bit services");
                             break;
                         }
@@ -141,11 +147,14 @@ async fn central(softdevice: &'static Softdevice) {
 
             let peer_address = match result {
                 Ok(v) => v,
+                #[allow(unused_variables)]
                 Err(e) => {
+                    #[cfg(feature = "defmt")]
                     error!("Failed to scan: {}", e);
                     continue;
                 }
             };
+            #[cfg(feature = "defmt")]
             info!("Found peripheral peer with address {}", peer_address);
 
             let mut config = central::ConnectConfig::default();
@@ -155,7 +164,9 @@ async fn central(softdevice: &'static Softdevice) {
             // TODO: Change to `connect_with_security`
             let new_connection = match central::connect(softdevice, &config).await {
                 Ok(v) => v,
+                #[allow(unused_variables)]
                 Err(e) => {
+                    #[cfg(feature = "defmt")]
                     error!("Failed to connect: {}", e);
                     continue;
                 }
@@ -163,13 +174,17 @@ async fn central(softdevice: &'static Softdevice) {
 
             let new_client = match gatt_client::discover::<Client>(&new_connection).await {
                 Ok(v) => v,
+                #[allow(unused_variables)]
                 Err(e) => {
+                    #[cfg(feature = "defmt")]
                     error!("Failed to discover service: {}", e);
                     continue;
                 }
             };
 
+            #[allow(unused_variables)]
             if let Err(e) = new_client.message_cccd_write(true).await {
+                #[cfg(feature = "defmt")]
                 error!("Failed to write BLE message: {}", e);
             }
 
@@ -180,6 +195,7 @@ async fn central(softdevice: &'static Softdevice) {
             })
             .await;
 
+            #[cfg(feature = "defmt")]
             warn!("GATT client disconnected");
         }
     };
@@ -188,7 +204,9 @@ async fn central(softdevice: &'static Softdevice) {
         loop {
             let message = SEND_CHANNEL.receive().await;
             if let Some(client) = &*client.lock().await {
+                #[allow(unused_variables)]
                 if let Err(e) = client.message_write(&message).await {
+                    #[cfg(feature = "defmt")]
                     error!("Failed to write BLE message: {}", e);
                 }
             }
@@ -223,7 +241,9 @@ async fn peripheral(softdevice: &'static Softdevice, server: Server) {
             let new_connection =
                 match peripheral::advertise_connectable(softdevice, adv, &config).await {
                     Ok(v) => v,
+                    #[allow(unused_variables)]
                     Err(e) => {
+                        #[cfg(feature = "defmt")]
                         error!("Failed to advertise: {}", e);
                         continue;
                     }
@@ -239,6 +259,7 @@ async fn peripheral(softdevice: &'static Softdevice, server: Server) {
             })
             .await;
 
+            #[cfg(feature = "defmt")]
             warn!("GATT server disconnected");
         }
     };
@@ -247,7 +268,9 @@ async fn peripheral(softdevice: &'static Softdevice, server: Server) {
         loop {
             let message = SEND_CHANNEL.receive().await;
             if let Some(connection) = &*connection.lock().await {
+                #[allow(unused_variables)]
                 if let Err(e) = server.service.message_notify(connection, &message) {
+                    #[cfg(feature = "defmt")]
                     error!("Failed to notify BLE message: {}", e)
                 }
             }

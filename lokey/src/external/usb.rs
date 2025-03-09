@@ -1,7 +1,8 @@
-use crate::{external, mcu::Mcu};
+use crate::{external, mcu::Mcu, util::unwrap};
 use core::pin::pin;
 use core::sync::atomic::Ordering;
-use defmt::{debug, info, unwrap, warn};
+#[cfg(feature = "defmt")]
+use defmt::{debug, info, warn};
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
@@ -152,6 +153,7 @@ impl<M: CreateDriver> Handler<M> {
             loop {
                 if let Some(message) = message_stream.next().await {
                     if suspended.load(Ordering::Acquire) {
+                        #[cfg(feature = "defmt")]
                         info!("Triggering remote wakeup");
                         remote_wakeup.signal(());
                     } else {
@@ -159,7 +161,11 @@ impl<M: CreateDriver> Handler<M> {
                         if report_changed {
                             match writer.write_serialize(&report).await {
                                 Ok(()) => {}
-                                Err(e) => warn!("Failed to send report: {:?}", e),
+                                #[allow(unused_variables)]
+                                Err(e) => {
+                                    #[cfg(feature = "defmt")]
+                                    warn!("Failed to send report: {:?}", e)
+                                }
                             };
                         }
                     }
@@ -178,21 +184,29 @@ impl<M: CreateDriver> Handler<M> {
 struct RequestHandler {}
 
 impl embassy_usb::class::hid::RequestHandler for RequestHandler {
+    #[allow(unused_variables)]
     fn get_report(&mut self, id: ReportId, _buf: &mut [u8]) -> Option<usize> {
+        #[cfg(feature = "defmt")]
         debug!("Get report for {:?}", id);
         None
     }
 
+    #[allow(unused_variables)]
     fn set_report(&mut self, id: ReportId, data: &[u8]) -> OutResponse {
+        #[cfg(feature = "defmt")]
         debug!("Set report for {:?}: {=[u8]}", id, data);
         OutResponse::Accepted
     }
 
+    #[allow(unused_variables)]
     fn set_idle_ms(&mut self, id: Option<ReportId>, dur: u32) {
+        #[cfg(feature = "defmt")]
         debug!("Set idle rate for {:?} to {:?}", id, dur);
     }
 
+    #[allow(unused_variables)]
     fn get_idle_ms(&mut self, id: Option<ReportId>) -> Option<u32> {
+        #[cfg(feature = "defmt")]
         debug!("Get idle rate for {:?}", id);
         None
     }
@@ -205,9 +219,11 @@ struct DeviceHandler {
 }
 
 impl embassy_usb::Handler for DeviceHandler {
+    #[allow(unused_variables)]
     fn enabled(&mut self, enabled: bool) {
         self.configured = false;
         self.suspended.store(false, Ordering::Release);
+        #[cfg(feature = "defmt")]
         if enabled {
             info!("USB device enabled");
         } else {
@@ -217,17 +233,21 @@ impl embassy_usb::Handler for DeviceHandler {
 
     fn reset(&mut self) {
         self.configured = false;
+        #[cfg(feature = "defmt")]
         debug!("Bus reset, the Vbus current limit is 100mA");
     }
 
+    #[allow(unused_variables)]
     fn addressed(&mut self, addr: u8) {
         self.configured = false;
+        #[cfg(feature = "defmt")]
         info!("USB address set to: {}", addr);
         self.activation_request_signal.signal(());
     }
 
     fn configured(&mut self, configured: bool) {
         self.configured = configured;
+        #[cfg(feature = "defmt")]
         if configured {
             debug!(
                 "USB device configured, it may now draw up to the configured current limit from Vbus."
@@ -239,12 +259,14 @@ impl embassy_usb::Handler for DeviceHandler {
 
     fn suspended(&mut self, suspended: bool) {
         if suspended {
+            #[cfg(feature = "defmt")]
             debug!(
                 "USB device suspended, the Vbus current limit is 500µA (or 2.5mA for high-power devices with remote wakeup enabled)."
             );
             self.suspended.store(true, Ordering::Release);
         } else {
             self.suspended.store(false, Ordering::Release);
+            #[cfg(feature = "defmt")]
             if self.configured {
                 debug!(
                     "USB device resumed, it may now draw up to the configured current limit from Vbus"

@@ -2,11 +2,12 @@ mod bonder;
 mod server;
 
 use crate::mcu::{Nrf52840, Storage};
-use crate::{external, external::ble::Message, internal, util::channel::Channel};
+use crate::{external, external::ble::Message, internal, util::channel::Channel, util::unwrap};
 use alloc::boxed::Box;
 use bonder::Bonder;
 use core::sync::atomic::Ordering;
-use defmt::{debug, error, info, unwrap, warn};
+#[cfg(feature = "defmt")]
+use defmt::{debug, error, info, warn};
 use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -97,9 +98,12 @@ async fn task(
         )
         .build();
 
+    #[allow(clippy::manual_unwrap_or_default)]
     let bond_info = match storage.fetch::<bonder::BondInfo>().await {
         Ok(v) => v,
+        #[allow(unused_variables)]
         Err(e) => {
+            #[cfg(feature = "defmt")]
             error!("Failed to read bond info from flash: {}", e);
             None
         }
@@ -118,19 +122,24 @@ async fn task(
             let new_connection =
                 match peripheral::advertise_pairable(softdevice, adv, &config, bonder).await {
                     Ok(v) => v,
+                    #[allow(unused_variables)]
                     Err(e) => {
+                        #[cfg(feature = "defmt")]
                         error!("Failed to advertise: {}", e);
                         continue;
                     }
                 };
             *connection.lock().await = Some(new_connection.clone());
 
+            #[cfg(feature = "defmt")]
             info!("Advertising done, found connection");
 
             // Run the GATT server on the connection. This returns when the connection gets disconnected.
             gatt_server::run(&new_connection, &server, |event| match event {
                 ServerEvent::Battery(e) => match e {
+                    #[allow(unused_variables)]
                     BatteryServiceEvent::BatteryLevelCccdWrite { notifications } => {
+                        #[cfg(feature = "defmt")]
                         debug!(
                             "Received event BatteryLevelCcdWrite {{ notifications: {} }}",
                             notifications
@@ -138,10 +147,14 @@ async fn task(
                     }
                 },
                 ServerEvent::Hid(e) => match e {
+                    #[allow(unused_variables)]
                     HidServiceEvent::InputReportWrite(v) => {
+                        #[cfg(feature = "defmt")]
                         debug!("Received event InputReportWrite({})", v)
                     }
+                    #[allow(unused_variables)]
                     HidServiceEvent::InputReportCccdWrite { notifications } => {
+                        #[cfg(feature = "defmt")]
                         debug!(
                             "Received event InputReportCcdWrite {{ notifications: {} }}",
                             notifications
@@ -151,11 +164,15 @@ async fn task(
             })
             .await;
 
+            #[cfg(feature = "defmt")]
             warn!("GATT server disconnected");
 
+            #[allow(clippy::manual_unwrap_or_default)]
             let bond_info = match storage.fetch::<bonder::BondInfo>().await {
                 Ok(v) => v,
+                #[allow(unused_variables)]
                 Err(e) => {
+                    #[cfg(feature = "defmt")]
                     error!("Failed to read bond info from flash: {}", e);
                     None
                 }
@@ -172,21 +189,23 @@ async fn task(
         };
         loop {
             let message = CHANNEL.receive().await;
+            #[allow(clippy::single_match)]
             match &*connection.lock().await {
                 Some(conn) => {
                     let report_changed = message.update_keyboard_report(&mut report);
                     if report_changed {
                         let mut report_bytes = [0u8; 8];
                         ssmarshal::serialize(&mut report_bytes, &report).unwrap();
-                        server
-                            .hid_service
-                            .input_report_notify(conn, &report_bytes)
-                            .unwrap_or_else(|e| {
-                                error!("Failed to notify about keyboard report: {}", e)
-                            });
+                        #[allow(unused_variables)]
+                        if let Err(e) = server.hid_service.input_report_notify(conn, &report_bytes)
+                        {
+                            #[cfg(feature = "defmt")]
+                            error!("Failed to notify about keyboard report: {}", e);
+                        }
                     }
                 }
                 None => {
+                    #[cfg(feature = "defmt")]
                     warn!("Ignoring external message as there is no bluetooth connection");
                 }
             }
@@ -203,7 +222,9 @@ async fn task(
                     }
                 }
                 Message::Clear => {
+                    #[allow(unused_variables)]
                     if let Err(e) = storage.remove::<bonder::BondInfo>().await {
+                        #[cfg(feature = "defmt")]
                         error!("Failed to remove bond info: {}", e);
                     }
                     if let Some(connection) = &mut *connection.lock().await {

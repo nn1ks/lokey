@@ -1,7 +1,6 @@
 use super::{Debounce, InputSwitch, Scanner};
-use crate::{DynContext, internal, key::Message};
+use crate::{DynContext, internal, key::Message, util::unwrap};
 use alloc::boxed::Box;
-use defmt::unwrap;
 use embassy_time::{Duration, Timer};
 use futures_util::future::join_all;
 

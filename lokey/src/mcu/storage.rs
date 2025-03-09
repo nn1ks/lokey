@@ -1,5 +1,6 @@
 use alloc::{vec, vec::Vec};
 use core::ops::Range;
+#[cfg(feature = "defmt")]
 use defmt::{Format, panic};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embedded_storage_async::nor_flash::{MultiwriteNorFlash, NorFlash};
@@ -28,7 +29,7 @@ pub trait Entry {
     fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
 }
 
-#[derive(Format)]
+#[cfg_attr(feature = "defmt", derive(Format))]
 pub enum Error<E> {
     Flash(E),
     FullStorage,

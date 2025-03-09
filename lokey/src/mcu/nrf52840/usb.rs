@@ -1,9 +1,10 @@
 use super::Nrf52840;
 use crate::external::{self, usb};
-use crate::{internal, util::channel::Channel};
+use crate::{internal, util::channel::Channel, util::unwrap};
 use alloc::boxed::Box;
 use core::{future::Future, pin::Pin};
-use defmt::{info, unwrap};
+#[cfg(feature = "defmt")]
+use defmt::info;
 use embassy_executor::Spawner;
 use embassy_nrf::interrupt::{InterruptExt, Priority};
 use embassy_nrf::usb::vbus_detect::{SoftwareVbusDetect, VbusDetect};
@@ -33,6 +34,7 @@ impl usb::CreateDriver for Nrf52840 {
         embassy_nrf::interrupt::USBD.set_priority(Priority::P2);
         embassy_nrf::interrupt::CLOCK_POWER.set_priority(Priority::P2);
 
+        #[cfg(feature = "defmt")]
         info!("Enabling ext hfosc...");
         unwrap!(nrf_softdevice::RawError::convert(unsafe {
             nrf_softdevice::raw::sd_clock_hfclk_request()

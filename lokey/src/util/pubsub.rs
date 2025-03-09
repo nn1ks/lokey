@@ -2,6 +2,7 @@ use alloc::{collections::VecDeque, vec::Vec};
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
 use core::{cell::RefCell, future::poll_fn};
+#[cfg(feature = "defmt")]
 use defmt::warn;
 use embassy_sync::blocking_mutex::{Mutex, raw::RawMutex};
 use futures_util::Stream;
@@ -226,7 +227,9 @@ impl<'a, M: RawMutex, T: Clone> Subscriber<'a, M, T> {
     pub async fn next_message(&mut self) -> T {
         loop {
             match self.next_message_inner().await {
+                #[allow(unused_variables)]
                 WaitResult::Lagged(v) => {
+                    #[cfg(feature = "defmt")]
                     warn!("Subscriber lagged by {} messages", v);
                     continue;
                 }

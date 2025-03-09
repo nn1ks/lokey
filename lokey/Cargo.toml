@@ -9,6 +9,22 @@ license = "Apache-2.0 OR MIT"
 [features]
 default = ["usb"]
 
+defmt = [
+  "dep:defmt",
+  "embassy-executor/defmt",
+  "embassy-futures/defmt",
+  "embassy-nrf?/defmt",
+  "embassy-rp?/defmt",
+  "embassy-sync/defmt",
+  "embassy-time/defmt",
+  "embassy-usb/defmt",
+  "embedded-hal/defmt-03",
+  "embedded-hal-async/defmt-03",
+  "nrf-softdevice?/defmt",
+  "sequential-storage/defmt-03",
+  "usbd-hid?/defmt",
+]
+
 usb = [
   "dep:embassy-usb",
   "dep:usbd-hid",
@@ -38,33 +54,33 @@ rp2040 = [
 ]
 
 [dependencies]
-defmt = { version = "0.3.5", features = ["alloc"] }
-embassy-executor = { version = "0.7.0", features = ["executor-thread", "executor-interrupt", "nightly", "defmt"] }
-embassy-futures = { version = "0.1.1", features = ["defmt"] }
-embassy-nrf = { version = "0.3.1", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio", "defmt"], optional = true }
-embassy-rp = { version = "0.3.1", features = ["critical-section-impl", "time-driver", "defmt"], optional = true }
-embassy-sync = { version = "0.6.2", features = ["defmt"] }
-embassy-time = { version = "0.4.0", features = ["defmt"] }
-embassy-usb = { version = "0.4.0", features = ["usbd-hid", "defmt"], optional = true }
+defmt = { version = "0.3.5", features = ["alloc"], optional = true }
+embassy-executor = { version = "0.7.0", features = ["executor-thread", "executor-interrupt", "nightly"] }
+embassy-futures = "0.1.1"
+embassy-nrf = { version = "0.3.1", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"], optional = true }
+embassy-rp = { version = "0.3.1", features = ["critical-section-impl", "time-driver"], optional = true }
+embassy-sync = "0.6.2"
+embassy-time = "0.4.0"
+embassy-usb = { version = "0.4.0", features = ["usbd-hid"], optional = true }
 embedded-alloc = "0.6.0"
-embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
-embedded-hal-async = { version = "1.0.0", features = ["defmt-03"] }
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
 embedded-storage-async = "0.4.1"
 futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
 generic-array = "1.0.0"
 lokey_macros = { path = "../lokey_macros" }
-nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice", rev = "bb1600b728c8acbaecf974741ee5867b472289f3", features = ["critical-section-impl", "usable-from-interrupts", "defmt"], optional = true }
+nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice", rev = "bb1600b728c8acbaecf974741ee5867b472289f3", features = ["critical-section-impl", "usable-from-interrupts"], optional = true }
 once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 portable-atomic-util = { version = "0.2.0", features = ["alloc"] }
-sequential-storage = { version = "4.0.1", features = ["defmt-03"] }
+sequential-storage = "4.0.1"
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
 typenum = "1.17.0"
-usbd-hid = { version = "0.8.2", features = ["defmt"], optional = true }
+usbd-hid = { version = "0.8.2", optional = true }
 
 [dev-dependencies]
 cortex-m-rt = "0.7.0"
 
 [package.metadata.docs.rs]
-features = ["usb", "ble"]
+features = ["defmt", "usb", "ble"]

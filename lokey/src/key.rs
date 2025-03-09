@@ -63,11 +63,13 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 /// ```
 pub use lokey_macros::layout;
 
+use crate::util::unwrap;
 use crate::{Component, DynContext, internal};
 use alloc::boxed::Box;
 use core::future::Future;
 use core::pin::Pin;
-use defmt::{debug, error, panic, unwrap};
+#[cfg(feature = "defmt")]
+use defmt::{Format, debug, error, panic};
 use generic_array::GenericArray;
 
 /// The layout of the keys.
@@ -140,18 +142,27 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
             let mut receiver = context.internal_channel.receiver::<Message>();
             loop {
                 let message = receiver.next().await;
+                #[cfg(feature = "defmt")]
                 debug!("Received keys message: {}", message);
                 match message {
                     Message::Press { key_index } => {
+                        #[allow(clippy::single_match)]
                         match actions.get(key_index as usize) {
                             Some(action) => action.on_press(context),
-                            None => error!("Layout has no action at key index {}", key_index),
+                            None => {
+                                #[cfg(feature = "defmt")]
+                                error!("Layout has no action at key index {}", key_index)
+                            }
                         };
                     }
                     Message::Release { key_index } => {
+                        #[allow(clippy::single_match)]
                         match actions.get(key_index as usize) {
                             Some(action) => action.on_release(context),
-                            None => error!("Layout has no action at key index {}", key_index),
+                            None => {
+                                #[cfg(feature = "defmt")]
+                                error!("Layout has no action at key index {}", key_index)
+                            }
                         };
                     }
                 }
@@ -229,7 +240,7 @@ pub trait Scanner {
 }
 
 /// A message type for key press and key release events.
-#[derive(defmt::Format)]
+#[cfg_attr(feature = "defmt", derive(Format))]
 pub enum Message {
     /// The key at the specified index was pressed.
     Press { key_index: u16 },
@@ -254,7 +265,9 @@ impl internal::Message for Message {
             1 => Some(Message::Release {
                 key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
             }),
+            #[allow(unused_variables)]
             v => {
+                #[cfg(feature = "defmt")]
                 error!("unknown tag byte: {}", v);
                 None
             }

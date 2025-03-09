@@ -1,5 +1,6 @@
 use crate::mcu::storage;
 use core::{cell::RefCell, mem};
+#[cfg(feature = "defmt")]
 use defmt::{Format, debug, error, info};
 use embassy_executor::Spawner;
 use generic_array::GenericArray;
@@ -12,7 +13,8 @@ use nrf_softdevice::ble::{
 use storage::Storage;
 
 #[repr(C)]
-#[derive(Clone, Debug, Format, Default)]
+#[derive(Clone, Debug, Default)]
+#[cfg_attr(feature = "defmt", derive(Format))]
 pub struct BondInfo {
     peer: Peer,
     sys_attr: SystemAttribute,
@@ -39,7 +41,8 @@ impl storage::Entry for BondInfo {
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, Format)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(Format))]
 struct Peer {
     master_id: MasterId,
     key: EncryptionInfo,
@@ -60,7 +63,8 @@ impl Default for Peer {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Format)]
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "defmt", derive(Format))]
 struct SystemAttribute {
     length: usize,
     data: [u8; 62],
@@ -77,7 +81,9 @@ impl Default for SystemAttribute {
 
 #[embassy_executor::task]
 async fn write_bond_info_to_flash(storage: &'static Storage<Flash>, bond_info: BondInfo) {
+    #[allow(unused_variables)]
     if let Err(e) = storage.store(&bond_info).await {
+        #[cfg(feature = "defmt")]
         error!("Failed to write bond info to flash: {}", e);
     }
 }
@@ -119,6 +125,7 @@ impl SecurityHandler for Bonder {
         key: EncryptionInfo,
         peer_id: IdentityKey,
     ) {
+        #[cfg(feature = "defmt")]
         debug!("Storing bond info for {}", master_id);
         let new_bond_info = BondInfo {
             peer: Peer {
@@ -136,6 +143,7 @@ impl SecurityHandler for Bonder {
 
     fn get_key(&self, _conn: &Connection, master_id: MasterId) -> Option<EncryptionInfo> {
         // Reconnecting with an existing bond
+        #[cfg(feature = "defmt")]
         debug!("Getting bond for {}", master_id);
 
         let bond_info = self.bond_info.borrow();
@@ -148,16 +156,20 @@ impl SecurityHandler for Bonder {
     fn save_sys_attrs(&self, conn: &Connection) {
         // On disconnect usually
         let addr = conn.peer_address();
+        #[cfg(feature = "defmt")]
         info!("Saving system attributes for {}", addr);
 
         let mut bond_info = self.bond_info.borrow_mut();
 
+        #[allow(clippy::manual_unwrap_or_default)]
         match bond_info.as_mut() {
             Some(bond_info) if bond_info.peer.peer_id.is_match(addr) => {
                 bond_info.sys_attr.length = match get_sys_attrs(conn, &mut bond_info.sys_attr.data)
                 {
                     Ok(length) => length,
+                    #[allow(unused_variables)]
                     Err(e) => {
+                        #[cfg(feature = "defmt")]
                         error!("Get system attr for {} error: {}", bond_info, e);
                         0
                     }
@@ -167,6 +179,7 @@ impl SecurityHandler for Bonder {
                     .unwrap();
             }
             _ => {
+                #[cfg(feature = "defmt")]
                 info!("Peer doesn't match {}", conn.peer_address());
             }
         };
@@ -174,6 +187,7 @@ impl SecurityHandler for Bonder {
 
     fn load_sys_attrs(&self, conn: &Connection) {
         let addr = conn.peer_address();
+        #[cfg(feature = "defmt")]
         info!("Loading system attributes for {}", addr);
 
         let bond_info = self.bond_info.borrow();
@@ -187,7 +201,9 @@ impl SecurityHandler for Bonder {
             _ => None,
         };
 
+        #[allow(unused_variables)]
         if let Err(err) = set_sys_attrs(conn, sys_attr) {
+            #[cfg(feature = "defmt")]
             error!("Failed to set sys attrs: {:?}", err);
         }
     }
