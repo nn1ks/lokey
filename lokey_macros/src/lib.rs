@@ -2,7 +2,7 @@ use darling::{FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use proc_macro_error::{abort, proc_macro_error};
 use quote::{ToTokens, quote};
-use syn::spanned::Spanned;
+use syn::{parse::Parser, spanned::Spanned};
 
 #[derive(FromMeta)]
 struct DeviceArgs {
@@ -156,6 +156,75 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             #function_ident(context).await
         }
+    }
+    .into()
+}
+
+#[proc_macro_error]
+#[proc_macro]
+pub fn layout(item: TokenStream) -> TokenStream {
+    let arrays: syn::punctuated::Punctuated<syn::ExprArray, syn::token::Comma> =
+        syn::punctuated::Punctuated::parse_terminated
+            .parse(item)
+            .unwrap_or_else(|e| abort!("{}", e.to_string()));
+
+    let num_keys = match arrays.first() {
+        Some(v) => v.elems.len(),
+        None => 0,
+    };
+    for array in &arrays {
+        if array.elems.len() != num_keys {
+            abort!(
+                array.span(),
+                "All layers must have an equal amount of actions"
+            );
+        }
+    }
+    let mut layer_actions: Vec<Vec<proc_macro2::TokenStream>> = vec![vec![]; num_keys];
+    for array in arrays {
+        for (key_index, expr) in array.elems.into_iter().enumerate() {
+            let expr = match expr {
+                syn::Expr::Path(path)
+                    if path.path.get_ident().map(|v| v.to_string())
+                        == Some("Transparent".to_owned()) =>
+                {
+                    match layer_actions[key_index].last() {
+                        Some(v) => v.clone(),
+                        None => quote! { ::lokey::key::action::NoOp },
+                    }
+                }
+                _ => expr.to_token_stream(),
+            };
+            layer_actions[key_index].push(expr);
+        }
+    }
+    let combined_actions = layer_actions
+        .into_iter()
+        .map(|actions| {
+            let v = actions
+                .into_iter()
+                .enumerate()
+                .map(|(layer_index, action)| {
+                    let layer_index = u8::try_from(layer_index).unwrap();
+                    quote! {
+                        (
+                            ::lokey::LayerId(#layer_index),
+                            ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(#action))
+                        )
+                    }
+                })
+                .collect::<Vec<_>>();
+            quote! {
+                ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
+                    ::lokey::key::action::PerLayer::new([#(#v,)*])
+                ))
+            }
+        })
+        .collect::<Vec<_>>();
+    quote! {
+        ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
+            ::lokey::key::Layout::new([#(#combined_actions,)*])
+        ))
     }
     .into()
 }

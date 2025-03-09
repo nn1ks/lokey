@@ -16,15 +16,23 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mcu: [no_mcu, rp2040]
+        mcu: [no_mcu, nrf52840, rp2040]
         features: ["", "usb", "ble", "usb ble"]
         include:
           - mcu: no_mcu
             target: thumbv7em-none-eabihf
             mcu_features: ""
+          - mcu: nrf52840
+            target: thumbv7em-none-eabihf
+            mcu_features: "nrf52840"
           - mcu: rp2040
             target: thumbv6m-none-eabi
             mcu_features: "rp2040"
+        exclude:
+          - mcu: nrf52840
+            features: ""
+          - mcu: nrf52840
+            features: "usb"
     steps:
     - uses: actions/checkout@v4
     - name: Build
@@ -42,8 +50,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mcu: [rp2040]
+        mcu: [nrf52840, rp2040]
         include:
+          - mcu: nrf52840
+            target: thumbv7em-none-eabihf
+            mcu_features: "nrf52840"
           - mcu: rp2040
             target: thumbv6m-none-eabi
             mcu_features: "rp2040"
