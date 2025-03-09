@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         mcu: [no_mcu, nrf52840, rp2040]
-        features: ["", "usb", "ble", "usb ble"]
+        features: ["", "defmt", "usb", "defmt usb", "ble", "defmt ble", "usb ble", "defmt usb ble"]
         include:
           - mcu: no_mcu
             target: thumbv7em-none-eabihf
@@ -29,14 +29,21 @@ jobs:
             target: thumbv6m-none-eabi
             mcu_features: "rp2040"
         exclude:
+          # If the "nrf52840" feature is enabled, the "ble" feature must also be enabled so we exclude all feature sets that don't have "ble" here
           - mcu: nrf52840
             features: ""
           - mcu: nrf52840
+            features: "defmt"
+          - mcu: nrf52840
             features: "usb"
+          - mcu: nrf52840
+            features: "defmt usb"
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose --target ${{ matrix.target }} --no-default-features --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
+      run: cargo build --verbose --target ${{ matrix.target }} --no-default-features --features "${{ matrix.features }} ${{ matrix.mcu_features }}"
+    - name: Run clippy
+      run: cargo clippy --verbose --target ${{ matrix.target }} --no-default-features --features "${{ matrix.features }} ${{ matrix.mcu_features }}" -- -D warnings
     - name: Run tests
       if: matrix.mcu != 'no_mcu'
       run: cargo test --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
@@ -46,19 +53,3 @@ jobs:
     - uses: actions/checkout@v4
     - name: Check formatting
       run: cargo fmt --verbose --check
-  clippy:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        mcu: [nrf52840, rp2040]
-        include:
-          - mcu: nrf52840
-            target: thumbv7em-none-eabihf
-            mcu_features: "nrf52840"
-          - mcu: rp2040
-            target: thumbv6m-none-eabi
-            mcu_features: "rp2040"
-    steps:
-    - uses: actions/checkout@v4
-    - name: Run clippy
-      run: cargo clippy --verbose --target ${{ matrix.target }} --no-default-features --features "${{ matrix.mcu_features }} usb ble" -- -D warnings
