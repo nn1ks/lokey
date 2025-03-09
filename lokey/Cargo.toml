@@ -65,3 +65,6 @@ usbd-hid = { version = "0.8.2", features = ["defmt"], optional = true }
 
 [dev-dependencies]
 cortex-m-rt = "0.7.0"
+
+[package.metadata.docs.rs]
+features = ["usb", "ble"]
