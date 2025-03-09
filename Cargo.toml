@@ -1,5 +1,6 @@
 [workspace]
 members = ["lokey", "lokey_macros"]
+exclude = ["examples/keyboard_nrf52840", "examples/keyboard_rp2040"]
 resolver = "2"
 
 [profile.release]

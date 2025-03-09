@@ -1,0 +1,15 @@
+{
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
+    "rust-analyzer.check.command": "clippy",
+    // "rust-analyzer.cargo.features": [
+    //     "defmt",
+    //     "usb",
+    //     "ble"
+    // ],
+    "rust-analyzer.linkedProjects": [
+        "Cargo.toml",
+        "examples/keyboard_nrf52840/Cargo.toml",
+        "examples/keyboard_rp2040/Cargo.toml",
+    ],
+}
