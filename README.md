@@ -22,6 +22,8 @@ Lokey is an extensible keyboard firmware written in Rust.
 - nRF52840
 - RP2040
 
+Note that the Atmega32u4 microcontroller (commonly used in Pro Micro controllers) is not supported and also won't be supported in the future because this firmware requires more flash memory and RAM than the microcontroller has.
+
 #### Features
 
 - USB Connectivity
