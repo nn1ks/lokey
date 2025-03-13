@@ -2,7 +2,7 @@ use darling::{FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use proc_macro_error::{abort, proc_macro_error};
 use quote::{ToTokens, quote};
-use syn::{parse::Parser, spanned::Spanned};
+use syn::{parse::Parser, parse_macro_input, spanned::Spanned};
 
 #[derive(FromMeta)]
 struct DeviceArgs {
@@ -160,14 +160,9 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     .into()
 }
 
-#[proc_macro_error]
-#[proc_macro]
-pub fn layout(item: TokenStream) -> TokenStream {
-    let arrays: syn::punctuated::Punctuated<syn::ExprArray, syn::token::Comma> =
-        syn::punctuated::Punctuated::parse_terminated
-            .parse(item)
-            .unwrap_or_else(|e| abort!("{}", e.to_string()));
-
+fn layer_actions(
+    arrays: syn::punctuated::Punctuated<syn::ExprArray, syn::token::Comma>,
+) -> Vec<Vec<proc_macro2::TokenStream>> {
     let num_keys = match arrays.first() {
         Some(v) => v.elems.len(),
         None => 0,
@@ -198,6 +193,19 @@ pub fn layout(item: TokenStream) -> TokenStream {
             layer_actions[key_index].push(expr);
         }
     }
+    layer_actions
+}
+
+#[proc_macro_error]
+#[proc_macro]
+pub fn layout(item: TokenStream) -> TokenStream {
+    let arrays: syn::punctuated::Punctuated<syn::ExprArray, syn::token::Comma> =
+        syn::punctuated::Punctuated::parse_terminated
+            .parse(item)
+            .unwrap_or_else(|e| abort!("{}", e.to_string()));
+
+    let layer_actions = layer_actions(arrays);
+
     let combined_actions = layer_actions
         .into_iter()
         .map(|actions| {
@@ -225,6 +233,85 @@ pub fn layout(item: TokenStream) -> TokenStream {
         ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
             ::lokey::key::Layout::new([#(#combined_actions,)*])
         ))
+    }
+    .into()
+}
+
+struct StaticLayoutArguments {
+    static_ident: syn::Ident,
+    _comma: syn::Token![,],
+    arrays: syn::punctuated::Punctuated<syn::ExprArray, syn::token::Comma>,
+}
+
+impl syn::parse::Parse for StaticLayoutArguments {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            static_ident: input.parse()?,
+            _comma: input.parse()?,
+            arrays: syn::punctuated::Punctuated::parse_terminated(input)?,
+        })
+    }
+}
+
+#[proc_macro_error]
+#[proc_macro]
+pub fn static_layout(item: TokenStream) -> TokenStream {
+    let arguments = parse_macro_input!(item as StaticLayoutArguments);
+    let layer_actions = layer_actions(arguments.arrays);
+
+    fn build_action_type_ident(key_index: usize, layer_index: usize) -> syn::Ident {
+        syn::Ident::new(
+            &format!("__Action_{key_index}_{layer_index}"),
+            proc_macro2::Span::call_site(),
+        )
+    }
+
+    let action_type_idents = layer_actions
+        .iter()
+        .enumerate()
+        .flat_map(|(key_index, actions)| {
+            actions
+                .iter()
+                .enumerate()
+                .map(move |(layer_index, _)| build_action_type_ident(key_index, layer_index))
+        })
+        .collect::<Vec<_>>();
+    let combined_actions = layer_actions
+        .into_iter()
+        .enumerate()
+        .map(|(key_index, actions)| {
+            let v = actions
+                .into_iter()
+                .enumerate()
+                .map(|(layer_index, action)| {
+                    let action_type_ident = build_action_type_ident(key_index, layer_index);
+                    let layer_index = u8::try_from(layer_index).unwrap();
+                    quote! {{
+                        #[define_opaque(#action_type_ident)]
+                        const fn action() -> #action_type_ident {
+                            #action
+                        }
+                        static ACTION: #action_type_ident = action();
+                        (::lokey::LayerId(#layer_index), &ACTION)
+                    }}
+                })
+                .collect::<Vec<_>>();
+            let num_actions = v.len();
+            quote! {{
+                static PER_LAYER_ACTION: ::lokey::key::action::PerLayer<#num_actions> =
+                    ::lokey::key::action::PerLayer::new([#(#v,)*]);
+                &PER_LAYER_ACTION
+            }}
+        })
+        .collect::<Vec<_>>();
+    let static_ident = arguments.static_ident;
+    let num_keys = combined_actions.len();
+    quote! {
+        #(type #action_type_idents = impl ::lokey::key::Action;)*
+        const fn __build_layout() -> ::lokey::key::Layout<#num_keys> {
+            ::lokey::key::Layout::new([#(#combined_actions,)*])
+        }
+        static #static_ident: ::lokey::key::Layout<#num_keys> = __build_layout();
     }
     .into()
 }

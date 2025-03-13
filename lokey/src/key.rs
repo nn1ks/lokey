@@ -62,6 +62,7 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 /// # }
 /// ```
 pub use lokey_macros::layout;
+pub use lokey_macros::static_layout;
 
 use crate::util::unwrap;
 use crate::{Component, DynContext, internal};

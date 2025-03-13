@@ -1,6 +1,7 @@
 #![no_main]
 #![no_std]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(type_alias_impl_trait)]
 
 use defmt_rtt as _;
 use embassy_nrf::gpio::{Input, Level, Output, OutputDrive, Pin, Pull};
@@ -83,9 +84,17 @@ impl ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>> for KeyboardLeft {
     }
 }
 
+lokey::key::static_layout!(
+    LAYOUT,
+    // Layer 0
+    [HoldTap::new(BleDisconnect, KeyCode::new(Key::A)).tapping_term(Duration::from_secs(2))],
+    // Layer 1
+    [Transparent]
+);
+
 #[lokey::device]
 async fn main(context: Context<KeyboardLeft, Central>) {
-    let layout = layout!(
+    let _layout = layout!(
         // Layer 0
         [HoldTap::new(BleDisconnect, KeyCode::new(Key::A)).tapping_term(Duration::from_secs(2))],
         // Layer 1
@@ -94,7 +103,8 @@ async fn main(context: Context<KeyboardLeft, Central>) {
     context
         .enable(
             Keys::<DirectPinsConfig, NUM_KEYS>::new()
-                .layout(layout)
+                // .layout(layout)
+                .layout(&LAYOUT)
                 .scanner_config(DirectPinsConfig {
                     debounce_key_press: key::Debounce::Defer {
                         duration: Duration::from_millis(30),
