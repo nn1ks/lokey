@@ -16,12 +16,13 @@
         };
         rustToolchain = fenix.packages.${system}.fromToolchainFile {
           file = ./rust-toolchain.toml;
-          sha256 = "sha256-sfz/L5xfR+ltvPiC4TnCUhsBjzi7I25Mj7DC8YyNATM=";
+          sha256 = "sha256-KAfZkFntAfbkkdx3RqrdwWrHoXoq5m8mVO23eNDa+C0=";
         };
         buildInputs = with pkgs; [
           pkg-config
           rustToolchain
           rust-analyzer
+          cargo-expand
           probe-rs
           libusb1
           libusb1.dev
