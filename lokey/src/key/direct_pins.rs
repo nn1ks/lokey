@@ -1,8 +1,10 @@
-use super::{Debounce, InputSwitch, Scanner};
+use super::{Debounce, Scanner};
 use crate::{DynContext, internal, key::Message, util::unwrap};
 use alloc::boxed::Box;
+use embassy_executor::raw::TaskStorage;
 use embassy_time::Timer;
 use futures_util::future::join_all;
+use switch_hal::{InputSwitch, WaitableInputSwitch};
 
 /// Configuration for the [`DirectPins`] scanner.
 #[derive(Clone, Default)]
@@ -42,34 +44,25 @@ impl<I, const IS: usize, const NUM_KEYS: usize> DirectPins<I, IS, NUM_KEYS> {
     }
 }
 
-impl<
-    I: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch + 'static,
-    const IS: usize,
-    const NUM_KEYS: usize,
-> Scanner for DirectPins<I, IS, NUM_KEYS>
+impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_KEYS: usize> Scanner
+    for DirectPins<I, IS, NUM_KEYS>
 {
     const NUM_KEYS: usize = NUM_KEYS;
 
     type Config = DirectPinsConfig;
 
     fn run(self, config: Self::Config, context: DynContext) {
-        let input_pins = Box::new(self.pins.map(|pin| {
-            let b: Box<dyn InputSwitch> = Box::new(pin);
-            b
-        }));
+        let task_storage = Box::leak(Box::new(TaskStorage::new()));
+        let task = task_storage.spawn(|| task(config, self.pins, context.internal_channel));
+        unwrap!(context.spawner.spawn(task));
 
-        unwrap!(
-            context
-                .spawner
-                .spawn(task(input_pins, context.internal_channel, config))
-        );
-
-        #[embassy_executor::task]
-        async fn task(
-            mut input_pins: Box<[Box<dyn InputSwitch>]>,
-            internal_channel: internal::DynChannel,
+        async fn task<I, const IS: usize>(
             config: DirectPinsConfig,
-        ) {
+            mut input_pins: [I; IS],
+            internal_channel: internal::DynChannel,
+        ) where
+            I: InputSwitch + WaitableInputSwitch + 'static,
+        {
             let futures = input_pins.iter_mut().enumerate().map(|(i, pin)| {
                 let debounce_key_press = config.debounce_key_press.clone();
                 let debounce_key_release = config.debounce_key_release.clone();
@@ -77,13 +70,11 @@ impl<
                     let mut active = false;
                     loop {
                         let wait_duration = if active {
-                            let wait_duration =
-                                debounce_key_release.wait_for_inactive(pin.as_mut()).await;
+                            let wait_duration = debounce_key_release.wait_for_inactive(pin).await;
                             active = false;
                             wait_duration
                         } else {
-                            let wait_duration =
-                                debounce_key_press.wait_for_active(pin.as_mut()).await;
+                            let wait_duration = debounce_key_press.wait_for_active(pin).await;
                             active = true;
                             wait_duration
                         };

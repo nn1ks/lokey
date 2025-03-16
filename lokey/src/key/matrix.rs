@@ -1,8 +1,10 @@
 use super::{Debounce, InputSwitch, OutputSwitch, Scanner};
+use crate::internal;
 use crate::key::Message;
 use crate::{DynContext, util::unwrap};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use embassy_executor::raw::TaskStorage;
 use embassy_time::{Duration, Instant, Timer};
 use switch_hal::WaitableInputSwitch;
 
@@ -59,48 +61,40 @@ impl<
     type Config = MatrixConfig;
 
     fn run(self, config: Self::Config, context: DynContext) {
-        let input_pins = Box::new(self.input_pins.map(|input_pin| {
-            let b: Box<dyn InputSwitch> = Box::new(input_pin);
-            b
-        }));
-        let output_pins = Box::new(self.output_pins.map(|output_pin| {
-            let b: Box<dyn OutputSwitch> = Box::new(output_pin);
-            b
-        }));
-        let states = (0..OS)
-            .map(|_| (0..IS).map(|_| false).collect::<Vec<_>>())
-            .collect::<Vec<_>>();
-        let key_indices = (0..OS)
-            .map(|i| {
-                (0..IS)
-                    .map(|j| {
-                        self.transform
-                            .iter()
-                            .position(|v| *v == Some((i, j)))
-                            .map(|v| v as u16)
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+        let mut key_indices = [[None::<u16>; IS]; OS];
+        for (i, key_index_array) in key_indices.iter_mut().enumerate() {
+            for (j, key_index) in key_index_array.iter_mut().enumerate() {
+                *key_index = self
+                    .transform
+                    .iter()
+                    .position(|v| *v == Some((i, j)))
+                    .map(|v| v as u16);
+            }
+        }
 
-        unwrap!(context.spawner.spawn(task(
-            config,
-            input_pins,
-            output_pins,
-            states,
-            key_indices,
-            context,
-        )));
+        let task_storage = Box::leak(Box::new(TaskStorage::new()));
+        let task = task_storage.spawn(|| {
+            task(
+                config,
+                self.input_pins,
+                self.output_pins,
+                key_indices,
+                context.internal_channel,
+            )
+        });
+        unwrap!(context.spawner.spawn(task));
 
-        #[embassy_executor::task]
-        async fn task(
+        async fn task<I, O, const IS: usize, const OS: usize>(
             config: MatrixConfig,
-            mut input_switches: Box<[Box<dyn InputSwitch>]>,
-            mut output_switches: Box<[Box<dyn OutputSwitch>]>,
-            mut states: Vec<Vec<bool>>,
-            key_indices: Vec<Vec<Option<u16>>>,
-            context: DynContext,
-        ) {
+            mut input_switches: [I; IS],
+            mut output_switches: [O; OS],
+            key_indices: [[Option<u16>; IS]; OS],
+            internal_channel: internal::DynChannel,
+        ) where
+            I: InputSwitch + 'static,
+            O: OutputSwitch + 'static,
+        {
+            let mut states = [[false; IS]; OS];
             let mut timeouts = Vec::<(u16, Instant)>::new();
             let mut defers = Vec::<(u16, Instant, bool)>::new();
             loop {
@@ -164,11 +158,9 @@ impl<
                                 if Instant::now().duration_since(last_change) > defer_duration {
                                     defers.remove(defer_index);
                                     if was_active {
-                                        context.internal_channel.send(Message::Press { key_index })
+                                        internal_channel.send(Message::Press { key_index })
                                     } else {
-                                        context
-                                            .internal_channel
-                                            .send(Message::Release { key_index })
+                                        internal_channel.send(Message::Release { key_index })
                                     }
                                 }
                             } else if is_active != states[i][j] {
