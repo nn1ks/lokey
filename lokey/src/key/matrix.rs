@@ -7,23 +7,10 @@ use embassy_time::{Duration, Instant, Timer};
 use switch_hal::WaitableInputSwitch;
 
 /// Configuration for the [`Matrix`] scanner.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MatrixConfig {
     pub debounce_key_press: Debounce,
     pub debounce_key_release: Debounce,
-}
-
-impl Default for MatrixConfig {
-    fn default() -> Self {
-        Self {
-            debounce_key_press: Debounce::Defer {
-                duration: Duration::from_millis(5),
-            },
-            debounce_key_release: Debounce::Defer {
-                duration: Duration::from_millis(5),
-            },
-        }
-    }
 }
 
 /// Scanner for keys that are arranged in a keyboard matrix.

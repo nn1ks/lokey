@@ -1,26 +1,14 @@
 use super::{Debounce, InputSwitch, Scanner};
 use crate::{DynContext, internal, key::Message, util::unwrap};
 use alloc::boxed::Box;
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 use futures_util::future::join_all;
 
 /// Configuration for the [`DirectPins`] scanner.
+#[derive(Clone, Default)]
 pub struct DirectPinsConfig {
     pub debounce_key_press: Debounce,
     pub debounce_key_release: Debounce,
-}
-
-impl Default for DirectPinsConfig {
-    fn default() -> Self {
-        Self {
-            debounce_key_press: Debounce::Defer {
-                duration: Duration::from_millis(5),
-            },
-            debounce_key_release: Debounce::Defer {
-                duration: Duration::from_millis(5),
-            },
-        }
-    }
 }
 
 /// Scanner for keys that are each connected to a single pin.

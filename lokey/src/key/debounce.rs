@@ -17,6 +17,14 @@ pub enum Debounce {
     None,
 }
 
+impl Default for Debounce {
+    fn default() -> Self {
+        Self::Defer {
+            duration: Duration::from_millis(5),
+        }
+    }
+}
+
 impl Debounce {
     pub async fn wait_for_active(&self, pin: &mut dyn InputSwitch) -> Duration {
         match self {
