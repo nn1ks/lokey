@@ -3,9 +3,12 @@ mod debounce;
 mod direct_pins;
 mod matrix;
 
-pub use action::Action;
+pub use action::{Action, DynAction};
+use alloc::vec::Vec;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
+use embassy_executor::raw::TaskStorage;
+use embassy_futures::select::{Either, select, select_slice};
 pub use matrix::{Matrix, MatrixConfig};
 
 /// Macro for building a [`Layout`].
@@ -78,11 +81,11 @@ use generic_array::GenericArray;
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
-    actions: [&'static dyn Action; NUM_KEYS],
+    actions: [&'static dyn DynAction; NUM_KEYS],
 }
 
 impl<const NUM_KEYS: usize> Layout<NUM_KEYS> {
-    pub const fn new(actions: [&'static dyn Action; NUM_KEYS]) -> Self {
+    pub const fn new(actions: [&'static dyn DynAction; NUM_KEYS]) -> Self {
         Self { actions }
     }
 }
@@ -132,43 +135,53 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
     scanner.run(keys.scanner_config, context);
 
     if let Some(layout) = keys.layout {
-        unwrap!(
-            context
-                .spawner
-                .spawn(handle_internal_message(&layout.actions, context,))
-        );
+        let task_storage = Box::leak(Box::new(TaskStorage::new()));
+        let task = task_storage.spawn(|| handle_internal_message(&layout.actions, context));
+        unwrap!(context.spawner.spawn(task));
 
-        #[embassy_executor::task]
         async fn handle_internal_message(
-            actions: &'static [&'static dyn Action],
+            actions: &'static [&'static dyn DynAction],
             context: DynContext,
         ) {
             let mut receiver = context.internal_channel.receiver::<Message>();
+            let mut action_futures = Vec::<Pin<Box<dyn Future<Output = ()>>>>::new();
             loop {
-                let message = receiver.next().await;
-                #[cfg(feature = "defmt")]
-                debug!("Received keys message: {}", message);
-                match message {
-                    Message::Press { key_index } => {
-                        #[allow(clippy::single_match)]
-                        match actions.get(key_index as usize) {
-                            Some(action) => action.on_press(context),
-                            None => {
-                                #[cfg(feature = "defmt")]
-                                error!("Layout has no action at key index {}", key_index)
+                let fut1 = async {
+                    let message = receiver.next().await;
+                    #[cfg(feature = "defmt")]
+                    debug!("Received keys message: {}", message);
+                    match message {
+                        Message::Press { key_index } =>
+                        {
+                            #[allow(clippy::manual_map)]
+                            match actions.get(key_index as usize) {
+                                Some(action) => Some(action.on_press(context)),
+                                None => {
+                                    #[cfg(feature = "defmt")]
+                                    error!("Layout has no action at key index {}", key_index);
+                                    None
+                                }
                             }
-                        };
-                    }
-                    Message::Release { key_index } => {
-                        #[allow(clippy::single_match)]
-                        match actions.get(key_index as usize) {
-                            Some(action) => action.on_release(context),
-                            None => {
-                                #[cfg(feature = "defmt")]
-                                error!("Layout has no action at key index {}", key_index)
+                        }
+                        Message::Release { key_index } =>
+                        {
+                            #[allow(clippy::manual_map)]
+                            match actions.get(key_index as usize) {
+                                Some(action) => Some(action.on_release(context)),
+                                None => {
+                                    #[cfg(feature = "defmt")]
+                                    error!("Layout has no action at key index {}", key_index);
+                                    None
+                                }
                             }
-                        };
+                        }
                     }
+                };
+                let fut2 = select_slice(&mut action_futures);
+                match select(fut1, fut2).await {
+                    Either::First(Some(action_future)) => action_futures.push(action_future),
+                    Either::First(None) => {}
+                    Either::Second((_, i)) => drop(action_futures.remove(i)),
                 }
             }
         }
