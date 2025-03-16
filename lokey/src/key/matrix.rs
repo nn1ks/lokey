@@ -120,7 +120,7 @@ impl<
                     let mut any_active = false;
                     for (i, output_switch) in output_switches.iter_mut().enumerate() {
                         output_switch.set_active();
-                        Timer::after_millis(1).await;
+                        Timer::after_ticks(1).await;
                         for (j, input_switch) in input_switches.iter_mut().enumerate() {
                             let Some(key_index) = key_indices[i][j] else {
                                 continue;
@@ -177,7 +177,6 @@ impl<
                             states[i][j] = is_active;
                         }
                         output_switch.set_inactive();
-                        Timer::after_millis(1).await;
                     }
                     if !any_active && defers.is_empty() && timeouts.is_empty() {
                         break;
