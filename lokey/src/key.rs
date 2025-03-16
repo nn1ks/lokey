@@ -1,10 +1,13 @@
 pub mod action;
 mod debounce;
 mod direct_pins;
+mod matrix;
 
 pub use action::Action;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
+pub use matrix::{Matrix, MatrixConfig};
+
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
