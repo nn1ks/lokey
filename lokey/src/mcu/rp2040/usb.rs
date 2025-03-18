@@ -23,6 +23,7 @@ impl usb::CreateDriver for Rp2040 {
 static CHANNEL: Channel<CriticalSectionRawMutex, external::Message> = Channel::new();
 static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
 
+#[non_exhaustive]
 pub struct ExternalTransport {}
 
 impl external::Transport for ExternalTransport {
