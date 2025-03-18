@@ -61,7 +61,7 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
             mut input_pins: [I; IS],
             internal_channel: internal::DynChannel,
         ) where
-            I: InputSwitch + WaitableInputSwitch + 'static,
+            I: WaitableInputSwitch + 'static,
         {
             let futures = input_pins.iter_mut().enumerate().map(|(i, pin)| {
                 let debounce_key_press = config.debounce_key_press.clone();
@@ -70,11 +70,22 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
                     let mut active = false;
                     loop {
                         let wait_duration = if active {
-                            let wait_duration = debounce_key_release.wait_for_inactive(pin).await;
+                            let Ok(wait_duration) =
+                                debounce_key_release.wait_for_inactive(pin).await
+                            else {
+                                #[cfg(feature = "defmt")]
+                                defmt::error!("failed to get active status of pin");
+                                continue;
+                            };
                             active = false;
                             wait_duration
                         } else {
-                            let wait_duration = debounce_key_press.wait_for_active(pin).await;
+                            let Ok(wait_duration) = debounce_key_press.wait_for_active(pin).await
+                            else {
+                                #[cfg(feature = "defmt")]
+                                defmt::error!("failed to get active status of pin");
+                                continue;
+                            };
                             active = true;
                             wait_duration
                         };

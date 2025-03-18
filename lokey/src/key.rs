@@ -76,7 +76,7 @@ use alloc::boxed::Box;
 use core::future::Future;
 use core::pin::Pin;
 #[cfg(feature = "defmt")]
-use defmt::{Format, debug, error, panic};
+use defmt::{Format, debug, error};
 use generic_array::GenericArray;
 
 /// The layout of the keys.
@@ -185,61 +185,6 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
                 }
             }
         }
-    }
-}
-
-pub trait InputSwitch {
-    fn is_active(&mut self) -> bool;
-    fn wait_for_active(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
-    fn wait_for_inactive(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
-    fn wait_for_change(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
-}
-
-impl<T: switch_hal::InputSwitch + switch_hal::WaitableInputSwitch> InputSwitch for T {
-    fn is_active(&mut self) -> bool {
-        switch_hal::InputSwitch::is_active(self)
-            .unwrap_or_else(|_| panic!("failed to get active status of pin"))
-    }
-
-    fn wait_for_active(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            switch_hal::WaitableInputSwitch::wait_for_active(self)
-                .await
-                .unwrap_or_else(|_| panic!("failed to get active status of pin"));
-        })
-    }
-
-    fn wait_for_inactive(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            switch_hal::WaitableInputSwitch::wait_for_inactive(self)
-                .await
-                .unwrap_or_else(|_| panic!("failed to get active status of pin"));
-        })
-    }
-
-    fn wait_for_change(&mut self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            switch_hal::WaitableInputSwitch::wait_for_change(self)
-                .await
-                .unwrap_or_else(|_| panic!("failed to get active status of pin"));
-        })
-    }
-}
-
-pub trait OutputSwitch {
-    fn set_active(&mut self);
-    fn set_inactive(&mut self);
-}
-
-impl<T: switch_hal::OutputSwitch> OutputSwitch for T {
-    fn set_active(&mut self) {
-        switch_hal::OutputSwitch::on(self)
-            .unwrap_or_else(|_| panic!("failed to set active status of pin"));
-    }
-
-    fn set_inactive(&mut self) {
-        switch_hal::OutputSwitch::off(self)
-            .unwrap_or_else(|_| panic!("failed to set active status of pin"));
     }
 }
 

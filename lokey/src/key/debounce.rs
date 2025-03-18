@@ -1,6 +1,6 @@
-use super::InputSwitch;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Timer};
+use switch_hal::WaitableInputSwitch;
 
 /// Configuration for debouncing key switches.
 #[derive(Clone)]
@@ -26,77 +26,86 @@ impl Default for Debounce {
 }
 
 impl Debounce {
-    pub async fn wait_for_active(&self, pin: &mut dyn InputSwitch) -> Duration {
+    pub async fn wait_for_active<T: WaitableInputSwitch>(
+        &self,
+        pin: &mut T,
+    ) -> Result<Duration, T::Error> {
         match self {
             Debounce::Defer { duration } => {
                 loop {
-                    pin.wait_for_active().await;
+                    pin.wait_for_active().await?;
                     let fut1 = Timer::after(*duration);
                     let fut2 = pin.wait_for_inactive();
                     match select(fut1, fut2).await {
                         Either::First(()) => break,
-                        Either::Second(()) => {}
+                        Either::Second(result) => result?,
                     }
                 }
-                Duration::from_ticks(0)
+                Ok(Duration::from_ticks(0))
             }
             Debounce::Eager { duration } => {
-                pin.wait_for_active().await;
-                *duration
+                pin.wait_for_active().await?;
+                Ok(*duration)
             }
             Debounce::None => {
-                pin.wait_for_active().await;
-                Duration::from_ticks(0)
+                pin.wait_for_active().await?;
+                Ok(Duration::from_ticks(0))
             }
         }
     }
 
-    pub async fn wait_for_inactive(&self, pin: &mut dyn InputSwitch) -> Duration {
+    pub async fn wait_for_inactive<T: WaitableInputSwitch>(
+        &self,
+        pin: &mut T,
+    ) -> Result<Duration, T::Error> {
         match self {
             Debounce::Defer { duration } => {
                 loop {
-                    pin.wait_for_inactive().await;
+                    pin.wait_for_inactive().await?;
                     let fut1 = Timer::after(*duration);
                     let fut2 = pin.wait_for_active();
                     match select(fut1, fut2).await {
                         Either::First(()) => break,
-                        Either::Second(()) => {}
+                        Either::Second(result) => result?,
                     }
                 }
-                Duration::from_ticks(0)
+                Ok(Duration::from_ticks(0))
             }
             Debounce::Eager { duration } => {
-                pin.wait_for_inactive().await;
-                *duration
+                pin.wait_for_inactive().await?;
+                Ok(*duration)
             }
             Debounce::None => {
-                pin.wait_for_inactive().await;
-                Duration::from_ticks(0)
+                pin.wait_for_inactive().await?;
+                Ok(Duration::from_ticks(0))
             }
         }
     }
 
-    pub async fn wait_for_change(&self, pin: &mut dyn InputSwitch) -> Duration {
+    pub async fn wait_for_change<T: WaitableInputSwitch>(
+        &self,
+        pin: &mut T,
+    ) -> Result<Duration, T::Error> {
         match self {
             Debounce::Defer { duration } => {
-                pin.wait_for_change().await;
+                pin.wait_for_change().await?;
                 loop {
                     let fut1 = Timer::after(*duration);
                     let fut2 = pin.wait_for_change();
                     match select(fut1, fut2).await {
                         Either::First(()) => break,
-                        Either::Second(()) => {}
+                        Either::Second(result) => result?,
                     }
                 }
-                Duration::from_ticks(0)
+                Ok(Duration::from_ticks(0))
             }
             Debounce::Eager { duration } => {
-                pin.wait_for_change().await;
-                *duration
+                pin.wait_for_change().await?;
+                Ok(*duration)
             }
             Debounce::None => {
-                pin.wait_for_change().await;
-                Duration::from_ticks(0)
+                pin.wait_for_change().await?;
+                Ok(Duration::from_ticks(0))
             }
         }
     }
