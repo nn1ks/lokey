@@ -16,17 +16,17 @@ pub struct MatrixConfig {
 }
 
 /// Scanner for keys that are arranged in a keyboard matrix.
-pub struct Matrix<I, O, const IS: usize, const OS: usize, const NUM_KEYS: usize> {
-    input_pins: [I; IS],
-    output_pins: [O; OS],
+pub struct Matrix<I, O, const NUM_IS: usize, const NUM_OS: usize, const NUM_KEYS: usize> {
+    input_pins: [I; NUM_IS],
+    output_pins: [O; NUM_OS],
     transform: [Option<(usize, usize)>; NUM_KEYS],
 }
 
-impl<I, O, const IS: usize, const OS: usize> Matrix<I, O, IS, OS, 0> {
+impl<I, O, const NUM_IS: usize, const NUM_OS: usize> Matrix<I, O, NUM_IS, NUM_OS, 0> {
     pub const fn new<const NUM_KEYS: usize>(
-        input_pins: [I; IS],
-        output_pins: [O; OS],
-    ) -> Matrix<I, O, IS, OS, NUM_KEYS> {
+        input_pins: [I; NUM_IS],
+        output_pins: [O; NUM_OS],
+    ) -> Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS> {
         Matrix {
             input_pins,
             output_pins,
@@ -35,21 +35,23 @@ impl<I, O, const IS: usize, const OS: usize> Matrix<I, O, IS, OS, 0> {
     }
 }
 
-impl<I, O, const IS: usize, const OS: usize, const NUM_KEYS: usize> Matrix<I, O, IS, OS, NUM_KEYS> {
+impl<I, O, const NUM_IS: usize, const NUM_OS: usize, const NUM_KEYS: usize>
+    Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
+{
     // #[allow(private_bounds)]
     // #[guard(<const IS: usize> { INDEX_I < IS })]
     // #[guard(<const OS: usize> { INDEX_O < OS })]
     // #[guard(<const NUM_KEYS: usize> { INDEX_KEYS < NUM_KEYS })]
-    pub const fn map<const INDEX_I: usize, const INDEX_O: usize, const INDEX_KEYS: usize>(
+    pub const fn map<const I_INDEX: usize, const O_INDEX: usize, const KEY_INDEX: usize>(
         mut self,
     ) -> Self {
-        self.transform[INDEX_KEYS] = Some((INDEX_I, INDEX_O));
+        self.transform[KEY_INDEX] = Some((I_INDEX, O_INDEX));
         self
     }
 
-    pub fn map_next<const INDEX_I: usize, const INDEX_O: usize>(mut self) -> Self {
+    pub fn map_next<const I_INDEX: usize, const O_INDEX: usize>(mut self) -> Self {
         if let Some(key_index) = self.transform.iter().position(|v| v.is_none()) {
-            self.transform[key_index] = Some((INDEX_I, INDEX_O));
+            self.transform[key_index] = Some((I_INDEX, O_INDEX));
         }
         self
     }
@@ -73,17 +75,17 @@ impl<I, O, const IS: usize, const OS: usize, const NUM_KEYS: usize> Matrix<I, O,
 impl<
     I: InputSwitch + WaitableInputSwitch + 'static,
     O: OutputSwitch + 'static,
-    const IS: usize,
-    const OS: usize,
+    const NUM_IS: usize,
+    const NUM_OS: usize,
     const NUM_KEYS: usize,
-> Scanner for Matrix<I, O, IS, OS, NUM_KEYS>
+> Scanner for Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
 {
     const NUM_KEYS: usize = NUM_KEYS;
 
     type Config = MatrixConfig;
 
     fn run(self, config: Self::Config, context: DynContext) {
-        let mut key_indices = [[None::<u16>; OS]; IS];
+        let mut key_indices = [[None::<u16>; NUM_OS]; NUM_IS];
         for (i, key_index_array) in key_indices.iter_mut().enumerate() {
             for (j, key_index) in key_index_array.iter_mut().enumerate() {
                 *key_index = self
@@ -106,17 +108,17 @@ impl<
         });
         unwrap!(context.spawner.spawn(task));
 
-        async fn task<I, O, const IS: usize, const OS: usize>(
+        async fn task<I, O, const NUM_IS: usize, const NUM_OS: usize>(
             config: MatrixConfig,
-            mut input_switches: [I; IS],
-            mut output_switches: [O; OS],
-            key_indices: [[Option<u16>; OS]; IS],
+            mut input_switches: [I; NUM_IS],
+            mut output_switches: [O; NUM_OS],
+            key_indices: [[Option<u16>; NUM_OS]; NUM_IS],
             internal_channel: internal::DynChannel,
         ) where
             I: InputSwitch + WaitableInputSwitch + 'static,
             O: OutputSwitch + 'static,
         {
-            let mut states = [[false; IS]; OS];
+            let mut states = [[false; NUM_IS]; NUM_OS];
             let mut timeouts = Vec::<(u16, Instant)>::new();
             let mut defers = Vec::<(u16, Instant, bool)>::new();
             loop {
