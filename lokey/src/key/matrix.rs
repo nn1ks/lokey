@@ -46,6 +46,28 @@ impl<I, O, const IS: usize, const OS: usize, const NUM_KEYS: usize> Matrix<I, O,
         self.transform[INDEX_KEYS] = Some((INDEX_I, INDEX_O));
         self
     }
+
+    pub fn map_next<const INDEX_I: usize, const INDEX_O: usize>(mut self) -> Self {
+        if let Some(key_index) = self.transform.iter().position(|v| v.is_none()) {
+            self.transform[key_index] = Some((INDEX_I, INDEX_O));
+        }
+        self
+    }
+
+    pub fn map_rows_and_cols<const NUM_ROWS: usize, const NUM_COLS: usize>(
+        mut self,
+        input_indices: [usize; NUM_ROWS],
+        output_indices: [usize; NUM_COLS],
+        mut start_key_index: usize,
+    ) -> Self {
+        for i in input_indices {
+            for j in output_indices {
+                self.transform[start_key_index] = Some((i, j));
+                start_key_index += 1;
+            }
+        }
+        self
+    }
 }
 
 impl<
@@ -61,7 +83,7 @@ impl<
     type Config = MatrixConfig;
 
     fn run(self, config: Self::Config, context: DynContext) {
-        let mut key_indices = [[None::<u16>; IS]; OS];
+        let mut key_indices = [[None::<u16>; OS]; IS];
         for (i, key_index_array) in key_indices.iter_mut().enumerate() {
             for (j, key_index) in key_index_array.iter_mut().enumerate() {
                 *key_index = self
@@ -88,7 +110,7 @@ impl<
             config: MatrixConfig,
             mut input_switches: [I; IS],
             mut output_switches: [O; OS],
-            key_indices: [[Option<u16>; IS]; OS],
+            key_indices: [[Option<u16>; OS]; IS],
             internal_channel: internal::DynChannel,
         ) where
             I: InputSwitch + WaitableInputSwitch + 'static,
@@ -129,7 +151,7 @@ impl<
                         }
                         Timer::after_ticks(1).await;
                         for (j, input_switch) in input_switches.iter_mut().enumerate() {
-                            let Some(key_index) = key_indices[i][j] else {
+                            let Some(key_index) = key_indices[j][i] else {
                                 continue;
                             };
                             let Ok(is_active) = input_switch.is_active() else {
