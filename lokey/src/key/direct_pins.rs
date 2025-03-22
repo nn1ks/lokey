@@ -1,5 +1,6 @@
 use super::{Debounce, Scanner};
-use crate::{DynContext, internal, key::Message, util::unwrap};
+use crate::util::{error, unwrap};
+use crate::{DynContext, internal, key::Message};
 use alloc::boxed::Box;
 use embassy_executor::raw::TaskStorage;
 use embassy_time::Timer;
@@ -73,8 +74,7 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
                             let Ok(wait_duration) =
                                 debounce_key_release.wait_for_inactive(pin).await
                             else {
-                                #[cfg(feature = "defmt")]
-                                defmt::error!("failed to get active status of pin");
+                                error!("failed to get active status of pin");
                                 continue;
                             };
                             active = false;
@@ -82,8 +82,7 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
                         } else {
                             let Ok(wait_duration) = debounce_key_press.wait_for_active(pin).await
                             else {
-                                #[cfg(feature = "defmt")]
-                                defmt::error!("failed to get active status of pin");
+                                error!("failed to get active status of pin");
                                 continue;
                             };
                             active = true;

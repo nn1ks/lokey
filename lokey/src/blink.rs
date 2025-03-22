@@ -1,8 +1,6 @@
 use crate::Component;
-use crate::util::unwrap;
+use crate::util::{error, unwrap};
 use alloc::boxed::Box;
-#[cfg(feature = "defmt")]
-use defmt::error;
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 
@@ -16,14 +14,12 @@ trait OutputPin {
 impl<T: embedded_hal::digital::OutputPin> OutputPin for T {
     fn set_high(&mut self) {
         if embedded_hal::digital::OutputPin::set_high(self).is_err() {
-            #[cfg(feature = "defmt")]
             error!("Failed to set pin");
         }
     }
 
     fn set_low(&mut self) {
         if embedded_hal::digital::OutputPin::set_low(self).is_err() {
-            #[cfg(feature = "defmt")]
             error!("Failed to set pin");
         }
     }

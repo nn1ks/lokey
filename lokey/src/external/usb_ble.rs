@@ -1,8 +1,9 @@
-use crate::{external, internal, mcu::Mcu, util::unwrap};
+use crate::util::{error, info, unwrap};
+use crate::{external, internal, mcu::Mcu};
 use alloc::boxed::Box;
 use core::{cell::Cell, future::Future, pin::Pin};
 #[cfg(feature = "defmt")]
-use defmt::{Format, error, info};
+use defmt::Format;
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
@@ -34,9 +35,7 @@ impl internal::Message for Message {
         let transport_selection = match bytes[0] {
             0 => TransportSelection::Usb,
             1 => TransportSelection::Ble,
-            #[allow(unused_variables)]
             v => {
-                #[cfg(feature = "defmt")]
                 error!("unknown transport selection byte: {}", v);
                 return None;
             }
@@ -197,7 +196,6 @@ where
                     Either::First(()) => TransportSelection::Usb,
                     Either::Second(()) => TransportSelection::Ble,
                 };
-                #[cfg(feature = "defmt")]
                 info!("Setting active transport to {}", transport_selection);
                 active.lock(|v| v.replace(transport_selection));
                 activation_request.signal(());

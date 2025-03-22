@@ -1,10 +1,8 @@
 use super::{Message, Transport};
 use crate::util::pubsub::{PubSubChannel, Subscriber};
-use crate::util::unwrap;
+use crate::util::{error, unwrap};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-#[cfg(feature = "defmt")]
-use defmt::error;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use generic_array::GenericArray;
@@ -84,8 +82,15 @@ impl<M: Message> Receiver<M> {
     pub async fn next(&mut self) -> M {
         loop {
             let message_bytes = self.subscriber.next_message().await;
+            if message_bytes.len() < 4 {
+                error!(
+                    "message must have at least 4 bytes, but found {} bytes: {:?}",
+                    message_bytes.len(),
+                    message_bytes
+                );
+                continue;
+            }
             if message_bytes[..4] == M::TAG {
-                #[allow(clippy::single_match)]
                 match GenericArray::try_from_slice(&message_bytes[4..]) {
                     Ok(array) => {
                         if let Some(message) = M::from_bytes(array) {
@@ -93,7 +98,6 @@ impl<M: Message> Receiver<M> {
                         }
                     }
                     Err(_) => {
-                        #[cfg(feature = "defmt")]
                         error!(
                             "invalid message size (expected {} bytes, found {})",
                             <M::Size as typenum::Unsigned>::USIZE,

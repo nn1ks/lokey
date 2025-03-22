@@ -70,13 +70,13 @@ pub use matrix::{Matrix, MatrixConfig};
 pub use lokey_macros::layout;
 pub use lokey_macros::static_layout;
 
-use crate::util::unwrap;
+use crate::util::{debug, error, unwrap};
 use crate::{Component, DynContext, internal};
 use alloc::boxed::Box;
 use core::future::Future;
 use core::pin::Pin;
 #[cfg(feature = "defmt")]
-use defmt::{Format, debug, error};
+use defmt::Format;
 use generic_array::GenericArray;
 
 /// The layout of the keys.
@@ -148,33 +148,22 @@ pub fn init<S: Scanner, const NUM_KEYS: usize>(
             loop {
                 let fut1 = async {
                     let message = receiver.next().await;
-                    #[cfg(feature = "defmt")]
                     debug!("Received keys message: {}", message);
                     match message {
-                        Message::Press { key_index } =>
-                        {
-                            #[allow(clippy::manual_map)]
-                            match actions.get(key_index as usize) {
-                                Some(action) => Some(action.on_press(context)),
-                                None => {
-                                    #[cfg(feature = "defmt")]
-                                    error!("Layout has no action at key index {}", key_index);
-                                    None
-                                }
+                        Message::Press { key_index } => match actions.get(key_index as usize) {
+                            Some(action) => Some(action.on_press(context)),
+                            None => {
+                                error!("Layout has no action at key index {}", key_index);
+                                None
                             }
-                        }
-                        Message::Release { key_index } =>
-                        {
-                            #[allow(clippy::manual_map)]
-                            match actions.get(key_index as usize) {
-                                Some(action) => Some(action.on_release(context)),
-                                None => {
-                                    #[cfg(feature = "defmt")]
-                                    error!("Layout has no action at key index {}", key_index);
-                                    None
-                                }
+                        },
+                        Message::Release { key_index } => match actions.get(key_index as usize) {
+                            Some(action) => Some(action.on_release(context)),
+                            None => {
+                                error!("Layout has no action at key index {}", key_index);
+                                None
                             }
-                        }
+                        },
                     }
                 };
                 let fut2 = select_slice(&mut action_futures);
@@ -227,9 +216,7 @@ impl internal::Message for Message {
             1 => Some(Message::Release {
                 key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
             }),
-            #[allow(unused_variables)]
             v => {
-                #[cfg(feature = "defmt")]
                 error!("unknown tag byte: {}", v);
                 None
             }

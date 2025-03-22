@@ -1,7 +1,8 @@
 use super::{Debounce, Scanner};
+use crate::DynContext;
 use crate::internal;
 use crate::key::Message;
-use crate::{DynContext, util::unwrap};
+use crate::util::{error, unwrap};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use embassy_executor::raw::TaskStorage;
@@ -124,31 +125,27 @@ impl<
             loop {
                 for output_switch in &mut output_switches {
                     if output_switch.on().is_err() {
-                        #[cfg(feature = "defmt")]
-                        defmt::error!("failed to turn output pin on");
+                        error!("failed to turn output pin on");
                     }
                 }
                 futures_util::future::select_all(input_switches.iter_mut().map(|input_switch| {
                     Box::pin(async {
                         if input_switch.wait_for_active().await.is_err() {
-                            #[cfg(feature = "defmt")]
-                            defmt::error!("failed to get active status of pin");
+                            error!("failed to get active status of pin");
                         }
                     })
                 }))
                 .await;
                 for output_switch in output_switches.iter_mut() {
                     if output_switch.off().is_err() {
-                        #[cfg(feature = "defmt")]
-                        defmt::error!("failed to turn output pin on");
+                        error!("failed to turn output pin on");
                     }
                 }
                 loop {
                     let mut any_active = false;
                     for (i, output_switch) in output_switches.iter_mut().enumerate() {
                         if output_switch.on().is_err() {
-                            #[cfg(feature = "defmt")]
-                            defmt::error!("failed to turn output pin on");
+                            error!("failed to turn output pin on");
                             continue;
                         }
                         Timer::after_ticks(1).await;
@@ -157,8 +154,7 @@ impl<
                                 continue;
                             };
                             let Ok(is_active) = input_switch.is_active() else {
-                                #[cfg(feature = "defmt")]
-                                defmt::error!("failed to get active status of pin");
+                                error!("failed to get active status of pin");
                                 continue;
                             };
                             if is_active {
@@ -210,8 +206,7 @@ impl<
                             states[i][j] = is_active;
                         }
                         if output_switch.off().is_err() {
-                            #[cfg(feature = "defmt")]
-                            defmt::error!("failed to turn output pin on");
+                            error!("failed to turn output pin on");
                         }
                     }
                     if !any_active && defers.is_empty() && timeouts.is_empty() {

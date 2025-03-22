@@ -1,10 +1,9 @@
 use super::BLE_ADDRESS_WAS_SET;
 use crate::util::{channel::Channel, unwrap};
+use crate::util::{debug, error, info, warn};
 use crate::{internal, mcu::Nrf52840};
 use alloc::{boxed::Box, vec::Vec};
 use core::{future::Future, pin::Pin, sync::atomic::Ordering};
-#[cfg(feature = "defmt")]
-use defmt::{debug, error, info, warn};
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -119,9 +118,7 @@ async fn central(
         debug!("Connecting to peripheral...");
         let connection = match central::connect(softdevice, &connect_config).await {
             Ok(v) => v,
-            #[allow(unused_variables)]
             Err(e) => {
-                #[cfg(feature = "defmt")]
                 error!("Failed to connect: {}", e);
                 continue;
             }
@@ -132,7 +129,6 @@ async fn central(
         let client: Client = match gatt_client::discover(&connection).await {
             Ok(v) => v,
             Err(e) => {
-                #[cfg(feature = "defmt")]
                 error!("Failed to discover service: {}", e);
                 continue;
             }
@@ -140,7 +136,6 @@ async fn central(
         info!("Discovered BLE service");
 
         if let Err(e) = client.message_to_central_cccd_write(true).await {
-            #[cfg(feature = "defmt")]
             error!("Failed to set message_to_central_cccd_write: {}", e);
         }
 
@@ -151,9 +146,7 @@ async fn central(
         let send = async {
             loop {
                 let message = SEND_CHANNEL.receive().await;
-                #[allow(unused_variables)]
                 if let Err(e) = client.message_to_peripheral_write(&message).await {
-                    #[cfg(feature = "defmt")]
                     error!("Failed to write BLE message: {}", e);
                 }
             }
@@ -161,7 +154,6 @@ async fn central(
 
         select(recv, send).await;
 
-        #[cfg(feature = "defmt")]
         warn!("GATT client disconnected");
     }
 }
@@ -190,9 +182,7 @@ async fn peripheral(
         debug!("Starting BLE peripheral advertisement...");
         let connection = match peripheral::advertise_connectable(softdevice, adv, &config).await {
             Ok(v) => v,
-            #[allow(unused_variables)]
             Err(e) => {
-                #[cfg(feature = "defmt")]
                 error!("Failed to advertise: {}", e);
                 continue;
             }
@@ -200,9 +190,7 @@ async fn peripheral(
         info!("Found BLE peripheral connection");
 
         debug!("Setting BLE sys attrs...");
-        #[allow(unused_variables)]
         if let Err(e) = gatt_server::set_sys_attrs(&connection, None) {
-            #[cfg(feature = "defmt")]
             error!("Failed to set sys attrs: {}", e);
             continue;
         }
@@ -218,12 +206,10 @@ async fn peripheral(
         let send = async {
             loop {
                 let message = SEND_CHANNEL.receive().await;
-                #[allow(unused_variables)]
                 if let Err(e) = server
                     .service
                     .message_to_central_notify(&connection, &message)
                 {
-                    #[cfg(feature = "defmt")]
                     error!("Failed to notify BLE message: {}", e)
                 }
             }
@@ -231,7 +217,6 @@ async fn peripheral(
 
         select(recv, send).await;
 
-        #[cfg(feature = "defmt")]
         warn!("GATT server disconnected");
     }
 }

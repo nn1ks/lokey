@@ -1,6 +1,5 @@
 use crate::internal;
-#[cfg(feature = "defmt")]
-use defmt::error;
+use crate::util::error;
 use generic_array::GenericArray;
 
 pub struct TransportConfig {
@@ -47,9 +46,7 @@ impl internal::Message for Message {
         match bytes[0] {
             0 => Some(Self::Disconnect),
             1 => Some(Self::Clear),
-            #[allow(unused_variables)]
             v => {
-                #[cfg(feature = "defmt")]
                 error!("invalid byte {}", v);
                 None
             }
