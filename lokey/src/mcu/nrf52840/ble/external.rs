@@ -1,8 +1,11 @@
 mod bonder;
 mod server;
 
+use super::BLE_ADDRESS_WAS_SET;
+use crate::external::{self, ble::Message};
+use crate::internal;
 use crate::mcu::{Nrf52840, Storage};
-use crate::{external, external::ble::Message, internal, util::channel::Channel, util::unwrap};
+use crate::util::{channel::Channel, unwrap};
 use alloc::boxed::Box;
 use bonder::Bonder;
 use core::sync::atomic::Ordering;
@@ -16,7 +19,7 @@ use nrf_softdevice::ble::advertisement_builder::{
     AdvertisementDataType, Flag, LegacyAdvertisementBuilder, LegacyAdvertisementPayload,
     ServiceList, ServiceUuid16,
 };
-use nrf_softdevice::ble::{gatt_server, peripheral};
+use nrf_softdevice::ble::{Address, AddressType, gatt_server, peripheral};
 use nrf_softdevice::{Flash, Softdevice};
 use portable_atomic::AtomicBool;
 use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
@@ -56,6 +59,7 @@ impl external::TransportConfig<Nrf52840> for external::ble::TransportConfig {
             softdevice,
             mcu.storage,
             name,
+            self.address,
             internal_channel,
             spawner
         )));
@@ -70,6 +74,7 @@ async fn task(
     softdevice: &'static Softdevice,
     storage: &'static Storage<Flash>,
     name: &'static str,
+    address: Option<[u8; 6]>,
     internal_channel: internal::DynChannel,
     spawner: Spawner,
 ) {
@@ -110,6 +115,16 @@ async fn task(
     };
 
     let bonder = Box::leak(Box::new(Bonder::new(bond_info, storage, spawner)));
+
+    if let Some(address) = address {
+        if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
+            nrf_softdevice::ble::set_address(
+                softdevice,
+                &Address::new(AddressType::RandomStatic, address),
+            );
+            BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
+        }
+    }
 
     let connection = Mutex::<CriticalSectionRawMutex, _>::new(None);
     let run_ble_server = async {

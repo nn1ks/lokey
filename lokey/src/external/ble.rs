@@ -11,6 +11,7 @@ pub struct TransportConfig {
     pub manufacturer: Option<&'static str>,
     pub model_number: Option<&'static str>,
     pub serial_number: Option<&'static str>,
+    pub address: Option<[u8; 6]>,
 }
 
 impl Default for TransportConfig {
@@ -23,6 +24,7 @@ impl Default for TransportConfig {
             manufacturer: None,
             model_number: None,
             serial_number: None,
+            address: None,
         }
     }
 }

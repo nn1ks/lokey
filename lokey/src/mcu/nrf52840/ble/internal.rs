@@ -1,25 +1,18 @@
+use super::BLE_ADDRESS_WAS_SET;
 use crate::util::{channel::Channel, unwrap};
 use crate::{internal, mcu::Nrf52840};
 use alloc::{boxed::Box, vec::Vec};
-use core::{future::Future, pin::Pin};
+use core::{future::Future, pin::Pin, sync::atomic::Ordering};
 #[cfg(feature = "defmt")]
 use defmt::{debug, error, info, warn};
 use embassy_executor::Spawner;
-use embassy_futures::join::join;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_futures::select::select;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use nrf_softdevice::Softdevice;
-use nrf_softdevice::ble::advertisement_builder::{Flag, LegacyAdvertisementBuilder, ServiceList};
 use nrf_softdevice::ble::{
-    Address, AddressType, Connection, central, gatt_client, gatt_server, peripheral,
+    Address, AddressType, GattValue, central, gatt_client, gatt_server, peripheral,
 };
-use nrf_softdevice::{ble::GattValue, gatt_client, gatt_server, gatt_service};
-
-const PERIPHERAL_SERVICE_UUID: [u8; 16] = [
-    0x68, 0x8f, 0x93, 0x20, 0x01, 0xe9, 0x22, 0xa8, 0x0f, 0x43, 0x28, 0xdd, 0x3d, 0xb1, 0xb4, 0xc6,
-];
-const CENTRAL_SERVICE_UUID: [u8; 16] = [
-    0x85, 0xa9, 0x58, 0x3e, 0xa5, 0x70, 0x1b, 0x8b, 0xfe, 0x41, 0x9b, 0xd3, 0x5f, 0x03, 0x51, 0x2e,
-];
+use nrf_softdevice::{gatt_client, gatt_server, gatt_service};
 
 pub struct Message(Vec<u8>);
 
@@ -43,15 +36,19 @@ struct Server {
 
 #[gatt_service(uuid = "2e51035f-d39b-41fe-8b1b-70a53e58a985")]
 struct Service {
-    #[characteristic(uuid = "f732a64b-06bb-4fec-94ac-7abfe1119ac8", read, write, notify)]
-    message: Message,
+    #[characteristic(uuid = "f732a64b-06bb-4fec-94ac-7abfe1119ac8", read, notify)]
+    message_to_central: Message,
+    #[characteristic(uuid = "3d90871d-e7d9-4064-b374-6b2480714ef6", write_without_response)]
+    message_to_peripheral: Message,
 }
 
-#[gatt_client(uuid = "c6b4b13d-dd28-430f-a822-e90120938f68")]
+#[gatt_client(uuid = "2e51035f-d39b-41fe-8b1b-70a53e58a985")]
 #[derive(Clone)]
 struct Client {
-    #[characteristic(uuid = "acbfbc81-99a0-4c71-be47-0bbde038fc4c", read, write, notify)]
-    message: Message,
+    #[characteristic(uuid = "f732a64b-06bb-4fec-94ac-7abfe1119ac8", read, notify)]
+    message_to_central: Message,
+    #[characteristic(uuid = "3d90871d-e7d9-4064-b374-6b2480714ef6", write)]
+    message_to_peripheral: Message,
 }
 
 static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
@@ -76,206 +73,165 @@ impl internal::TransportConfig<Nrf52840> for internal::ble::TransportConfig {
 
     async fn init(self, mcu: &'static Nrf52840, spawner: Spawner) -> Self::Transport {
         let softdevice: &'static mut Softdevice = unsafe { &mut *mcu.softdevice.get() };
-        if self.central {
-            unwrap!(spawner.spawn(central(softdevice)));
-        } else {
-            let server = unwrap!(Server::new(softdevice));
-            unwrap!(spawner.spawn(peripheral(softdevice, server)));
+        match self {
+            Self::Central {
+                address,
+                peripheral_addresses,
+            } => {
+                unwrap!(spawner.spawn(central(softdevice, address, peripheral_addresses)));
+            }
+            Self::Peripheral {
+                address,
+                central_address,
+            } => {
+                let server = unwrap!(Server::new(softdevice));
+                unwrap!(spawner.spawn(peripheral(softdevice, server, address, central_address)));
+            }
         }
         Transport {}
     }
 }
 
 #[embassy_executor::task]
-async fn central(softdevice: &'static Softdevice) {
-    let scan_config = central::ScanConfig::default();
+async fn central(
+    softdevice: &'static Softdevice,
+    central_address: [u8; 6],
+    peripheral_addresses: &'static [[u8; 6]],
+) {
+    if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
+        nrf_softdevice::ble::set_address(
+            softdevice,
+            &Address::new(AddressType::RandomStatic, central_address),
+        );
+        BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
+    }
 
-    let client: Mutex<CriticalSectionRawMutex, Option<Client>> = Mutex::new(None);
+    let mut connect_config = central::ConnectConfig::default();
 
-    let recv = async {
-        loop {
-            let result = central::scan(softdevice, &scan_config, |params| {
-                let mut data = unsafe {
-                    core::slice::from_raw_parts(params.data.p_data, params.data.len as usize)
-                };
-                let address_type = match AddressType::try_from(params.peer_addr.addr_type()) {
-                    Ok(AddressType::Anonymous) => {
-                        #[cfg(feature = "defmt")]
-                        debug!("Ignoring advertisment from anonymous peer");
-                        return None;
-                    }
-                    Ok(v) => v,
-                    Err(_) => {
-                        #[cfg(feature = "defmt")]
-                        warn!(
-                            "Unknown peer address type \"{}\"",
-                            params.peer_addr.addr_type()
-                        );
-                        return None;
-                    }
-                };
-                while !data.is_empty() {
-                    let len = data[0] as usize;
-                    if data.len() < len + 1 || len < 1 {
-                        #[cfg(feature = "defmt")]
-                        warn!("Invalid advertisement data");
-                        break;
-                    }
-                    let key = data[1];
-                    let value = &data[2..len + 1];
-                    if key == 0x06 || key == 0x07 {
-                        if value.len() % 128 != 0 {
-                            #[cfg(feature = "defmt")]
-                            warn!("Invalid data length for list of 128-bit services");
-                            break;
-                        }
-                        let mut services = value;
-                        while !services.is_empty() {
-                            let uuid = &services[..128];
-                            if uuid == PERIPHERAL_SERVICE_UUID {
-                                let address = Address::new(address_type, params.peer_addr.addr);
-                                return Some(address);
-                            }
-                            services = &services[128..];
-                        }
-                    }
-                    data = &data[len + 1..];
-                }
-                None
-            })
-            .await;
+    let mut whitelisted_addresses = Vec::new();
+    for address in peripheral_addresses {
+        whitelisted_addresses.push(Address::new(AddressType::RandomStatic, *address));
+    }
+    let whitelisted_addresses = whitelisted_addresses.iter().collect::<Vec<_>>();
+    connect_config.scan_config.whitelist = Some(&whitelisted_addresses);
 
-            let peer_address = match result {
-                Ok(v) => v,
-                #[allow(unused_variables)]
-                Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    error!("Failed to scan: {}", e);
-                    continue;
-                }
-            };
-            #[cfg(feature = "defmt")]
-            info!("Found peripheral peer with address {}", peer_address);
-
-            let mut config = central::ConnectConfig::default();
-            let peer_addresses = &[&peer_address];
-            config.scan_config.whitelist = Some(peer_addresses);
-
-            // TODO: Change to `connect_with_security`
-            let new_connection = match central::connect(softdevice, &config).await {
-                Ok(v) => v,
-                #[allow(unused_variables)]
-                Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    error!("Failed to connect: {}", e);
-                    continue;
-                }
-            };
-
-            let new_client = match gatt_client::discover::<Client>(&new_connection).await {
-                Ok(v) => v,
-                #[allow(unused_variables)]
-                Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    error!("Failed to discover service: {}", e);
-                    continue;
-                }
-            };
-
+    loop {
+        debug!("Connecting to peripheral...");
+        let connection = match central::connect(softdevice, &connect_config).await {
+            Ok(v) => v,
             #[allow(unused_variables)]
-            if let Err(e) = new_client.message_cccd_write(true).await {
+            Err(e) => {
                 #[cfg(feature = "defmt")]
-                error!("Failed to write BLE message: {}", e);
+                error!("Failed to connect: {}", e);
+                continue;
             }
+        };
+        info!("Connected to peripheral");
 
-            *client.lock().await = Some(new_client.clone());
+        debug!("Discovering BLE service...");
+        let client: Client = match gatt_client::discover(&connection).await {
+            Ok(v) => v,
+            Err(e) => {
+                #[cfg(feature = "defmt")]
+                error!("Failed to discover service: {}", e);
+                continue;
+            }
+        };
+        info!("Discovered BLE service");
 
-            gatt_client::run(&new_connection, &new_client, |event| match event {
-                ClientEvent::MessageNotification(message) => RECV_CHANNEL.send(message),
-            })
-            .await;
-
+        if let Err(e) = client.message_to_central_cccd_write(true).await {
             #[cfg(feature = "defmt")]
-            warn!("GATT client disconnected");
+            error!("Failed to set message_to_central_cccd_write: {}", e);
         }
-    };
 
-    let send = async {
-        loop {
-            let message = SEND_CHANNEL.receive().await;
-            if let Some(client) = &*client.lock().await {
+        let recv = gatt_client::run(&connection, &client, |event| match event {
+            ClientEvent::MessageToCentralNotification(message) => RECV_CHANNEL.send(message),
+        });
+
+        let send = async {
+            loop {
+                let message = SEND_CHANNEL.receive().await;
                 #[allow(unused_variables)]
-                if let Err(e) = client.message_write(&message).await {
+                if let Err(e) = client.message_to_peripheral_write(&message).await {
                     #[cfg(feature = "defmt")]
                     error!("Failed to write BLE message: {}", e);
                 }
             }
-        }
-    };
+        };
 
-    join(recv, send).await;
+        select(recv, send).await;
+
+        #[cfg(feature = "defmt")]
+        warn!("GATT client disconnected");
+    }
 }
 
 #[embassy_executor::task]
-async fn peripheral(softdevice: &'static Softdevice, server: Server) {
-    let adv_data = LegacyAdvertisementBuilder::new()
-        .flags(&[Flag::GeneralDiscovery, Flag::LE_Only])
-        .services_128(ServiceList::Complete, &[PERIPHERAL_SERVICE_UUID])
-        .build();
+async fn peripheral(
+    softdevice: &'static Softdevice,
+    server: Server,
+    address: [u8; 6],
+    central_address: [u8; 6],
+) {
+    if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
+        nrf_softdevice::ble::set_address(
+            softdevice,
+            &Address::new(AddressType::RandomStatic, address),
+        );
+        BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
+    }
 
-    let scan_data = LegacyAdvertisementBuilder::new()
-        .services_128(ServiceList::Complete, &[CENTRAL_SERVICE_UUID])
-        .build();
-
-    let adv = peripheral::ConnectableAdvertisement::ScannableUndirected {
-        adv_data: &adv_data,
-        scan_data: &scan_data,
+    let adv = peripheral::ConnectableAdvertisement::NonscannableDirected {
+        peer: Address::new(AddressType::RandomStatic, central_address),
     };
     let config = peripheral::Config::default();
 
-    let connection: Mutex<CriticalSectionRawMutex, Option<Connection>> = Mutex::new(None);
+    loop {
+        debug!("Starting BLE peripheral advertisement...");
+        let connection = match peripheral::advertise_connectable(softdevice, adv, &config).await {
+            Ok(v) => v,
+            #[allow(unused_variables)]
+            Err(e) => {
+                #[cfg(feature = "defmt")]
+                error!("Failed to advertise: {}", e);
+                continue;
+            }
+        };
+        info!("Found BLE peripheral connection");
 
-    let recv = async {
-        loop {
-            // TODO: Change to `advertise_pairable`
-            let new_connection =
-                match peripheral::advertise_connectable(softdevice, adv, &config).await {
-                    Ok(v) => v,
-                    #[allow(unused_variables)]
-                    Err(e) => {
-                        #[cfg(feature = "defmt")]
-                        error!("Failed to advertise: {}", e);
-                        continue;
-                    }
-                };
-
-            *connection.lock().await = Some(new_connection.clone());
-
-            gatt_server::run(&new_connection, &server, |event| match event {
-                ServerEvent::Service(event) => match event {
-                    ServiceEvent::MessageWrite(message) => RECV_CHANNEL.send(message),
-                    ServiceEvent::MessageCccdWrite { notifications: _ } => {}
-                },
-            })
-            .await;
-
+        debug!("Setting BLE sys attrs...");
+        #[allow(unused_variables)]
+        if let Err(e) = gatt_server::set_sys_attrs(&connection, None) {
             #[cfg(feature = "defmt")]
-            warn!("GATT server disconnected");
+            error!("Failed to set sys attrs: {}", e);
+            continue;
         }
-    };
+        info!("Set BLE sys attrs");
 
-    let send = async {
-        loop {
-            let message = SEND_CHANNEL.receive().await;
-            if let Some(connection) = &*connection.lock().await {
+        let recv = gatt_server::run(&connection, &server, |event| match event {
+            ServerEvent::Service(event) => match event {
+                ServiceEvent::MessageToPeripheralWrite(message) => RECV_CHANNEL.send(message),
+                ServiceEvent::MessageToCentralCccdWrite { notifications: _ } => {}
+            },
+        });
+
+        let send = async {
+            loop {
+                let message = SEND_CHANNEL.receive().await;
                 #[allow(unused_variables)]
-                if let Err(e) = server.service.message_notify(connection, &message) {
+                if let Err(e) = server
+                    .service
+                    .message_to_central_notify(&connection, &message)
+                {
                     #[cfg(feature = "defmt")]
                     error!("Failed to notify BLE message: {}", e)
                 }
             }
-        }
-    };
+        };
 
-    join(recv, send).await;
+        select(recv, send).await;
+
+        #[cfg(feature = "defmt")]
+        warn!("GATT server disconnected");
+    }
 }

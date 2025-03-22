@@ -87,6 +87,7 @@ pub struct TransportConfig {
     pub model_number: Option<&'static str>,
     pub serial_number: Option<&'static str>,
     pub self_powered: bool,
+    pub ble_address: Option<[u8; 6]>,
 }
 
 impl Default for TransportConfig {
@@ -101,6 +102,7 @@ impl Default for TransportConfig {
             model_number: None,
             serial_number: None,
             self_powered: false,
+            ble_address: None,
         }
     }
 }
@@ -126,6 +128,7 @@ impl TransportConfig {
             manufacturer: self.manufacturer,
             model_number: self.model_number,
             serial_number: self.serial_number,
+            address: self.ble_address,
         }
     }
 }
