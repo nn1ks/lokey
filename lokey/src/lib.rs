@@ -5,12 +5,13 @@
 //! ```no_run
 #![doc = include_str!("./doctest_setup")]
 //! # use core::unimplemented;
-//! use lokey::{ComponentSupport, Context, Device, Transports, mcu::DummyMcu};
+//! use lokey::{Address, ComponentSupport, Context, Device, Transports, mcu::DummyMcu};
 //! use lokey::key::{self, DirectPins, DirectPinsConfig, Keys};
 //!
 //! struct Keyboard;
 //!
 //! impl Device for Keyboard {
+//!     const ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
 //!     type Mcu = lokey::mcu::DummyMcu;
 //!     fn mcu_config() {
 //!        // ...
