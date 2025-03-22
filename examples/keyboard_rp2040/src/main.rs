@@ -10,7 +10,7 @@ use lokey::external::{self, Key};
 use lokey::key::action::KeyCode;
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, layout};
 use lokey::mcu::{Rp2040, rp2040};
-use lokey::{ComponentSupport, Context, Device, Transports, blink::Blink, internal};
+use lokey::{Address, ComponentSupport, Context, Device, Transports, blink::Blink, internal};
 use panic_probe as _;
 use switch_hal::IntoSwitch;
 
@@ -37,6 +37,8 @@ impl Transports<Rp2040> for Central {
 struct KeyboardLeft;
 
 impl Device for KeyboardLeft {
+    const ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
+
     type Mcu = Rp2040;
 
     fn mcu_config() -> rp2040::Config {
