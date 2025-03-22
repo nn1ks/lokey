@@ -15,13 +15,13 @@ pub struct DirectPinsConfig {
 }
 
 /// Scanner for keys that are each connected to a single pin.
-pub struct DirectPins<I, const IS: usize, const NUM_KEYS: usize> {
-    pins: [I; IS],
+pub struct DirectPins<I, const NUM_IS: usize, const NUM_KEYS: usize> {
+    pins: [I; NUM_IS],
     transform: [Option<usize>; NUM_KEYS],
 }
 
-impl<I, const IS: usize> DirectPins<I, IS, 0> {
-    pub const fn new<const NUM_KEYS: usize>(pins: [I; IS]) -> DirectPins<I, IS, NUM_KEYS> {
+impl<I, const NUM_IS: usize> DirectPins<I, NUM_IS, 0> {
+    pub const fn new<const NUM_KEYS: usize>(pins: [I; NUM_IS]) -> DirectPins<I, NUM_IS, NUM_KEYS> {
         DirectPins {
             pins,
             transform: [None; NUM_KEYS],
@@ -29,7 +29,7 @@ impl<I, const IS: usize> DirectPins<I, IS, 0> {
     }
 }
 
-impl<I, const IS: usize, const NUM_KEYS: usize> DirectPins<I, IS, NUM_KEYS> {
+impl<I, const NUM_IS: usize, const NUM_KEYS: usize> DirectPins<I, NUM_IS, NUM_KEYS> {
     pub const fn map<const INDEX_I: usize, const INDEX_KEYS: usize>(mut self) -> Self {
         self.transform[INDEX_KEYS] = Some(INDEX_I);
         self
@@ -37,7 +37,7 @@ impl<I, const IS: usize, const NUM_KEYS: usize> DirectPins<I, IS, NUM_KEYS> {
 
     pub const fn continuous<const OFFSET: usize>(mut self) -> Self {
         let mut i = 0;
-        while i < IS {
+        while i < NUM_IS {
             self.transform[i + OFFSET] = Some(i);
             i += 1;
         }
@@ -45,8 +45,8 @@ impl<I, const IS: usize, const NUM_KEYS: usize> DirectPins<I, IS, NUM_KEYS> {
     }
 }
 
-impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_KEYS: usize> Scanner
-    for DirectPins<I, IS, NUM_KEYS>
+impl<I: InputSwitch + WaitableInputSwitch + 'static, const NUM_IS: usize, const NUM_KEYS: usize>
+    Scanner for DirectPins<I, NUM_IS, NUM_KEYS>
 {
     const NUM_KEYS: usize = NUM_KEYS;
 
@@ -54,12 +54,14 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
 
     fn run(self, config: Self::Config, context: DynContext) {
         let task_storage = Box::leak(Box::new(TaskStorage::new()));
-        let task = task_storage.spawn(|| task(config, self.pins, context.internal_channel));
+        let task = task_storage
+            .spawn(|| task(config, self.pins, self.transform, context.internal_channel));
         unwrap!(context.spawner.spawn(task));
 
-        async fn task<I, const IS: usize>(
+        async fn task<I, const NUM_IS: usize, const NUM_KEYS: usize>(
             config: DirectPinsConfig,
-            mut input_pins: [I; IS],
+            mut input_pins: [I; NUM_IS],
+            transform: [Option<usize>; NUM_KEYS],
             internal_channel: internal::DynChannel,
         ) where
             I: WaitableInputSwitch + 'static,
@@ -88,11 +90,13 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const IS: usize, const NUM_
                             active = true;
                             wait_duration
                         };
-                        let key_index = u16::try_from(i).expect("too many keys");
-                        if active {
-                            internal_channel.send(Message::Press { key_index });
-                        } else {
-                            internal_channel.send(Message::Release { key_index });
+                        if let Some(key_index) = transform.into_iter().position(|v| v == Some(i)) {
+                            let key_index = u16::try_from(key_index).expect("too many keys");
+                            if active {
+                                internal_channel.send(Message::Press { key_index });
+                            } else {
+                                internal_channel.send(Message::Release { key_index });
+                            }
                         }
                         Timer::after(wait_duration).await;
                     }
