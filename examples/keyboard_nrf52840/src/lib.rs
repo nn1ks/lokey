@@ -1,17 +1,17 @@
 #![no_std]
 
-use defmt_rtt as _;
 use embassy_nrf::gpio::{Input, Level, Output, OutputDrive, Pin, Pull};
 use embassy_nrf::peripherals::{
     P0_02, P0_03, P0_09, P0_10, P0_28, P1_11, P1_12, P1_13, P1_14, P1_15,
 };
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::mutex::Mutex;
+use lokey::blink::Blink;
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use lokey::mcu::{Nrf52840, nrf52840};
-use lokey::{Address, external};
-use lokey::{ComponentSupport, Context, Device, Transports, blink::Blink, internal};
-use panic_probe as _;
+use lokey::{Address, ComponentSupport, Context, Device, Transports, external, internal};
 use switch_hal::IntoSwitch;
+use {defmt_rtt as _, panic_probe as _};
 
 pub const NUM_KEYS: usize = 36;
 

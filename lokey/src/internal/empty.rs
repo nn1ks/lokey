@@ -1,6 +1,9 @@
-use crate::{Address, internal, mcu::Mcu};
-use alloc::{boxed::Box, vec::Vec};
-use core::{future::Future, pin::Pin};
+use crate::mcu::Mcu;
+use crate::{Address, internal};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::future::Future;
+use core::pin::Pin;
 use embassy_executor::Spawner;
 
 pub struct TransportConfig;

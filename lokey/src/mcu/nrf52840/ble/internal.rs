@@ -1,14 +1,18 @@
 use super::{BLE_ADDRESS_WAS_SET, device_address_to_ble_address};
-use crate::util::{channel::Channel, debug, error, info, unwrap, warn};
-use crate::{Address, internal, mcu::Nrf52840};
-use alloc::{boxed::Box, vec::Vec};
-use core::{future::Future, pin::Pin, sync::atomic::Ordering};
+use crate::mcu::Nrf52840;
+use crate::util::channel::Channel;
+use crate::util::{debug, error, info, unwrap, warn};
+use crate::{Address, internal};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::future::Future;
+use core::pin::Pin;
+use core::sync::atomic::Ordering;
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use nrf_softdevice::Softdevice;
 use nrf_softdevice::ble::{GattValue, central, gatt_client, gatt_server, peripheral};
-use nrf_softdevice::{gatt_client, gatt_server, gatt_service};
+use nrf_softdevice::{Softdevice, gatt_client, gatt_server, gatt_service};
 
 pub struct Message(Vec<u8>);
 

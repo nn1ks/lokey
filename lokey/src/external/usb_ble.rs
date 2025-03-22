@@ -1,12 +1,16 @@
+use crate::mcu::Mcu;
 use crate::util::{error, info, unwrap};
-use crate::{Address, external, internal, mcu::Mcu};
+use crate::{Address, external, internal};
 use alloc::boxed::Box;
-use core::{cell::Cell, future::Future, pin::Pin};
+use core::cell::Cell;
+use core::future::Future;
+use core::pin::Pin;
 #[cfg(feature = "defmt")]
 use defmt::Format;
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
-use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
+use embassy_sync::blocking_mutex::Mutex;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use generic_array::GenericArray;
 use portable_atomic_util::Arc;

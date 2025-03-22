@@ -1,10 +1,12 @@
+use crate::external;
+use crate::mcu::Mcu;
 use crate::util::{debug, info, unwrap, warn};
-use crate::{external, mcu::Mcu};
 use core::pin::pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::signal::Signal;
 use embassy_usb::class::hid::{HidReaderWriter, ReportId, State};
 use embassy_usb::control::OutResponse;
 use futures_util::{Stream, StreamExt};

@@ -65,15 +65,14 @@ mod layer;
 pub mod mcu;
 pub mod util;
 
+use core::future::Future;
 #[doc(hidden)]
 pub use embassy_executor;
+use embassy_executor::Spawner;
 #[doc(hidden)]
 pub use embedded_alloc;
 pub use layer::{LayerId, LayerManager, LayerManagerEntry};
 pub use lokey_macros::device;
-
-use core::future::Future;
-use embassy_executor::Spawner;
 
 pub struct Context<D: Device, T: Transports<D::Mcu>> {
     pub spawner: Spawner,

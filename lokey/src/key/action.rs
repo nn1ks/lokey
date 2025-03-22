@@ -3,7 +3,9 @@ use alloc::boxed::Box;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::select::{Either, select};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex, signal::Signal};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::mutex::Mutex;
+use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use portable_atomic::AtomicBool;
 

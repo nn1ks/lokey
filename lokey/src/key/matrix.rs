@@ -1,8 +1,7 @@
 use super::{Debounce, Scanner};
-use crate::DynContext;
-use crate::internal;
 use crate::key::Message;
 use crate::util::{error, unwrap};
+use crate::{DynContext, internal};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use embassy_executor::raw::TaskStorage;

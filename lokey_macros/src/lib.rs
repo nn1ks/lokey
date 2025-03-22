@@ -1,8 +1,11 @@
-use darling::{FromMeta, ast::NestedMeta};
+use darling::FromMeta;
+use darling::ast::NestedMeta;
 use proc_macro::TokenStream;
 use proc_macro_error::{abort, proc_macro_error};
 use quote::{ToTokens, quote};
-use syn::{parse::Parser, parse_macro_input, spanned::Spanned};
+use syn::parse::Parser;
+use syn::parse_macro_input;
+use syn::spanned::Spanned;
 
 #[derive(FromMeta)]
 struct DeviceArgs {

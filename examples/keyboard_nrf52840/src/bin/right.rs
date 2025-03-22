@@ -3,11 +3,11 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(type_alias_impl_trait)]
 
-use defmt_rtt as _;
 use keyboard_nrf52840::{KeyboardRight, NUM_KEYS, Peripheral};
+use lokey::Context;
+use lokey::blink::Blink;
 use lokey::key::{DirectPinsConfig, Keys};
-use lokey::{Context, blink::Blink};
-use panic_probe as _;
+use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
 async fn main(context: Context<KeyboardRight, Peripheral>) {

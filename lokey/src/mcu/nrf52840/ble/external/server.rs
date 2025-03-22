@@ -1,8 +1,9 @@
 use crate::external;
 use nrf_softdevice::Softdevice;
+use nrf_softdevice::ble::gatt_server::builder::ServiceBuilder;
 use nrf_softdevice::ble::gatt_server::characteristic::{Attribute, Metadata, Properties};
 use nrf_softdevice::ble::gatt_server::{
-    self, CharacteristicHandles, RegisterError, Service, WriteOp, builder::ServiceBuilder,
+    self, CharacteristicHandles, RegisterError, Service, WriteOp,
 };
 use nrf_softdevice::ble::{Connection, Uuid};
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};

@@ -3,14 +3,14 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(type_alias_impl_trait)]
 
-use defmt_rtt as _;
 use embassy_nrf::gpio::{Level, Output, OutputDrive, Pin};
 use keyboard_nrf52840::{Central, KeyboardLeft, LedAction, NUM_KEYS};
+use lokey::Context;
+use lokey::blink::Blink;
 use lokey::external::Key;
 use lokey::key::action::{HoldTap, KeyCode, NoOp, Toggle};
 use lokey::key::{Keys, MatrixConfig, layout};
-use lokey::{Context, blink::Blink};
-use panic_probe as _;
+use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
 async fn main(context: Context<KeyboardLeft, Central>) {

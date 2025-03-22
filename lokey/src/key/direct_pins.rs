@@ -1,6 +1,7 @@
 use super::{Debounce, Scanner};
+use crate::key::Message;
 use crate::util::{error, unwrap};
-use crate::{DynContext, internal, key::Message};
+use crate::{DynContext, internal};
 use alloc::boxed::Box;
 use embassy_executor::raw::TaskStorage;
 use embassy_time::Timer;

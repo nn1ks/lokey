@@ -3,14 +3,20 @@ mod debounce;
 mod direct_pins;
 mod matrix;
 
+use crate::util::{debug, error, unwrap};
+use crate::{Component, DynContext, internal};
 pub use action::{Action, DynAction};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
+use core::future::Future;
+use core::pin::Pin;
 pub use debounce::Debounce;
+#[cfg(feature = "defmt")]
+use defmt::Format;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_executor::raw::TaskStorage;
 use embassy_futures::select::{Either, select, select_slice};
-pub use matrix::{Matrix, MatrixConfig};
-
+use generic_array::GenericArray;
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -69,15 +75,7 @@ pub use matrix::{Matrix, MatrixConfig};
 /// ```
 pub use lokey_macros::layout;
 pub use lokey_macros::static_layout;
-
-use crate::util::{debug, error, unwrap};
-use crate::{Component, DynContext, internal};
-use alloc::boxed::Box;
-use core::future::Future;
-use core::pin::Pin;
-#[cfg(feature = "defmt")]
-use defmt::Format;
-use generic_array::GenericArray;
+pub use matrix::{Matrix, MatrixConfig};
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {

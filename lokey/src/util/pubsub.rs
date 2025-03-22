@@ -1,9 +1,12 @@
 use crate::util::warn;
-use alloc::{collections::VecDeque, vec::Vec};
+use alloc::collections::VecDeque;
+use alloc::vec::Vec;
+use core::cell::RefCell;
+use core::future::poll_fn;
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
-use core::{cell::RefCell, future::poll_fn};
-use embassy_sync::blocking_mutex::{Mutex, raw::RawMutex};
+use embassy_sync::blocking_mutex::Mutex;
+use embassy_sync::blocking_mutex::raw::RawMutex;
 use futures_util::Stream;
 
 pub struct PubSubChannel<M: RawMutex, T: Clone> {

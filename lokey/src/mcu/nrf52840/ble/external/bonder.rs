@@ -1,6 +1,7 @@
 use crate::mcu::storage;
 use crate::util::{debug, error, info};
-use core::{cell::RefCell, mem};
+use core::cell::RefCell;
+use core::mem;
 #[cfg(feature = "defmt")]
 use defmt::Format;
 use embassy_executor::Spawner;

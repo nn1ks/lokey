@@ -2,17 +2,17 @@
 #![no_std]
 #![feature(impl_trait_in_assoc_type)]
 
-use defmt_rtt as _;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
+use lokey::blink::Blink;
 use lokey::external::{self, Key};
 use lokey::key::action::KeyCode;
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, layout};
 use lokey::mcu::{Rp2040, rp2040};
-use lokey::{Address, ComponentSupport, Context, Device, Transports, blink::Blink, internal};
-use panic_probe as _;
+use lokey::{Address, ComponentSupport, Context, Device, Transports, internal};
 use switch_hal::IntoSwitch;
+use {defmt_rtt as _, panic_probe as _};
 
 struct Central;
 

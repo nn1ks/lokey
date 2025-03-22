@@ -3,11 +3,14 @@ pub mod ble;
 mod channel;
 pub mod empty;
 
+use crate::mcu::Mcu;
+use crate::{Address, Device, Transports};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 pub use channel::{Channel, DynChannel, Receiver};
-
-use crate::{Address, Device, Transports, mcu::Mcu};
-use alloc::{boxed::Box, vec::Vec};
-use core::{any::Any, future::Future, pin::Pin};
+use core::any::Any;
+use core::future::Future;
+use core::pin::Pin;
 use embassy_executor::Spawner;
 use generic_array::{ArrayLength, GenericArray};
 

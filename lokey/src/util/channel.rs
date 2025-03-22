@@ -3,7 +3,8 @@ use core::cell::RefCell;
 use core::future::poll_fn;
 use core::pin::Pin;
 use core::task::{Context, Poll};
-use embassy_sync::blocking_mutex::{Mutex, raw::RawMutex};
+use embassy_sync::blocking_mutex::Mutex;
+use embassy_sync::blocking_mutex::raw::RawMutex;
 use embassy_sync::waitqueue::WakerRegistration;
 use futures_util::Stream;
 

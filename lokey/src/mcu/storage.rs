@@ -1,8 +1,10 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec;
+use alloc::vec::Vec;
 use core::ops::Range;
 #[cfg(feature = "defmt")]
 use defmt::{Format, panic};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::mutex::Mutex;
 use embedded_storage_async::nor_flash::{MultiwriteNorFlash, NorFlash};
 use generic_array::{ArrayLength, GenericArray};
 use sequential_storage::cache::NoCache;

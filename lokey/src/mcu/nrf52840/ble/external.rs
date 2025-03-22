@@ -2,9 +2,11 @@ mod bonder;
 mod server;
 
 use super::{BLE_ADDRESS_WAS_SET, device_address_to_ble_address};
-use crate::external::{self, ble::Message};
+use crate::external::ble::Message;
+use crate::external::{self};
 use crate::mcu::{Nrf52840, Storage};
-use crate::util::{channel::Channel, debug, error, info, unwrap, warn};
+use crate::util::channel::Channel;
+use crate::util::{debug, error, info, unwrap, warn};
 use crate::{Address, internal};
 use alloc::boxed::Box;
 use bonder::Bonder;

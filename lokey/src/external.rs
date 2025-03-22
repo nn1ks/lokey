@@ -7,10 +7,10 @@ pub mod usb;
 #[cfg(all(feature = "usb", feature = "ble"))]
 pub mod usb_ble;
 
-pub use channel::{Channel, DynChannel, Receiver};
-
-use crate::{Address, Device, Transports, internal, mcu::Mcu};
+use crate::mcu::Mcu;
+use crate::{Address, Device, Transports, internal};
 use alloc::boxed::Box;
+pub use channel::{Channel, DynChannel, Receiver};
 use core::any::Any;
 use core::future::Future;
 use core::pin::Pin;

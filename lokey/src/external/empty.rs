@@ -1,5 +1,6 @@
 use crate::external::{self, Message};
-use crate::{Address, internal, mcu::Mcu};
+use crate::mcu::Mcu;
+use crate::{Address, internal};
 use embassy_executor::Spawner;
 
 pub struct TransportConfig;

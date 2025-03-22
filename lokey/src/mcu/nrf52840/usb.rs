@@ -1,13 +1,16 @@
 use super::Nrf52840;
 use crate::external::{self, usb};
+use crate::util::channel::Channel;
 use crate::util::{info, unwrap};
-use crate::{Address, internal, util::channel::Channel};
+use crate::{Address, internal};
 use alloc::boxed::Box;
-use core::{future::Future, pin::Pin};
+use core::future::Future;
+use core::pin::Pin;
 use embassy_executor::Spawner;
+use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::{InterruptExt, Priority};
+use embassy_nrf::peripherals::USBD;
 use embassy_nrf::usb::vbus_detect::{SoftwareVbusDetect, VbusDetect};
-use embassy_nrf::{bind_interrupts, peripherals::USBD};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use once_cell::sync::OnceCell;
 

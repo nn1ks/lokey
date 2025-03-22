@@ -1,11 +1,10 @@
 mod external;
 mod internal;
 
-pub use external::Transport as ExternalTransport;
-pub use internal::Transport as InternalTransport;
-
 use crate::Address;
 use core::sync::atomic::AtomicBool;
+pub use external::Transport as ExternalTransport;
+pub use internal::Transport as InternalTransport;
 use nrf_softdevice::ble;
 
 static BLE_ADDRESS_WAS_SET: AtomicBool = AtomicBool::new(false);
