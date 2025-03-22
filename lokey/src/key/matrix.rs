@@ -50,24 +50,37 @@ impl<I, O, const NUM_IS: usize, const NUM_OS: usize, const NUM_KEYS: usize>
         self
     }
 
-    pub fn map_next<const I_INDEX: usize, const O_INDEX: usize>(mut self) -> Self {
-        if let Some(key_index) = self.transform.iter().position(|v| v.is_none()) {
-            self.transform[key_index] = Some((I_INDEX, O_INDEX));
+    pub const fn map_next<const I_INDEX: usize, const O_INDEX: usize>(mut self) -> Self {
+        // Use while loops so that the function can be `const`
+        let mut i = 0;
+        while i < self.transform.len() {
+            if self.transform[i].is_none() {
+                self.transform[i] = Some((I_INDEX, O_INDEX));
+                break;
+            }
+            i += 1;
         }
         self
     }
 
-    pub fn map_rows_and_cols<const NUM_ROWS: usize, const NUM_COLS: usize>(
+    pub const fn map_rows_and_cols<const NUM_ROWS: usize, const NUM_COLS: usize>(
         mut self,
         input_indices: [usize; NUM_ROWS],
         output_indices: [usize; NUM_COLS],
         mut start_key_index: usize,
     ) -> Self {
-        for i in input_indices {
-            for j in output_indices {
-                self.transform[start_key_index] = Some((i, j));
+        // Use while loops so that the function can be `const`
+        let mut i = 0;
+        while i < input_indices.len() {
+            let input_index = input_indices[i];
+            let mut j = 0;
+            while j < output_indices.len() {
+                let output_index = output_indices[j];
+                self.transform[start_key_index] = Some((input_index, output_index));
                 start_key_index += 1;
+                j += 1;
             }
+            i += 1;
         }
         self
     }
