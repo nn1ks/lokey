@@ -54,6 +54,9 @@ jobs:
         example: [keyboard_nrf52840, keyboard_rp2040]
     steps:
       - uses: actions/checkout@v4
+      - name: Check formatting
+        run: cargo fmt --verbose --check
+        working-directory: examples/${{ matrix.example }}
       - name: Build
         run: cargo build --verbose
         working-directory: examples/${{ matrix.example }}
