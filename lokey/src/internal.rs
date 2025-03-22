@@ -5,7 +5,7 @@ pub mod empty;
 
 pub use channel::{Channel, DynChannel, Receiver};
 
-use crate::{Device, Transports, mcu::Mcu};
+use crate::{Address, Device, Transports, mcu::Mcu};
 use alloc::{boxed::Box, vec::Vec};
 use core::{any::Any, future::Future, pin::Pin};
 use embassy_executor::Spawner;
@@ -30,7 +30,12 @@ pub trait Message: Send + 'static {
 
 pub trait TransportConfig<M: Mcu> {
     type Transport: Transport;
-    fn init(self, mcu: &'static M, spawner: Spawner) -> impl Future<Output = Self::Transport>;
+    fn init(
+        self,
+        mcu: &'static M,
+        address: Address,
+        spawner: Spawner,
+    ) -> impl Future<Output = Self::Transport>;
 }
 
 pub trait Transport: Any {

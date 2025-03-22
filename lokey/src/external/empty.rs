@@ -1,6 +1,5 @@
 use crate::external::{self, Message};
-use crate::internal;
-use crate::mcu::Mcu;
+use crate::{Address, internal, mcu::Mcu};
 use embassy_executor::Spawner;
 
 pub struct TransportConfig;
@@ -8,7 +7,13 @@ pub struct TransportConfig;
 impl<M: Mcu> external::TransportConfig<M> for TransportConfig {
     type Transport = Transport;
 
-    async fn init(self, _: &'static M, _: Spawner, _: internal::DynChannel) -> Self::Transport {
+    async fn init(
+        self,
+        _: &'static M,
+        _: Address,
+        _: Spawner,
+        _: internal::DynChannel,
+    ) -> Self::Transport {
         Transport
     }
 }

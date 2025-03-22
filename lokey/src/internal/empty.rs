@@ -1,4 +1,4 @@
-use crate::{internal, mcu::Mcu};
+use crate::{Address, internal, mcu::Mcu};
 use alloc::{boxed::Box, vec::Vec};
 use core::{future::Future, pin::Pin};
 use embassy_executor::Spawner;
@@ -8,7 +8,7 @@ pub struct TransportConfig;
 impl<M: Mcu> internal::TransportConfig<M> for TransportConfig {
     type Transport = Transport;
 
-    async fn init(self, _: &'static M, _: Spawner) -> Self::Transport {
+    async fn init(self, _: &'static M, _: Address, _: Spawner) -> Self::Transport {
         Transport
     }
 }

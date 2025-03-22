@@ -107,6 +107,8 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
             }
 
+            const ADDRESS: ::lokey::Address = <#device_type_path as ::lokey::Device>::ADDRESS;
+
             // Create MCU
             let mut mcu_config = <#device_type_path as ::lokey::Device>::mcu_config();
             __modify_mcu_config(&mut mcu_config);
@@ -123,6 +125,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let transport = ::lokey::internal::TransportConfig::init(
                     config,
                     mcu,
+                    ADDRESS,
                     spawner
                 ).await;
                 let transport = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(transport));
@@ -135,6 +138,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let transport = ::lokey::external::TransportConfig::init(
                     config,
                     mcu,
+                    ADDRESS,
                     spawner,
                     internal_channel.as_dyn()
                 ).await;

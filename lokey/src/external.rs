@@ -9,7 +9,7 @@ pub mod usb_ble;
 
 pub use channel::{Channel, DynChannel, Receiver};
 
-use crate::{Device, Transports, internal, mcu::Mcu};
+use crate::{Address, Device, Transports, internal, mcu::Mcu};
 use alloc::boxed::Box;
 use core::any::Any;
 use core::future::Future;
@@ -367,6 +367,7 @@ pub trait TransportConfig<M: Mcu> {
     fn init(
         self,
         mcu: &'static M,
+        address: Address,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
     ) -> impl Future<Output = Self::Transport>;

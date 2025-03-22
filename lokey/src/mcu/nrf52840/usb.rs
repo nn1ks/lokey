@@ -1,7 +1,7 @@
 use super::Nrf52840;
 use crate::external::{self, usb};
 use crate::util::{info, unwrap};
-use crate::{internal, util::channel::Channel};
+use crate::{Address, internal, util::channel::Channel};
 use alloc::boxed::Box;
 use core::{future::Future, pin::Pin};
 use embassy_executor::Spawner;
@@ -77,6 +77,7 @@ impl external::TransportConfig<Nrf52840> for usb::TransportConfig {
     async fn init(
         self,
         mcu: &'static Nrf52840,
+        _address: Address,
         spawner: Spawner,
         _internal_channel: internal::DynChannel,
     ) -> Self::Transport {

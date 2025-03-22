@@ -1,11 +1,11 @@
 mod bonder;
 mod server;
 
-use super::BLE_ADDRESS_WAS_SET;
+use super::{BLE_ADDRESS_WAS_SET, device_address_to_ble_address};
 use crate::external::{self, ble::Message};
-use crate::internal;
 use crate::mcu::{Nrf52840, Storage};
 use crate::util::{channel::Channel, debug, error, info, unwrap, warn};
+use crate::{Address, internal};
 use alloc::boxed::Box;
 use bonder::Bonder;
 use core::sync::atomic::Ordering;
@@ -17,7 +17,7 @@ use nrf_softdevice::ble::advertisement_builder::{
     AdvertisementDataType, Flag, LegacyAdvertisementBuilder, LegacyAdvertisementPayload,
     ServiceList, ServiceUuid16,
 };
-use nrf_softdevice::ble::{Address, AddressType, gatt_server, peripheral};
+use nrf_softdevice::ble::{gatt_server, peripheral};
 use nrf_softdevice::{Flash, Softdevice};
 use portable_atomic::AtomicBool;
 use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
@@ -39,6 +39,7 @@ impl external::TransportConfig<Nrf52840> for external::ble::TransportConfig {
     async fn init(
         self,
         mcu: &'static Nrf52840,
+        address: Address,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
     ) -> Self::Transport {
@@ -57,7 +58,7 @@ impl external::TransportConfig<Nrf52840> for external::ble::TransportConfig {
             softdevice,
             mcu.storage,
             name,
-            self.address,
+            address,
             internal_channel,
             spawner
         )));
@@ -72,7 +73,7 @@ async fn task(
     softdevice: &'static Softdevice,
     storage: &'static Storage<Flash>,
     name: &'static str,
-    address: Option<[u8; 6]>,
+    address: Address,
     internal_channel: internal::DynChannel,
     spawner: Spawner,
 ) {
@@ -111,14 +112,9 @@ async fn task(
 
     let bonder = Box::leak(Box::new(Bonder::new(bond_info, storage, spawner)));
 
-    if let Some(address) = address {
-        if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
-            nrf_softdevice::ble::set_address(
-                softdevice,
-                &Address::new(AddressType::RandomStatic, address),
-            );
-            BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
-        }
+    if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
+        nrf_softdevice::ble::set_address(softdevice, &device_address_to_ble_address(&address));
+        BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
     }
 
     let connection = Mutex::<CriticalSectionRawMutex, _>::new(None);

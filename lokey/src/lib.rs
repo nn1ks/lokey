@@ -121,7 +121,12 @@ pub struct DynContext {
     pub layer_manager: LayerManager,
 }
 
+/// A random static address for a device.
+#[derive(Clone)]
+pub struct Address(pub [u8; 6]);
+
 pub trait Device: Sized {
+    const ADDRESS: Address;
     type Mcu: mcu::Mcu + mcu::McuInit;
     fn mcu_config() -> <Self::Mcu as mcu::McuInit>::Config;
 }

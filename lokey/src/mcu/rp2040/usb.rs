@@ -1,6 +1,6 @@
 use super::Rp2040;
 use crate::external::{self, usb};
-use crate::{internal, util::channel::Channel, util::unwrap};
+use crate::{Address, internal, util::channel::Channel, util::unwrap};
 use alloc::boxed::Box;
 use core::{future::Future, pin::Pin};
 use embassy_executor::Spawner;
@@ -46,6 +46,7 @@ impl external::TransportConfig<Rp2040> for usb::TransportConfig {
     async fn init(
         self,
         mcu: &'static Rp2040,
+        _address: Address,
         spawner: Spawner,
         _internal_channel: internal::DynChannel,
     ) -> Self::Transport {
@@ -55,7 +56,7 @@ impl external::TransportConfig<Rp2040> for usb::TransportConfig {
         }
 
         let (handler, activation_request) = usb::Handler::new(self, mcu);
-        unwrap!(spawner.spawn(task(handler)));
+        unwrap!(spawner.make_send().spawn(task(handler)));
         let _ = ACTIVATION_REQUEST.set(activation_request);
         ExternalTransport {}
     }

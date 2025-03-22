@@ -1,5 +1,5 @@
 use crate::util::{error, info, unwrap};
-use crate::{external, internal, mcu::Mcu};
+use crate::{Address, external, internal, mcu::Mcu};
 use alloc::boxed::Box;
 use core::{cell::Cell, future::Future, pin::Pin};
 #[cfg(feature = "defmt")]
@@ -127,7 +127,6 @@ impl TransportConfig {
             manufacturer: self.manufacturer,
             model_number: self.model_number,
             serial_number: self.serial_number,
-            address: self.ble_address,
         }
     }
 }
@@ -145,17 +144,18 @@ where
     async fn init(
         self,
         mcu: &'static M,
+        address: Address,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
     ) -> Self::Transport {
         let usb_transport = Arc::new(
             self.to_usb_config()
-                .init(mcu, spawner, internal_channel)
+                .init(mcu, address.clone(), spawner, internal_channel)
                 .await,
         );
         let ble_transport = Arc::new(
             self.to_ble_config()
-                .init(mcu, spawner, internal_channel)
+                .init(mcu, address, spawner, internal_channel)
                 .await,
         );
 

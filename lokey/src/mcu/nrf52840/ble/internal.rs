@@ -1,16 +1,13 @@
-use super::BLE_ADDRESS_WAS_SET;
-use crate::util::{channel::Channel, unwrap};
-use crate::util::{debug, error, info, warn};
-use crate::{internal, mcu::Nrf52840};
+use super::{BLE_ADDRESS_WAS_SET, device_address_to_ble_address};
+use crate::util::{channel::Channel, debug, error, info, unwrap, warn};
+use crate::{Address, internal, mcu::Nrf52840};
 use alloc::{boxed::Box, vec::Vec};
 use core::{future::Future, pin::Pin, sync::atomic::Ordering};
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use nrf_softdevice::Softdevice;
-use nrf_softdevice::ble::{
-    Address, AddressType, GattValue, central, gatt_client, gatt_server, peripheral,
-};
+use nrf_softdevice::ble::{GattValue, central, gatt_client, gatt_server, peripheral};
 use nrf_softdevice::{gatt_client, gatt_server, gatt_service};
 
 pub struct Message(Vec<u8>);
@@ -70,21 +67,29 @@ impl internal::Transport for Transport {
 impl internal::TransportConfig<Nrf52840> for internal::ble::TransportConfig {
     type Transport = Transport;
 
-    async fn init(self, mcu: &'static Nrf52840, spawner: Spawner) -> Self::Transport {
+    async fn init(
+        self,
+        mcu: &'static Nrf52840,
+        address: Address,
+        spawner: Spawner,
+    ) -> Self::Transport {
         let softdevice: &'static mut Softdevice = unsafe { &mut *mcu.softdevice.get() };
+
+        let ble_address = device_address_to_ble_address(&address);
+        if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
+            nrf_softdevice::ble::set_address(softdevice, &ble_address);
+            BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
+        }
+
         match self {
             Self::Central {
-                address,
                 peripheral_addresses,
             } => {
-                unwrap!(spawner.spawn(central(softdevice, address, peripheral_addresses)));
+                unwrap!(spawner.spawn(central(softdevice, peripheral_addresses)));
             }
-            Self::Peripheral {
-                address,
-                central_address,
-            } => {
+            Self::Peripheral { central_address } => {
                 let server = unwrap!(Server::new(softdevice));
-                unwrap!(spawner.spawn(peripheral(softdevice, server, address, central_address)));
+                unwrap!(spawner.spawn(peripheral(softdevice, server, central_address)));
             }
         }
         Transport {}
@@ -92,24 +97,12 @@ impl internal::TransportConfig<Nrf52840> for internal::ble::TransportConfig {
 }
 
 #[embassy_executor::task]
-async fn central(
-    softdevice: &'static Softdevice,
-    central_address: [u8; 6],
-    peripheral_addresses: &'static [[u8; 6]],
-) {
-    if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
-        nrf_softdevice::ble::set_address(
-            softdevice,
-            &Address::new(AddressType::RandomStatic, central_address),
-        );
-        BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
-    }
-
+async fn central(softdevice: &'static Softdevice, peripheral_addresses: &'static [Address]) {
     let mut connect_config = central::ConnectConfig::default();
 
     let mut whitelisted_addresses = Vec::new();
     for address in peripheral_addresses {
-        whitelisted_addresses.push(Address::new(AddressType::RandomStatic, *address));
+        whitelisted_addresses.push(device_address_to_ble_address(address));
     }
     let whitelisted_addresses = whitelisted_addresses.iter().collect::<Vec<_>>();
     connect_config.scan_config.whitelist = Some(&whitelisted_addresses);
@@ -159,22 +152,9 @@ async fn central(
 }
 
 #[embassy_executor::task]
-async fn peripheral(
-    softdevice: &'static Softdevice,
-    server: Server,
-    address: [u8; 6],
-    central_address: [u8; 6],
-) {
-    if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
-        nrf_softdevice::ble::set_address(
-            softdevice,
-            &Address::new(AddressType::RandomStatic, address),
-        );
-        BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
-    }
-
+async fn peripheral(softdevice: &'static Softdevice, server: Server, central_address: Address) {
     let adv = peripheral::ConnectableAdvertisement::NonscannableDirected {
-        peer: Address::new(AddressType::RandomStatic, central_address),
+        peer: device_address_to_ble_address(&central_address),
     };
     let config = peripheral::Config::default();
 
