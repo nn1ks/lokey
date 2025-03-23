@@ -2,8 +2,6 @@ use crate::mcu::storage;
 use crate::util::{debug, error, info};
 use core::cell::RefCell;
 use core::mem;
-#[cfg(feature = "defmt")]
-use defmt::Format;
 use embassy_executor::Spawner;
 use generic_array::GenericArray;
 use nrf_softdevice::Flash;
@@ -16,7 +14,7 @@ use storage::Storage;
 
 #[repr(C)]
 #[derive(Clone, Debug, Default)]
-#[cfg_attr(feature = "defmt", derive(Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct BondInfo {
     peer: Peer,
     sys_attr: SystemAttribute,
@@ -44,7 +42,7 @@ impl storage::Entry for BondInfo {
 
 #[repr(C)]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "defmt", derive(Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 struct Peer {
     master_id: MasterId,
     key: EncryptionInfo,
@@ -66,7 +64,7 @@ impl Default for Peer {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-#[cfg_attr(feature = "defmt", derive(Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 struct SystemAttribute {
     length: usize,
     data: [u8; 62],

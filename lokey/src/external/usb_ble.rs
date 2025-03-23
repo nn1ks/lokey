@@ -5,8 +5,6 @@ use alloc::boxed::Box;
 use core::cell::Cell;
 use core::future::Future;
 use core::pin::Pin;
-#[cfg(feature = "defmt")]
-use defmt::Format;
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::Mutex;
@@ -15,7 +13,7 @@ use embassy_sync::signal::Signal;
 use portable_atomic_util::Arc;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "defmt", derive(Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TransportSelection {
     Usb,
     Ble,

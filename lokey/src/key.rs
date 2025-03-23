@@ -11,8 +11,6 @@ use alloc::vec::Vec;
 use core::future::Future;
 use core::pin::Pin;
 pub use debounce::Debounce;
-#[cfg(feature = "defmt")]
-use defmt::Format;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_executor::raw::TaskStorage;
 use embassy_futures::select::{Either, select, select_slice};
@@ -188,7 +186,7 @@ pub trait Scanner {
 }
 
 /// A message type for key press and key release events.
-#[cfg_attr(feature = "defmt", derive(Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Message {
     /// The key at the specified index was pressed.
     Press { key_index: u16 },
