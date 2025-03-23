@@ -151,7 +151,7 @@ where
     ) -> Self::Transport {
         let usb_transport = Arc::new(
             self.to_usb_config()
-                .init(mcu, address.clone(), spawner, internal_channel)
+                .init(mcu, address, spawner, internal_channel)
                 .await,
         );
         let ble_transport = Arc::new(

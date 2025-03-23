@@ -87,6 +87,7 @@ impl<D: Device, T: Transports<D::Mcu>> Context<D, T> {
         let mcu = self.mcu;
         DynContext {
             spawner: self.spawner,
+            address: D::ADDRESS,
             mcu,
             internal_channel: self.internal_channel.as_dyn(),
             external_channel: self.external_channel.as_dyn(),
@@ -115,6 +116,7 @@ impl<D: Device, T: Transports<D::Mcu>> Copy for Context<D, T> {}
 #[derive(Clone, Copy)]
 pub struct DynContext {
     pub spawner: Spawner,
+    pub address: Address,
     pub mcu: &'static dyn mcu::Mcu,
     pub internal_channel: internal::DynChannel,
     pub external_channel: external::DynChannel,
@@ -122,7 +124,7 @@ pub struct DynContext {
 }
 
 /// A random static address for a device.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Address(pub [u8; 6]);
 
 pub trait Device: Sized {
