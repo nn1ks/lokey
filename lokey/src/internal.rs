@@ -12,7 +12,6 @@ use core::any::Any;
 use core::future::Future;
 use core::pin::Pin;
 use embassy_executor::Spawner;
-use generic_array::{ArrayLength, GenericArray};
 
 pub type DeviceTransport<D, T> =
     <<T as Transports<<D as Device>::Mcu>>::InternalTransportConfig as TransportConfig<
@@ -20,15 +19,15 @@ pub type DeviceTransport<D, T> =
     >>::Transport;
 
 pub trait Message: Send + 'static {
-    type Size: ArrayLength;
+    type Bytes: for<'a> TryFrom<&'a [u8]> + Into<Vec<u8>>;
 
     const TAG: [u8; 4];
 
-    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
+    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
     where
         Self: Sized;
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
+    fn to_bytes(&self) -> Self::Bytes;
 }
 
 pub trait TransportConfig<M: Mcu> {

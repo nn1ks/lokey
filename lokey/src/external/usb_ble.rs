@@ -12,7 +12,6 @@ use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-use generic_array::GenericArray;
 use portable_atomic_util::Arc;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -27,15 +26,14 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Size = typenum::U1;
+    type Bytes = [u8; 1];
 
     const TAG: [u8; 4] = [0x73, 0xe2, 0x8c, 0xcf];
 
-    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
+    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
     where
         Self: Sized,
     {
-        let bytes = bytes.into_array::<1>();
         let transport_selection = match bytes[0] {
             0 => TransportSelection::Usb,
             1 => TransportSelection::Ble,
@@ -47,14 +45,13 @@ impl internal::Message for Message {
         Some(Self::SetActive(transport_selection))
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        let bytes = match self {
+    fn to_bytes(&self) -> Self::Bytes {
+        match self {
             Message::SetActive(v) => match v {
                 TransportSelection::Usb => [0],
                 TransportSelection::Ble => [1],
             },
-        };
-        GenericArray::from_array(bytes)
+        }
     }
 }
 

@@ -5,7 +5,6 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use generic_array::GenericArray;
 
 // TODO: Optimization:
 //   - Don't convert local messages to bytes and then convert it back to a message
@@ -49,7 +48,7 @@ impl<T: Transport> Channel<T> {
 impl<T: Transport + ?Sized> Channel<T> {
     pub fn send<M: Message>(&self, message: M) {
         let message_tag = M::TAG;
-        let message_bytes = message.to_bytes();
+        let message_bytes: Vec<u8> = message.to_bytes().into();
         let mut bytes = Vec::with_capacity(message_tag.len() + message_bytes.len());
         bytes.extend(message_tag);
         bytes.extend(message_bytes);
@@ -91,16 +90,15 @@ impl<M: Message> Receiver<M> {
                 continue;
             }
             if message_bytes[..4] == M::TAG {
-                match GenericArray::try_from_slice(&message_bytes[4..]) {
+                match M::Bytes::try_from(&message_bytes[4..]) {
                     Ok(array) => {
-                        if let Some(message) = M::from_bytes(array) {
+                        if let Some(message) = M::from_bytes(&array) {
                             return message;
                         }
                     }
                     Err(_) => {
                         error!(
-                            "invalid message size (expected {} bytes, found {})",
-                            <M::Size as typenum::Unsigned>::USIZE,
+                            "invalid message size (found {} bytes): ",
                             message_bytes.len() - 4
                         )
                     }

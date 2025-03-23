@@ -1,6 +1,5 @@
 use crate::internal;
 use crate::util::error;
-use generic_array::GenericArray;
 
 pub struct TransportConfig {
     pub name: &'static str,
@@ -32,15 +31,14 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Size = typenum::U1;
+    type Bytes = [u8; 1];
 
     const TAG: [u8; 4] = [0x1a, 0xbe, 0x84, 0x10];
 
-    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
+    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
     where
         Self: Sized,
     {
-        let bytes = bytes.into_array::<1>();
         match bytes[0] {
             0 => Some(Self::Disconnect),
             1 => Some(Self::Clear),
@@ -51,11 +49,10 @@ impl internal::Message for Message {
         }
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        let bytes = match self {
+    fn to_bytes(&self) -> Self::Bytes {
+        match self {
             Message::Disconnect => [0],
             Message::Clear => [1],
-        };
-        GenericArray::from_array(bytes)
+        }
     }
 }

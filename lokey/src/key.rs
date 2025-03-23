@@ -16,7 +16,6 @@ use defmt::Format;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_executor::raw::TaskStorage;
 use embassy_futures::select::{Either, select, select_slice};
-use generic_array::GenericArray;
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -198,15 +197,14 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Size = typenum::U3;
+    type Bytes = [u8; 3];
 
     const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
 
-    fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
+    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
     where
         Self: Sized,
     {
-        let bytes = bytes.into_array::<3>();
         match bytes[0] {
             0 => Some(Message::Press {
                 key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
@@ -221,8 +219,8 @@ impl internal::Message for Message {
         }
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        let array = match self {
+    fn to_bytes(&self) -> Self::Bytes {
+        match self {
             Message::Press { key_index } => {
                 let bytes = key_index.to_be_bytes();
                 [0, bytes[0], bytes[1]]
@@ -231,7 +229,6 @@ impl internal::Message for Message {
                 let bytes = key_index.to_be_bytes();
                 [1, bytes[0], bytes[1]]
             }
-        };
-        GenericArray::from_array(array)
+        }
     }
 }
