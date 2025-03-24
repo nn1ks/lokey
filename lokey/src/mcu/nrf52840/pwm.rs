@@ -1,9 +1,9 @@
 use crate::mcu;
-use alloc::sync::Arc;
 use core::cell::RefCell;
 use embassy_nrf::pwm::{self, Prescaler};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use portable_atomic_util::Arc;
 
 pub struct Pwm<'d, T: pwm::Instance, const N: usize> {
     pwm: pwm::SimplePwm<'d, T>,

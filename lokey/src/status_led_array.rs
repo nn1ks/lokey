@@ -4,10 +4,11 @@ use crate::{Address, Component, DynContext, internal};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use bitcode::{Decode, Encode};
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::sync::atomic::Ordering;
 use embassy_executor::raw::TaskStorage;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
+use portable_atomic::AtomicU32;
 
 static ACTION_ID: AtomicU32 = AtomicU32::new(0);
 
