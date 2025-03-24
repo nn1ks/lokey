@@ -58,7 +58,7 @@ rp2040 = [
 ]
 
 [dependencies]
-bitcode = { version = "0.6.6", default-features = false, features = ["derive"] }
+bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }
 defmt = { version = "0.3.5", features = ["alloc"], optional = true }
 embassy-executor = { version = "0.7.0", features = ["executor-thread", "executor-interrupt", "nightly"] }
 embassy-futures = "0.1.1"
