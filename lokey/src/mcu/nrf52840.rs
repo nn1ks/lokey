@@ -1,5 +1,6 @@
 #[cfg(feature = "ble")]
 pub mod ble;
+pub mod pwm;
 #[cfg(feature = "usb")]
 pub mod usb;
 
