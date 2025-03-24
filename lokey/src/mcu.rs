@@ -1,5 +1,6 @@
 #[cfg(feature = "nrf52840")]
 pub mod nrf52840;
+pub mod pwm;
 #[cfg(feature = "rp2040")]
 pub mod rp2040;
 pub mod storage;
