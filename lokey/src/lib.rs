@@ -63,8 +63,10 @@ pub mod internal;
 pub mod key;
 mod layer;
 pub mod mcu;
+pub mod status_led_array;
 pub mod util;
 
+use bitcode::{Decode, Encode};
 use core::future::Future;
 #[doc(hidden)]
 pub use embassy_executor;
@@ -124,7 +126,8 @@ pub struct DynContext {
 }
 
 /// A random static address for a device.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Encode, Decode)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Address(pub [u8; 6]);
 
 pub trait Device: Sized {
