@@ -261,28 +261,25 @@ impl<'a, const N: usize> ActionHandler<'a, N> {
             pwm_channel.enable();
         }
 
-        fn map_value(value: isize) -> isize {
-            if value > RANGE {
-                (RANGE - value + RANGE).max(0)
-            } else {
-                value.max(0)
-            }
+        fn calculate_brightness(update_num: usize, pwm_channel_index: usize) -> f32 {
+            let value = update_num as isize - (pwm_channel_index as isize * RANGE + RANGE);
+            let value = (RANGE - value.abs()).clamp(0, RANGE);
+            let brightness = value as f32 / RANGE as f32;
+            1.0 - (1.0 - brightness) * (1.0 - brightness)
         }
 
         let factor = skip_ms as f32 / duration_ms as f32;
         let start = (factor * num_updates as f32) as usize;
-        for v in start..num_updates {
+        for update_num in start..num_updates {
             let started = Instant::now();
             if reverse {
                 for (i, pwm_channel) in self.pwm_channels.iter_mut().rev().enumerate() {
-                    let value = map_value(v as isize - (i as isize * RANGE));
-                    let brightness = value as f32 / RANGE as f32;
+                    let brightness = calculate_brightness(update_num, i);
                     set_brightness(pwm_channel.as_mut(), brightness, self.gamma_correction);
                 }
             } else {
                 for (i, pwm_channel) in self.pwm_channels.iter_mut().enumerate() {
-                    let value = map_value(v as isize - (i as isize * RANGE));
-                    let brightness = value as f32 / RANGE as f32;
+                    let brightness = calculate_brightness(update_num, i);
                     set_brightness(pwm_channel.as_mut(), brightness, self.gamma_correction);
                 }
             }
