@@ -2,7 +2,7 @@ mod bonder;
 mod server;
 
 use super::{BLE_ADDRESS_WAS_SET, device_address_to_ble_address};
-use crate::external::ble::Message;
+use crate::external::ble::{Event, Message};
 use crate::external::{self};
 use crate::mcu::{Nrf52840, Storage};
 use crate::util::channel::Channel;
@@ -123,6 +123,7 @@ async fn task(
     let run_ble_server = async {
         let config = peripheral::Config::default();
         loop {
+            internal_channel.send(Event::StartedAdvertising);
             let adv = peripheral::ConnectableAdvertisement::ScannableUndirected {
                 adv_data: &adv_data,
                 scan_data: &scan_data,
@@ -136,6 +137,8 @@ async fn task(
                     }
                 };
             *connection.lock().await = Some(new_connection.clone());
+            internal_channel.send(Event::StoppedAdvertising);
+            internal_channel.send(Event::Connected);
 
             info!("Advertising done, found connection");
 
@@ -163,6 +166,7 @@ async fn task(
             })
             .await;
 
+            internal_channel.send(Event::Disconnected);
             warn!("GATT server disconnected");
 
             let bond_info = match storage.fetch::<bonder::BondInfo>().await {
