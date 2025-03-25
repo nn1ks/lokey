@@ -312,10 +312,13 @@ impl<'a, const N: usize> ActionHandler<'a, N> {
                     }
                 }
             }
-            None => loop {
+            None => {
                 self.activate_single_slide(duration_ms, offset, reverse)
                     .await;
-            },
+                loop {
+                    self.activate_single_slide(duration_ms, 0, reverse).await;
+                }
+            }
         }
         self.deactivate();
         self.actions.pop();
