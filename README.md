@@ -50,10 +50,14 @@ ZMK and QMK do however have a lot more features out of the box and are obviously
 
 ## Test
 
-Run this command to check the doc tests:
+Run these commands to check the doc tests:
 
 ```
-cargo test --doc --all-features -Zdoctest-xcompile
+cargo test --doc -Zdoctest-xcompile --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
+```
+
+```
+cargo test --doc -Zdoctest-xcompile --features "defmt usb rp2040" --target thumbv6m-none-eabi
 ```
 
 ## License
