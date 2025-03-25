@@ -415,3 +415,51 @@ impl<const N: usize> StatusLedArray<N> {
 pub trait Hook {
     fn init<const N: usize>(self, status_led_array: &StatusLedArray<N>, context: DynContext);
 }
+
+#[cfg(feature = "ble")]
+pub use ble::BleAdvertisementHook;
+
+#[cfg(feature = "ble")]
+mod ble {
+    use super::*;
+    use crate::external;
+
+    pub struct BleAdvertisementHook;
+
+    impl Hook for BleAdvertisementHook {
+        fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
+            #[embassy_executor::task]
+            async fn task(device_address: Address, internal_channel: internal::DynChannel) {
+                let mut receiver = internal_channel.receiver::<external::ble::Event>();
+                let mut current_action_id = None;
+                loop {
+                    let message = receiver.next().await;
+                    match message {
+                        external::ble::Event::StartedAdvertising => {
+                            let action_id = ActionId::new(device_address);
+                            let action = Action::SlideForwards {
+                                duration_ms: 800,
+                                count: None,
+                            };
+                            internal_channel.send(Message::new(action_id.clone(), action));
+                            current_action_id = Some(action_id);
+                        }
+                        external::ble::Event::StoppedAdvertising => {
+                            if let Some(action_id) = current_action_id.take() {
+                                let new_action_id = ActionId::new(device_address);
+                                let action = Action::Stop { action_id };
+                                internal_channel.send(Message::new(new_action_id, action));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            unwrap!(
+                context
+                    .spawner
+                    .spawn(task(context.address, context.internal_channel))
+            );
+        }
+    }
+}
