@@ -336,6 +336,7 @@ impl<'a, const N: usize> ActionHandler<'a, N> {
             }
             None => warn!("no action with ID {:?}", action_id),
         }
+        self.actions.pop();
     }
 }
 
