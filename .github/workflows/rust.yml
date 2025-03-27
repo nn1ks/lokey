@@ -61,7 +61,7 @@ jobs:
         run: cargo build --verbose
         working-directory: examples/${{ matrix.example }}
       - name: Run clippy
-        run: cargo clippy --verbose
+        run: cargo clippy --verbose -- -D warnings
         working-directory: examples/${{ matrix.example }}
   format:
     runs-on: ubuntu-latest
