@@ -138,7 +138,8 @@ async fn task(
                 };
             *connection.lock().await = Some(new_connection.clone());
             internal_channel.send(Event::StoppedAdvertising);
-            internal_channel.send(Event::Connected);
+            let device_address = Address(new_connection.peer_address().bytes());
+            internal_channel.send(Event::Connected(device_address));
 
             info!("Advertising done, found connection");
 
@@ -166,7 +167,7 @@ async fn task(
             })
             .await;
 
-            internal_channel.send(Event::Disconnected);
+            internal_channel.send(Event::Disconnected(device_address));
             warn!("GATT server disconnected");
 
             let bond_info = match storage.fetch::<bonder::BondInfo>().await {

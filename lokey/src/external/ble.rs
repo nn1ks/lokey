@@ -1,5 +1,5 @@
-use crate::internal;
 use crate::util::error;
+use crate::{Address, internal};
 
 pub struct TransportConfig {
     pub name: &'static str,
@@ -62,12 +62,12 @@ impl internal::Message for Message {
 pub enum Event {
     StartedAdvertising,
     StoppedAdvertising,
-    Connected,
-    Disconnected,
+    Connected(Address),
+    Disconnected(Address),
 }
 
 impl internal::Message for Event {
-    type Bytes = [u8; 1];
+    type Bytes = [u8; 7];
 
     const TAG: [u8; 4] = [0xc6, 0x7a, 0xbd, 0xb0];
 
@@ -75,11 +75,11 @@ impl internal::Message for Event {
     where
         Self: Sized,
     {
-        match bytes[0] {
-            0 => Some(Self::StartedAdvertising),
-            1 => Some(Self::StoppedAdvertising),
-            2 => Some(Self::Connected),
-            3 => Some(Self::Disconnected),
+        match bytes {
+            [0, 0, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising),
+            [1, 0, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising),
+            [2, bytes @ ..] => Some(Self::Connected(Address(*bytes))),
+            [3, bytes @ ..] => Some(Self::Disconnected(Address(*bytes))),
             v => {
                 error!("invalid byte {}", v);
                 None
@@ -88,11 +88,20 @@ impl internal::Message for Event {
     }
 
     fn to_bytes(&self) -> Self::Bytes {
+        fn build_with_address(tag_byte: u8, address: &Address) -> [u8; 7] {
+            let mut bytes = [0; 7];
+            bytes[0] = tag_byte;
+            for (i, byte) in address.0.into_iter().enumerate() {
+                bytes[i + 1] = byte;
+            }
+            bytes
+        }
+
         match self {
-            Event::StartedAdvertising => [0],
-            Event::StoppedAdvertising => [1],
-            Event::Connected => [2],
-            Event::Disconnected => [3],
+            Event::StartedAdvertising => [0, 0, 0, 0, 0, 0, 0],
+            Event::StoppedAdvertising => [1, 0, 0, 0, 0, 0, 0],
+            Event::Connected(address) => build_with_address(2, address),
+            Event::Disconnected(address) => build_with_address(3, address),
         }
     }
 }
