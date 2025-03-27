@@ -119,53 +119,50 @@ impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
         self.scanner_config = value;
         self
     }
-}
 
-/// Initializes the component.
-pub fn init<S: Scanner, const NUM_KEYS: usize>(
-    keys: Keys<S::Config, NUM_KEYS>,
-    scanner: S,
-    context: DynContext,
-) {
-    scanner.run(keys.scanner_config, context);
+    /// Initializes the component.
+    pub fn init<S: Scanner<Config = C>>(self, scanner: S, context: DynContext) {
+        scanner.run(self.scanner_config, context);
 
-    if let Some(layout) = keys.layout {
-        let task_storage = Box::leak(Box::new(TaskStorage::new()));
-        let task = task_storage.spawn(|| handle_internal_message(&layout.actions, context));
-        unwrap!(context.spawner.spawn(task));
+        if let Some(layout) = self.layout {
+            let task_storage = Box::leak(Box::new(TaskStorage::new()));
+            let task = task_storage.spawn(|| handle_internal_message(&layout.actions, context));
+            unwrap!(context.spawner.spawn(task));
 
-        async fn handle_internal_message(
-            actions: &'static [&'static dyn DynAction],
-            context: DynContext,
-        ) {
-            let mut receiver = context.internal_channel.receiver::<Message>();
-            let mut action_futures = Vec::<Pin<Box<dyn Future<Output = ()>>>>::new();
-            loop {
-                let fut1 = async {
-                    let message = receiver.next().await;
-                    debug!("Received keys message: {}", message);
-                    match message {
-                        Message::Press { key_index } => match actions.get(key_index as usize) {
-                            Some(action) => Some(action.on_press(context)),
-                            None => {
-                                error!("Layout has no action at key index {}", key_index);
-                                None
-                            }
-                        },
-                        Message::Release { key_index } => match actions.get(key_index as usize) {
-                            Some(action) => Some(action.on_release(context)),
-                            None => {
-                                error!("Layout has no action at key index {}", key_index);
-                                None
-                            }
-                        },
+            async fn handle_internal_message(
+                actions: &'static [&'static dyn DynAction],
+                context: DynContext,
+            ) {
+                let mut receiver = context.internal_channel.receiver::<Message>();
+                let mut action_futures = Vec::<Pin<Box<dyn Future<Output = ()>>>>::new();
+                loop {
+                    let fut1 = async {
+                        let message = receiver.next().await;
+                        debug!("Received keys message: {}", message);
+                        match message {
+                            Message::Press { key_index } => match actions.get(key_index as usize) {
+                                Some(action) => Some(action.on_press(context)),
+                                None => {
+                                    error!("Layout has no action at key index {}", key_index);
+                                    None
+                                }
+                            },
+                            Message::Release { key_index } => match actions.get(key_index as usize)
+                            {
+                                Some(action) => Some(action.on_release(context)),
+                                None => {
+                                    error!("Layout has no action at key index {}", key_index);
+                                    None
+                                }
+                            },
+                        }
+                    };
+                    let fut2 = select_slice(&mut action_futures);
+                    match select(fut1, fut2).await {
+                        Either::First(Some(action_future)) => action_futures.push(action_future),
+                        Either::First(None) => {}
+                        Either::Second((_, i)) => drop(action_futures.remove(i)),
                     }
-                };
-                let fut2 = select_slice(&mut action_futures);
-                match select(fut1, fut2).await {
-                    Either::First(Some(action_future)) => action_futures.push(action_future),
-                    Either::First(None) => {}
-                    Either::Second((_, i)) => drop(action_futures.remove(i)),
                 }
             }
         }

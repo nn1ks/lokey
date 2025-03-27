@@ -65,7 +65,7 @@ impl ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>> for KeyboardLeft {
             unsafe { [Input::new(PIN_0::steal().degrade(), Pull::Up).into_active_low_switch()] };
         let scanner = DirectPins::new::<NUM_KEYS>(input_pins).continuous::<0>();
 
-        key::init(component, scanner, context.as_dyn())
+        component.init(scanner, context.as_dyn())
     }
 }
 

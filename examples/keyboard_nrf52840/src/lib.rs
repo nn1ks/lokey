@@ -145,7 +145,7 @@ impl ComponentSupport<Keys<MatrixConfig, NUM_KEYS>> for KeyboardLeft {
             .map_next::<2, 5>()
             .map_next::<1, 5>()
             .map_next::<0, 5>();
-        key::init(component, matrix, context.as_dyn())
+        component.init(matrix, context.as_dyn());
     }
 }
 
@@ -180,7 +180,7 @@ impl ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>> for KeyboardRight {
             unsafe { [Input::new(P1_11::steal().degrade(), Pull::Up).into_active_low_switch()] };
         let scanner = DirectPins::new::<NUM_KEYS>(input_pins).continuous::<18>();
 
-        key::init(component, scanner, context.as_dyn())
+        component.init(scanner, context.as_dyn())
     }
 }
 
