@@ -4,7 +4,7 @@ pub mod pwm;
 #[cfg(feature = "usb")]
 pub mod usb;
 
-use super::{HeapSize, Mcu, McuInit, Storage};
+use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
 use crate::util::{info, unwrap};
 use crate::{DynContext, external, internal};
 use alloc::boxed::Box;
@@ -33,6 +33,12 @@ pub struct Nrf52840 {
 }
 
 impl Mcu for Nrf52840 {}
+
+impl McuStorage<Flash> for Nrf52840 {
+    fn storage(&self) -> &'static Storage<Flash> {
+        self.storage
+    }
+}
 
 impl McuInit for Nrf52840 {
     type Config = Config;

@@ -40,6 +40,10 @@ pub trait McuInit: Mcu {
     fn run(&'static self, context: DynContext);
 }
 
+pub trait McuStorage<F> {
+    fn storage(&self) -> &'static Storage<F>;
+}
+
 pub trait HeapSize {
     const DEFAULT_HEAP_SIZE: usize;
 }
