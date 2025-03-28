@@ -112,21 +112,31 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             const ADDRESS: ::lokey::Address = <#device_type_path as ::lokey::Device>::ADDRESS;
 
-            // Create MCU
+            // Get MCU config
             let mut mcu_config = <#device_type_path as ::lokey::Device>::mcu_config();
             __modify_mcu_config(&mut mcu_config);
+
+            // Get internal transport config
+            let mut internal_transport_config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::internal_transport_config();
+            __modify_internal_transport_config(&mut internal_transport_config);
+
+            // Get external transport config
+            let mut external_transport_config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::external_transport_config();
+            __modify_external_transport_config(&mut external_transport_config);
+
+            // Create MCU
             let mcu = <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(
                 mcu_config,
+                &external_transport_config,
+                &internal_transport_config,
                 spawner
             );
             let mcu = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(mcu));
 
             // Create channels
             let internal_channel = {
-                let mut config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::internal_transport_config();
-                __modify_internal_transport_config(&mut config);
                 let transport = ::lokey::internal::TransportConfig::init(
-                    config,
+                    internal_transport_config,
                     mcu,
                     ADDRESS,
                     spawner
@@ -136,10 +146,8 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             let external_channel = {
-                let mut config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::external_transport_config();
-                __modify_external_transport_config(&mut config);
                 let transport = ::lokey::external::TransportConfig::init(
-                    config,
+                    external_transport_config,
                     mcu,
                     ADDRESS,
                     spawner,

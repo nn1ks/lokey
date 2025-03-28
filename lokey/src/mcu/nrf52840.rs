@@ -5,8 +5,8 @@ pub mod pwm;
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, Storage};
-use crate::DynContext;
 use crate::util::{info, unwrap};
+use crate::{DynContext, external, internal};
 use alloc::boxed::Box;
 use core::cell::UnsafeCell;
 use core::mem;
@@ -31,11 +31,25 @@ impl Mcu for Nrf52840 {}
 impl McuInit for Nrf52840 {
     type Config = Config;
 
-    fn create(config: Self::Config, _spawner: Spawner) -> Self {
+    fn create<E, I>(
+        _config: Self::Config,
+        external_transport_config: &E,
+        _internal_transport_config: &I,
+        _spawner: Spawner,
+    ) -> Self
+    where
+        E: external::TransportConfig<Self> + 'static,
+        I: internal::TransportConfig<Self> + 'static,
+    {
         let mut nrf_config = embassy_nrf::config::Config::default();
         nrf_config.gpiote_interrupt_priority = Priority::P2;
         nrf_config.time_interrupt_priority = Priority::P2;
         embassy_nrf::init(nrf_config);
+
+        let external_ble_config: &dyn core::any::Any = external_transport_config;
+        let device_name = external_ble_config
+            .downcast_ref::<external::ble::TransportConfig>()
+            .map(|v| v.name);
 
         let config = nrf_softdevice::Config {
             clock: Some(raw::nrf_clock_lf_cfg_t {
@@ -59,10 +73,10 @@ impl McuInit for Nrf52840 {
                 central_sec_count: 0,
                 _bitfield_1: raw::ble_gap_cfg_role_count_t::new_bitfield_1(0),
             }),
-            gap_device_name: Some(raw::ble_gap_cfg_device_name_t {
-                p_value: config.name.as_ptr() as _,
-                current_len: config.name.len() as u16,
-                max_len: config.name.len() as u16,
+            gap_device_name: device_name.map(|device_name| raw::ble_gap_cfg_device_name_t {
+                p_value: device_name.as_ptr() as _,
+                current_len: device_name.len() as u16,
+                max_len: device_name.len() as u16,
                 write_perm: unsafe { mem::zeroed() },
                 _bitfield_1: raw::ble_gap_cfg_device_name_t::new_bitfield_1(
                     raw::BLE_GATTS_VLOC_STACK as u8,

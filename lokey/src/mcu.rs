@@ -5,7 +5,7 @@ pub mod pwm;
 pub mod rp2040;
 pub mod storage;
 
-use crate::DynContext;
+use crate::{DynContext, external, internal};
 use core::any::Any;
 use embassy_executor::Spawner;
 #[cfg(feature = "nrf52840")]
@@ -16,16 +16,23 @@ pub use storage::Storage;
 
 pub trait Mcu: Any {}
 
-pub trait McuInit {
+pub trait McuInit: Mcu {
     /// The configuration for this MCU.
     type Config;
 
     /// Creates the MCU.
     ///
     /// This function must be called only once for a MCU type.
-    fn create(config: Self::Config, spawner: Spawner) -> Self
+    fn create<E, I>(
+        config: Self::Config,
+        external_transport_config: &E,
+        internal_transport_config: &I,
+        spawner: Spawner,
+    ) -> Self
     where
-        Self: Sized;
+        Self: Sized,
+        E: external::TransportConfig<Self> + 'static,
+        I: internal::TransportConfig<Self> + 'static;
 
     /// Runs MCU specific tasks.
     ///
@@ -51,9 +58,16 @@ mod dummy {
     impl McuInit for DummyMcu {
         type Config = ();
 
-        fn create(_config: Self::Config, _spawner: Spawner) -> Self
+        fn create<E, I>(
+            _config: Self::Config,
+            _external_transport_config: &E,
+            _internal_transport_config: &I,
+            _spawner: Spawner,
+        ) -> Self
         where
             Self: Sized,
+            E: external::TransportConfig<Self> + 'static,
+            I: internal::TransportConfig<Self> + 'static,
         {
             Self
         }

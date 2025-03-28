@@ -2,7 +2,7 @@
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit};
-use crate::DynContext;
+use crate::{DynContext, external, internal};
 use embassy_executor::Spawner;
 
 // TODO: Storage
@@ -16,9 +16,16 @@ impl Mcu for Rp2040 {}
 impl McuInit for Rp2040 {
     type Config = Config;
 
-    fn create(_config: Self::Config, _spawner: Spawner) -> Self
+    fn create<E, I>(
+        _config: Self::Config,
+        _external_transport_config: &E,
+        _internal_transport_config: &I,
+        _spawner: Spawner,
+    ) -> Self
     where
         Self: Sized,
+        E: external::TransportConfig<Self> + 'static,
+        I: internal::TransportConfig<Self> + 'static,
     {
         let config = embassy_rp::config::Config::default();
         embassy_rp::init(config);
