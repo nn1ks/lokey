@@ -42,7 +42,7 @@ impl Device for KeyboardLeft {
     type Mcu = Rp2040;
 
     fn mcu_config() -> rp2040::Config {
-        rp2040::Config
+        rp2040::Config::default()
     }
 }
 
