@@ -16,13 +16,13 @@ use embassy_nrf::interrupt::Priority;
 use nrf_softdevice::{Flash, Softdevice, raw};
 
 pub struct Config {
-    pub flash_range: Range<u32>,
+    pub storage_flash_range: Range<u32>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            flash_range: 0x6_0000..0x7_0000,
+            storage_flash_range: 0x6_0000..0x7_0000,
         }
     }
 }
@@ -33,12 +33,6 @@ pub struct Nrf52840 {
 }
 
 impl Mcu for Nrf52840 {}
-
-impl McuStorage<Flash> for Nrf52840 {
-    fn storage(&self) -> &'static Storage<Flash> {
-        self.storage
-    }
-}
 
 impl McuInit for Nrf52840 {
     type Config = Config;
@@ -100,7 +94,7 @@ impl McuInit for Nrf52840 {
         info!("Finished nRF softdevice setup");
 
         let flash = Flash::take(softdevice);
-        let storage = Storage::new(flash, config.flash_range);
+        let storage = Storage::new(flash, config.storage_flash_range);
 
         // SAFETY: UnsafeCell<T> has the same in-memory layout as T.
         let softdevice = unsafe {
@@ -117,6 +111,12 @@ impl McuInit for Nrf52840 {
 
     fn run(&'static self, context: DynContext) {
         unwrap!(context.spawner.spawn(softdevice_task(self)));
+    }
+}
+
+impl McuStorage<Flash> for Nrf52840 {
+    fn storage(&self) -> &'static Storage<Flash> {
+        self.storage
     }
 }
 

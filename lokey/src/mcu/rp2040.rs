@@ -10,13 +10,13 @@ use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
 
 pub struct Config {
-    pub flash_range: Range<u32>,
+    pub storage_flash_range: Range<u32>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            flash_range: 0..0x1_0000,
+            storage_flash_range: 0..0x1_0000,
         }
     }
 }
@@ -47,7 +47,7 @@ impl McuInit for Rp2040 {
         let rp_config = embassy_rp::config::Config::default();
         embassy_rp::init(rp_config);
         let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() });
-        let storage = Storage::new(flash, config.flash_range);
+        let storage = Storage::new(flash, config.storage_flash_range);
         Self {
             storage: Box::leak(Box::new(storage)),
         }
