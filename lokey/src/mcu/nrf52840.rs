@@ -15,10 +15,16 @@ use embassy_executor::Spawner;
 use embassy_nrf::interrupt::Priority;
 use nrf_softdevice::{Flash, Softdevice, raw};
 
-const FLASH_RANGE: Range<u32> = 0x8_0000..0x10_0000;
-
 pub struct Config {
-    pub name: &'static str,
+    pub flash_range: Range<u32>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            flash_range: 0x6_0000..0x7_0000,
+        }
+    }
 }
 
 pub struct Nrf52840 {
@@ -32,7 +38,7 @@ impl McuInit for Nrf52840 {
     type Config = Config;
 
     fn create<E, I>(
-        _config: Self::Config,
+        config: Self::Config,
         external_transport_config: &E,
         _internal_transport_config: &I,
         _spawner: Spawner,
@@ -51,7 +57,7 @@ impl McuInit for Nrf52840 {
             .downcast_ref::<external::ble::TransportConfig>()
             .map(|v| v.name);
 
-        let config = nrf_softdevice::Config {
+        let nrf_config = nrf_softdevice::Config {
             clock: Some(raw::nrf_clock_lf_cfg_t {
                 source: raw::NRF_CLOCK_LF_SRC_RC as u8,
                 rc_ctiv: 16,
@@ -84,11 +90,11 @@ impl McuInit for Nrf52840 {
             }),
             ..Default::default()
         };
-        let softdevice = Softdevice::enable(&config);
+        let softdevice = Softdevice::enable(&nrf_config);
         info!("Finished nRF softdevice setup");
 
         let flash = Flash::take(softdevice);
-        let storage = Storage::new(flash, FLASH_RANGE);
+        let storage = Storage::new(flash, config.flash_range);
 
         // SAFETY: UnsafeCell<T> has the same in-memory layout as T.
         let softdevice = unsafe {

@@ -79,9 +79,7 @@ impl Device for KeyboardLeft {
     type Mcu = Nrf52840;
 
     fn mcu_config() -> nrf52840::Config {
-        nrf52840::Config {
-            name: "keyboard_nrf52840",
-        }
+        nrf52840::Config::default()
     }
 }
 
@@ -157,9 +155,7 @@ impl Device for KeyboardRight {
     type Mcu = Nrf52840;
 
     fn mcu_config() -> nrf52840::Config {
-        nrf52840::Config {
-            name: "keyboard_nrf52840",
-        }
+        nrf52840::Config::default()
     }
 }
 
