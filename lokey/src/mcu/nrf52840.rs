@@ -29,7 +29,7 @@ impl Default for Config {
 
 pub struct Nrf52840 {
     softdevice: &'static UnsafeCell<Softdevice>,
-    pub storage: &'static Storage<Flash>,
+    storage: &'static Storage<Flash>,
 }
 
 impl Mcu for Nrf52840 {}

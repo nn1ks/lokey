@@ -23,9 +23,8 @@ impl Default for Config {
 
 pub type Flash = flash::Flash<'static, FLASH, flash::Async, 0x200000>;
 
-#[non_exhaustive]
 pub struct Rp2040 {
-    pub storage: &'static Storage<Flash>,
+    storage: &'static Storage<Flash>,
 }
 
 impl Mcu for Rp2040 {}
