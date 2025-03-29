@@ -1,8 +1,9 @@
 use crate::mcu::storage;
+use crate::util::channel::Channel;
 use crate::util::{debug, error, info};
 use core::cell::RefCell;
 use core::mem;
-use embassy_executor::Spawner;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use generic_array::GenericArray;
 use nrf_softdevice::Flash;
 use nrf_softdevice::ble::gatt_server::{get_sys_attrs, set_sys_attrs};
@@ -11,6 +12,23 @@ use nrf_softdevice::ble::{
     Address, AddressType, Connection, EncryptionInfo, IdentityKey, IdentityResolutionKey, MasterId,
 };
 use storage::Storage;
+
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+struct StoreBondInfoMessage(BondInfo);
+
+static CHANNEL: Channel<CriticalSectionRawMutex, StoreBondInfoMessage> = Channel::new();
+
+#[embassy_executor::task]
+pub(crate) async fn handle_messages(storage: &'static Storage<Flash>) {
+    loop {
+        let StoreBondInfoMessage(bond_info) = CHANNEL.receive().await;
+        debug!("Received message to store bond info");
+        if let Err(e) = storage.store(&bond_info).await {
+            error!("Failed to write bond info to flash: {}", e);
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Clone, Debug, Default)]
@@ -79,30 +97,15 @@ impl Default for SystemAttribute {
     }
 }
 
-#[embassy_executor::task]
-async fn write_bond_info_to_flash(storage: &'static Storage<Flash>, bond_info: BondInfo) {
-    if let Err(e) = storage.store(&bond_info).await {
-        error!("Failed to write bond info to flash: {}", e);
-    }
-}
-
 // Bonder aka security handler used in advertising & pairing
 pub struct Bonder {
     pub(crate) bond_info: RefCell<Option<BondInfo>>,
-    storage: &'static Storage<Flash>,
-    spawner: Spawner,
 }
 
 impl Bonder {
-    pub fn new(
-        bond_info: Option<BondInfo>,
-        storage: &'static Storage<Flash>,
-        spawner: Spawner,
-    ) -> Self {
+    pub fn new(bond_info: Option<BondInfo>) -> Self {
         Self {
             bond_info: RefCell::new(bond_info),
-            storage,
-            spawner,
         }
     }
 }
@@ -133,9 +136,11 @@ impl SecurityHandler for Bonder {
             sys_attr: SystemAttribute::default(),
         };
         *self.bond_info.borrow_mut() = Some(new_bond_info.clone());
-        self.spawner
-            .spawn(write_bond_info_to_flash(self.storage, new_bond_info))
-            .unwrap();
+        info!(
+            "Sending BLE storage message: {:?}",
+            StoreBondInfoMessage(new_bond_info.clone())
+        );
+        CHANNEL.send(StoreBondInfoMessage(new_bond_info));
     }
 
     fn get_key(&self, _conn: &Connection, master_id: MasterId) -> Option<EncryptionInfo> {
@@ -158,17 +163,25 @@ impl SecurityHandler for Bonder {
 
         match bond_info.as_mut() {
             Some(bond_info) if bond_info.peer.peer_id.is_match(addr) => {
-                bond_info.sys_attr.length = match get_sys_attrs(conn, &mut bond_info.sys_attr.data)
-                {
-                    Ok(length) => length,
+                let mut buf = [0u8; 64];
+                match get_sys_attrs(conn, &mut buf) {
+                    Ok(length) => {
+                        if bond_info.sys_attr.length != length
+                            || bond_info.sys_attr.data[0..length] != buf[0..length]
+                        {
+                            bond_info.sys_attr.length = length;
+                            bond_info.sys_attr.data[0..length].copy_from_slice(&buf[0..length]);
+                            info!(
+                                "Sending BLE storage message: {:?}",
+                                StoreBondInfoMessage(bond_info.clone())
+                            );
+                            CHANNEL.send(StoreBondInfoMessage(bond_info.clone()));
+                        }
+                    }
                     Err(e) => {
                         error!("Get system attr for {} error: {}", bond_info, e);
-                        0
                     }
                 };
-                self.spawner
-                    .spawn(write_bond_info_to_flash(self.storage, bond_info.clone()))
-                    .unwrap();
             }
             _ => {
                 info!("Peer doesn't match {}", conn.peer_address());

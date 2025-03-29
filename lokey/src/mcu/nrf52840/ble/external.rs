@@ -112,7 +112,8 @@ async fn task(
         }
     };
 
-    let bonder = Box::leak(Box::new(Bonder::new(bond_info, storage, spawner)));
+    unwrap!(spawner.spawn(bonder::handle_messages(storage)));
+    let bonder = Box::leak(Box::new(Bonder::new(bond_info)));
 
     if !BLE_ADDRESS_WAS_SET.load(Ordering::SeqCst) {
         nrf_softdevice::ble::set_address(softdevice, &device_address_to_ble_address(&address));
@@ -124,9 +125,18 @@ async fn task(
         let config = peripheral::Config::default();
         loop {
             internal_channel.send(Event::StartedAdvertising);
-            let adv = peripheral::ConnectableAdvertisement::ScannableUndirected {
-                adv_data: &adv_data,
-                scan_data: &scan_data,
+            let adv = if bonder.bond_info.borrow().is_some() {
+                info!("Advertising as non-scannable because of existing bond info");
+                peripheral::ConnectableAdvertisement::ExtendedNonscannableUndirected {
+                    set_id: 0,
+                    adv_data: &adv_data,
+                }
+            } else {
+                info!("Advertising as scannable because of no stored bond info");
+                peripheral::ConnectableAdvertisement::ScannableUndirected {
+                    adv_data: &adv_data,
+                    scan_data: &scan_data,
+                }
             };
             let new_connection =
                 match peripheral::advertise_pairable(softdevice, adv, &config, bonder).await {
@@ -218,6 +228,7 @@ async fn task(
                     }
                 }
                 Message::Clear => {
+                    debug!("Removing bond info");
                     if let Err(e) = storage.remove::<bonder::BondInfo>().await {
                         error!("Failed to remove bond info: {}", e);
                     }
