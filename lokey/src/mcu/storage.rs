@@ -15,8 +15,15 @@ pub trait Entry {
     /// The length of the byte array that this type is serialized to.
     type Size: ArrayLength;
 
-    /// A unique tag to identify this entry type.
-    const TAG: [u8; ENTRY_TAG_SIZE];
+    /// The type of the parameter that is passed to the [`tag`](Self::tag) function.
+    ///
+    /// By settings this to a type that can have different values, multiple instances of the entry
+    /// can be stored. If you only ever need to store one instance of this entry type, the type can
+    /// be set to `()`.
+    type TagParams;
+
+    /// Creates a unique tag to identify this entry type.
+    fn tag(params: Self::TagParams) -> [u8; ENTRY_TAG_SIZE];
 
     /// Deserializes the entry from the specified bytes.
     ///
@@ -106,20 +113,24 @@ impl<F: MultiwriteNorFlash> Storage<F> {
         vec![0; buf_len]
     }
 
-    pub async fn remove<E: Entry>(&self) -> Result<(), Error<F::Error>> {
+    pub async fn remove<E: Entry>(&self, tag_params: E::TagParams) -> Result<(), Error<F::Error>> {
         let mut buf = Self::create_buffer::<E>();
         remove_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
             &mut NoCache::new(),
             &mut buf,
-            &E::TAG,
+            &E::tag(tag_params),
         )
         .await
         .map_err(Error::from_sequential_storage)
     }
 
-    pub async fn store<E: Entry>(&self, entry: &E) -> Result<(), Error<F::Error>> {
+    pub async fn store<E: Entry>(
+        &self,
+        tag_params: E::TagParams,
+        entry: &E,
+    ) -> Result<(), Error<F::Error>> {
         let mut buf = Self::create_buffer::<E>();
         let value_bytes = entry.to_bytes();
         store_item(
@@ -127,21 +138,24 @@ impl<F: MultiwriteNorFlash> Storage<F> {
             self.flash_range.clone(),
             &mut NoCache::new(),
             &mut buf,
-            &E::TAG,
+            &E::tag(tag_params),
             &value_bytes.as_ref(),
         )
         .await
         .map_err(Error::from_sequential_storage)
     }
 
-    pub async fn fetch<E: Entry>(&self) -> Result<Option<E>, Error<F::Error>> {
+    pub async fn fetch<E: Entry>(
+        &self,
+        tag_params: E::TagParams,
+    ) -> Result<Option<E>, Error<F::Error>> {
         let mut buf = Self::create_buffer::<E>();
         let data: Option<&[u8]> = fetch_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
             &mut NoCache::new(),
             &mut buf,
-            &E::TAG,
+            &E::tag(tag_params),
         )
         .await
         .map_err(Error::from_sequential_storage)?;

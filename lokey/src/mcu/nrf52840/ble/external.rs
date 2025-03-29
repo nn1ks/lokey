@@ -104,7 +104,7 @@ async fn task(
         )
         .build();
 
-    let bond_info = match storage.fetch::<bonder::BondInfo>().await {
+    let bond_info = match storage.fetch::<bonder::BondInfo>(0).await {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to read bond info from flash: {}", e);
@@ -185,7 +185,7 @@ async fn task(
             internal_channel.send(Event::Disconnected { device_address });
             warn!("GATT server disconnected");
 
-            let bond_info = match storage.fetch::<bonder::BondInfo>().await {
+            let bond_info = match storage.fetch::<bonder::BondInfo>(0).await {
                 Ok(v) => v,
                 Err(e) => {
                     error!("Failed to read bond info from flash: {}", e);
@@ -234,7 +234,7 @@ async fn task(
                 }
                 Message::Clear => {
                     debug!("Removing bond info");
-                    if let Err(e) = storage.remove::<bonder::BondInfo>().await {
+                    if let Err(e) = storage.remove::<bonder::BondInfo>(0).await {
                         error!("Failed to remove bond info: {}", e);
                     }
                     if let Some(connection) = &mut *connection.lock().await {

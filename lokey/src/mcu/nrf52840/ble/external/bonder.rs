@@ -24,7 +24,7 @@ pub(crate) async fn handle_messages(storage: &'static Storage<Flash>) {
     loop {
         let StoreBondInfoMessage(bond_info) = CHANNEL.receive().await;
         debug!("Received message to store bond info");
-        if let Err(e) = storage.store(&bond_info).await {
+        if let Err(e) = storage.store(0, &bond_info).await {
             error!("Failed to write bond info to flash: {}", e);
         }
     }
@@ -41,7 +41,11 @@ pub struct BondInfo {
 impl storage::Entry for BondInfo {
     type Size = typenum::U120;
 
-    const TAG: [u8; 4] = [0x68, 0xb6, 0xa9, 0xff];
+    type TagParams = u8;
+
+    fn tag(params: Self::TagParams) -> [u8; 4] {
+        [0x68, 0xb6, 0xa9, params]
+    }
 
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
