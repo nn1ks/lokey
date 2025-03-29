@@ -124,8 +124,11 @@ async fn task(
     let run_ble_server = async {
         let config = peripheral::Config::default();
         loop {
-            internal_channel.send(Event::StartedAdvertising);
-            let adv = if bonder.bond_info.borrow().is_some() {
+            let found_bond_info = bonder.bond_info.borrow().is_some();
+            internal_channel.send(Event::StartedAdvertising {
+                scannable: !found_bond_info,
+            });
+            let adv = if found_bond_info {
                 info!("Advertising as non-scannable because of existing bond info");
                 peripheral::ConnectableAdvertisement::ExtendedNonscannableUndirected {
                     set_id: 0,
@@ -147,9 +150,11 @@ async fn task(
                     }
                 };
             *connection.lock().await = Some(new_connection.clone());
-            internal_channel.send(Event::StoppedAdvertising);
+            internal_channel.send(Event::StoppedAdvertising {
+                scannable: found_bond_info,
+            });
             let device_address = Address(new_connection.peer_address().bytes());
-            internal_channel.send(Event::Connected(device_address));
+            internal_channel.send(Event::Connected { device_address });
 
             info!("Advertising done, found connection");
 
@@ -177,7 +182,7 @@ async fn task(
             })
             .await;
 
-            internal_channel.send(Event::Disconnected(device_address));
+            internal_channel.send(Event::Disconnected { device_address });
             warn!("GATT server disconnected");
 
             let bond_info = match storage.fetch::<bonder::BondInfo>().await {

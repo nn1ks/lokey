@@ -435,7 +435,7 @@ mod ble {
                 loop {
                     let message = receiver.next().await;
                     match message {
-                        external::ble::Event::StartedAdvertising => {
+                        external::ble::Event::StartedAdvertising { scannable: true } => {
                             let action_id = ActionId::new(device_address);
                             let action = Action::SlideForwards {
                                 duration_ms: 800,
@@ -444,7 +444,7 @@ mod ble {
                             internal_channel.send(Message::new(action_id.clone(), action));
                             current_action_id = Some(action_id);
                         }
-                        external::ble::Event::StoppedAdvertising => {
+                        external::ble::Event::StoppedAdvertising { scannable: true } => {
                             if let Some(action_id) = current_action_id.take() {
                                 let new_action_id = ActionId::new(device_address);
                                 let action = Action::Stop { action_id };

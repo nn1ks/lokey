@@ -60,10 +60,10 @@ impl internal::Message for Message {
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Event {
-    StartedAdvertising,
-    StoppedAdvertising,
-    Connected(Address),
-    Disconnected(Address),
+    StartedAdvertising { scannable: bool },
+    StoppedAdvertising { scannable: bool },
+    Connected { device_address: Address },
+    Disconnected { device_address: Address },
 }
 
 impl internal::Message for Event {
@@ -76,12 +76,18 @@ impl internal::Message for Event {
         Self: Sized,
     {
         match bytes {
-            [0, 0, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising),
-            [1, 0, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising),
-            [2, bytes @ ..] => Some(Self::Connected(Address(*bytes))),
-            [3, bytes @ ..] => Some(Self::Disconnected(Address(*bytes))),
+            [0, 0, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising { scannable: false }),
+            [0, 1, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising { scannable: true }),
+            [1, 0, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising { scannable: false }),
+            [1, 1, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising { scannable: true }),
+            [2, address_bytes @ ..] => Some(Self::Connected {
+                device_address: Address(*address_bytes),
+            }),
+            [3, address_bytes @ ..] => Some(Self::Disconnected {
+                device_address: Address(*address_bytes),
+            }),
             v => {
-                error!("invalid byte {}", v);
+                error!("invalid bytes {}", v);
                 None
             }
         }
@@ -98,10 +104,10 @@ impl internal::Message for Event {
         }
 
         match self {
-            Event::StartedAdvertising => [0, 0, 0, 0, 0, 0, 0],
-            Event::StoppedAdvertising => [1, 0, 0, 0, 0, 0, 0],
-            Event::Connected(address) => build_with_address(2, address),
-            Event::Disconnected(address) => build_with_address(3, address),
+            Event::StartedAdvertising { scannable } => [0, *scannable as u8, 0, 0, 0, 0, 0],
+            Event::StoppedAdvertising { scannable } => [1, *scannable as u8, 0, 0, 0, 0, 0],
+            Event::Connected { device_address } => build_with_address(2, device_address),
+            Event::Disconnected { device_address } => build_with_address(3, device_address),
         }
     }
 }
