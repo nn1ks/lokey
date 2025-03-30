@@ -279,13 +279,19 @@ async fn task(
                         );
                     } else {
                         info!("Switching to profile {}", index);
-                        if active_profile_index.load(Ordering::SeqCst) != index {
+                        let is_different_profile =
+                            active_profile_index.load(Ordering::SeqCst) != index;
+                        if is_different_profile {
                             active_profile_index.store(index, Ordering::SeqCst);
                             if let Some(connection) = &mut *connection.lock().await {
                                 let _ = connection.disconnect();
                             }
                             cancel_advertisement.signal(());
                         }
+                        internal_channel.send(Event::SwitchedProfile {
+                            profile_index: index,
+                            changed: is_different_profile,
+                        });
                     }
                 }
                 Message::SelectNextProfile => {
@@ -301,6 +307,10 @@ async fn task(
                         let _ = connection.disconnect();
                     }
                     cancel_advertisement.signal(());
+                    internal_channel.send(Event::SwitchedProfile {
+                        profile_index: new_profile_index,
+                        changed: num_profiles.get() > 1,
+                    });
                 }
                 Message::SelectPreviousProfile => {
                     let active = active_profile_index.load(Ordering::SeqCst);
@@ -315,6 +325,10 @@ async fn task(
                         let _ = connection.disconnect();
                     }
                     cancel_advertisement.signal(());
+                    internal_channel.send(Event::SwitchedProfile {
+                        profile_index: new_profile_index,
+                        changed: num_profiles.get() > 1,
+                    });
                 }
                 Message::DisconnectActive => {
                     if let Some(connection) = &mut *connection.lock().await {

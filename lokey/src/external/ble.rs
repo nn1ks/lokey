@@ -79,6 +79,7 @@ pub enum Event {
     StoppedAdvertising { scannable: bool },
     Connected { device_address: Address },
     Disconnected { device_address: Address },
+    SwitchedProfile { profile_index: u8, changed: bool },
 }
 
 impl internal::Message for Event {
@@ -101,6 +102,14 @@ impl internal::Message for Event {
             [3, address_bytes @ ..] => Some(Self::Disconnected {
                 device_address: Address(*address_bytes),
             }),
+            [4, profile_index, 0, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
+                profile_index: *profile_index,
+                changed: false,
+            }),
+            [4, profile_index, 1, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
+                profile_index: *profile_index,
+                changed: true,
+            }),
             v => {
                 error!("invalid bytes {}", v);
                 None
@@ -119,10 +128,14 @@ impl internal::Message for Event {
         }
 
         match self {
-            Event::StartedAdvertising { scannable } => [0, *scannable as u8, 0, 0, 0, 0, 0],
-            Event::StoppedAdvertising { scannable } => [1, *scannable as u8, 0, 0, 0, 0, 0],
-            Event::Connected { device_address } => build_with_address(2, device_address),
-            Event::Disconnected { device_address } => build_with_address(3, device_address),
+            Self::StartedAdvertising { scannable } => [0, *scannable as u8, 0, 0, 0, 0, 0],
+            Self::StoppedAdvertising { scannable } => [1, *scannable as u8, 0, 0, 0, 0, 0],
+            Self::Connected { device_address } => build_with_address(2, device_address),
+            Self::Disconnected { device_address } => build_with_address(3, device_address),
+            Self::SwitchedProfile {
+                profile_index,
+                changed,
+            } => [4, *profile_index, *changed as u8, 0, 0, 0, 0],
         }
     }
 }
