@@ -11,7 +11,7 @@
 //! struct Keyboard;
 //!
 //! impl Device for Keyboard {
-//!     const ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
+//!     const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
 //!     type Mcu = lokey::mcu::DummyMcu;
 //!     fn mcu_config() {
 //!        // ...
@@ -78,6 +78,7 @@ pub use lokey_macros::device;
 
 pub struct Context<D: Device, T: Transports<D::Mcu>> {
     pub spawner: Spawner,
+    pub address: Address,
     pub mcu: &'static D::Mcu,
     pub internal_channel: internal::Channel<internal::DeviceTransport<D, T>>,
     pub external_channel: external::Channel<external::DeviceTransport<D, T>>,
@@ -89,7 +90,7 @@ impl<D: Device, T: Transports<D::Mcu>> Context<D, T> {
         let mcu = self.mcu;
         DynContext {
             spawner: self.spawner,
-            address: D::ADDRESS,
+            address: self.address,
             mcu,
             internal_channel: self.internal_channel.as_dyn(),
             external_channel: self.external_channel.as_dyn(),
@@ -131,7 +132,7 @@ pub struct DynContext {
 pub struct Address(pub [u8; 6]);
 
 pub trait Device: Sized {
-    const ADDRESS: Address;
+    const DEFAULT_ADDRESS: Address;
     type Mcu: mcu::Mcu + mcu::McuInit;
     fn mcu_config() -> <Self::Mcu as mcu::McuInit>::Config;
 }

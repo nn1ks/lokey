@@ -49,7 +49,7 @@ impl Transports<Nrf52840> for Central {
     fn internal_transport_config() -> Self::InternalTransportConfig {
         // internal::empty::TransportConfig
         internal::ble::TransportConfig::Central {
-            peripheral_addresses: &[KeyboardRight::ADDRESS],
+            peripheral_addresses: &[KeyboardRight::DEFAULT_ADDRESS],
         }
     }
 }
@@ -66,7 +66,7 @@ impl Transports<Nrf52840> for Peripheral {
 
     fn internal_transport_config() -> Self::InternalTransportConfig {
         internal::ble::TransportConfig::Peripheral {
-            central_address: KeyboardLeft::ADDRESS,
+            central_address: KeyboardLeft::DEFAULT_ADDRESS,
         }
     }
 }
@@ -74,7 +74,7 @@ impl Transports<Nrf52840> for Peripheral {
 pub struct KeyboardLeft;
 
 impl Device for KeyboardLeft {
-    const ADDRESS: Address = Address([0x8b, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
+    const DEFAULT_ADDRESS: Address = Address([0x8b, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
 
     type Mcu = Nrf52840;
 
@@ -150,7 +150,7 @@ impl ComponentSupport<Keys<MatrixConfig, NUM_KEYS>> for KeyboardLeft {
 pub struct KeyboardRight;
 
 impl Device for KeyboardRight {
-    const ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
+    const DEFAULT_ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
 
     type Mcu = Nrf52840;
 

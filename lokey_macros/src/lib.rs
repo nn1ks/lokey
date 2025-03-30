@@ -10,6 +10,7 @@ use syn::spanned::Spanned;
 #[derive(FromMeta)]
 struct DeviceArgs {
     heap_size: Option<syn::Expr>,
+    address: Option<syn::Expr>,
     mcu_config: Option<syn::Expr>,
     internal_transport_config: Option<syn::Expr>,
     external_transport_config: Option<syn::Expr>,
@@ -63,6 +64,11 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         },
     };
 
+    let address = match args.address {
+        Some(v) => v.to_token_stream(),
+        None => quote! { <#device_type_path as ::lokey::Device>::DEFAULT_ADDRESS },
+    };
+
     let modify_mcu_config = match args.mcu_config {
         Some(v) => quote! { #v(__config); },
         None => quote! {},
@@ -110,7 +116,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
             }
 
-            const ADDRESS: ::lokey::Address = <#device_type_path as ::lokey::Device>::ADDRESS;
+            let address: ::lokey::Address = #address;
 
             // Get MCU config
             let mut mcu_config = <#device_type_path as ::lokey::Device>::mcu_config();
@@ -138,7 +144,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let transport = ::lokey::internal::TransportConfig::init(
                     internal_transport_config,
                     mcu,
-                    ADDRESS,
+                    address,
                     spawner
                 ).await;
                 let transport = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(transport));
@@ -149,7 +155,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let transport = ::lokey::external::TransportConfig::init(
                     external_transport_config,
                     mcu,
-                    ADDRESS,
+                    address,
                     spawner,
                     internal_channel.as_dyn()
                 ).await;
@@ -159,6 +165,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             let context = ::lokey::Context {
                 spawner,
+                address,
                 mcu,
                 external_channel,
                 internal_channel,

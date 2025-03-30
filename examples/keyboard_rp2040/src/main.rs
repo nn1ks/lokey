@@ -37,7 +37,7 @@ impl Transports<Rp2040> for Central {
 struct KeyboardLeft;
 
 impl Device for KeyboardLeft {
-    const ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
+    const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
 
     type Mcu = Rp2040;
 
