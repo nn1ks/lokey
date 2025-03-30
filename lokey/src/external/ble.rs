@@ -9,6 +9,7 @@ pub struct TransportConfig {
     pub manufacturer: Option<&'static str>,
     pub model_number: Option<&'static str>,
     pub serial_number: Option<&'static str>,
+    pub num_profiles: u8,
 }
 
 impl Default for TransportConfig {
@@ -21,17 +22,23 @@ impl Default for TransportConfig {
             manufacturer: None,
             model_number: None,
             serial_number: None,
+            num_profiles: 4,
         }
     }
 }
 
 pub enum Message {
-    Disconnect,
-    Clear,
+    SelectProfile { index: u8 },
+    SelectNextProfile,
+    SelectPreviousProfile,
+    DisconnectActive,
+    Clear { profile_index: u8 },
+    ClearActive,
+    ClearAll,
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 1];
+    type Bytes = [u8; 2];
 
     const TAG: [u8; 4] = [0x1a, 0xbe, 0x84, 0x10];
 
@@ -39,20 +46,28 @@ impl internal::Message for Message {
     where
         Self: Sized,
     {
-        match bytes[0] {
-            0 => Some(Self::Disconnect),
-            1 => Some(Self::Clear),
-            v => {
-                error!("invalid byte {}", v);
-                None
-            }
-        }
+        let message = match *bytes {
+            [0, index] => Self::SelectProfile { index },
+            [1, 0] => Self::SelectNextProfile,
+            [2, 0] => Self::SelectPreviousProfile,
+            [3, 0] => Self::DisconnectActive,
+            [4, profile_index] => Self::Clear { profile_index },
+            [5, 0] => Self::ClearActive,
+            [6, 0] => Self::ClearAll,
+            _ => return None,
+        };
+        Some(message)
     }
 
     fn to_bytes(&self) -> Self::Bytes {
         match self {
-            Message::Disconnect => [0],
-            Message::Clear => [1],
+            Self::SelectProfile { index } => [0, *index],
+            Self::SelectNextProfile => [1, 0],
+            Self::SelectPreviousProfile => [2, 0],
+            Self::DisconnectActive => [3, 0],
+            Self::Clear { profile_index } => [4, *profile_index],
+            Self::ClearActive => [5, 0],
+            Self::ClearAll => [6, 0],
         }
     }
 }

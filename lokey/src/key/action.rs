@@ -280,28 +280,87 @@ impl<H: Action, T: Action> Action for HoldTap<H, T> {
 }
 
 #[cfg(feature = "ble")]
-pub use ble::{BleClear, BleDisconnect};
+pub use ble::{
+    BleClear, BleClearActive, BleClearAll, BleDisconnectActive, BleNextProfile, BlePreviousProfile,
+    BleSelectProfile,
+};
 
 #[cfg(feature = "ble")]
 mod ble {
     use super::*;
     use crate::external::ble::Message;
 
-    pub struct BleDisconnect;
+    pub struct BleDisconnectActive;
 
-    impl Action for BleDisconnect {
+    impl Action for BleDisconnectActive {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::Disconnect);
+            context.internal_channel.send(Message::DisconnectActive);
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
     }
 
-    pub struct BleClear;
+    pub struct BleClear(pub u8);
 
     impl Action for BleClear {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::Clear);
+            context.internal_channel.send(Message::Clear {
+                profile_index: self.0,
+            });
+        }
+
+        async fn on_release(&'static self, _context: DynContext) {}
+    }
+
+    pub struct BleClearActive;
+
+    impl Action for BleClearActive {
+        async fn on_press(&'static self, context: DynContext) {
+            context.internal_channel.send(Message::ClearActive);
+        }
+
+        async fn on_release(&'static self, _context: DynContext) {}
+    }
+
+    pub struct BleClearAll;
+
+    impl Action for BleClearAll {
+        async fn on_press(&'static self, context: DynContext) {
+            context.internal_channel.send(Message::ClearAll);
+        }
+
+        async fn on_release(&'static self, _context: DynContext) {}
+    }
+
+    pub struct BleSelectProfile(pub u8);
+
+    impl Action for BleSelectProfile {
+        async fn on_press(&'static self, context: DynContext) {
+            context
+                .internal_channel
+                .send(Message::SelectProfile { index: self.0 });
+        }
+
+        async fn on_release(&'static self, _context: DynContext) {}
+    }
+
+    pub struct BleNextProfile;
+
+    impl Action for BleNextProfile {
+        async fn on_press(&'static self, context: DynContext) {
+            context.internal_channel.send(Message::SelectNextProfile);
+        }
+
+        async fn on_release(&'static self, _context: DynContext) {}
+    }
+
+    pub struct BlePreviousProfile;
+
+    impl Action for BlePreviousProfile {
+        async fn on_press(&'static self, context: DynContext) {
+            context
+                .internal_channel
+                .send(Message::SelectPreviousProfile);
         }
 
         async fn on_release(&'static self, _context: DynContext) {}

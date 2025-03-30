@@ -1,8 +1,10 @@
 use crate::mcu::storage;
 use crate::util::channel::Channel;
 use crate::util::{debug, error, info};
+use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::mem;
+use core::sync::atomic::Ordering;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use generic_array::GenericArray;
 use nrf_softdevice::Flash;
@@ -11,20 +13,27 @@ use nrf_softdevice::ble::security::{IoCapabilities, SecurityHandler};
 use nrf_softdevice::ble::{
     Address, AddressType, Connection, EncryptionInfo, IdentityKey, IdentityResolutionKey, MasterId,
 };
+use portable_atomic::AtomicU8;
 use storage::Storage;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-struct StoreBondInfoMessage(BondInfo);
+struct StoreBondInfoMessage {
+    bond_info: BondInfo,
+    profile_index: u8,
+}
 
 static CHANNEL: Channel<CriticalSectionRawMutex, StoreBondInfoMessage> = Channel::new();
 
 #[embassy_executor::task]
 pub(crate) async fn handle_messages(storage: &'static Storage<Flash>) {
     loop {
-        let StoreBondInfoMessage(bond_info) = CHANNEL.receive().await;
+        let StoreBondInfoMessage {
+            bond_info,
+            profile_index,
+        } = CHANNEL.receive().await;
         debug!("Received message to store bond info");
-        if let Err(e) = storage.store(0, &bond_info).await {
+        if let Err(e) = storage.store(profile_index, &bond_info).await {
             error!("Failed to write bond info to flash: {}", e);
         }
     }
@@ -103,14 +112,29 @@ impl Default for SystemAttribute {
 
 // Bonder aka security handler used in advertising & pairing
 pub struct Bonder {
-    pub(crate) bond_info: RefCell<Option<BondInfo>>,
+    pub bond_infos: RefCell<Vec<Option<BondInfo>>>,
+    pub active_profile_index: AtomicU8,
 }
 
 impl Bonder {
-    pub fn new(bond_info: Option<BondInfo>) -> Self {
+    pub const fn new(bond_infos: Vec<Option<BondInfo>>, active_profile_index: AtomicU8) -> Self {
         Self {
-            bond_info: RefCell::new(bond_info),
+            bond_infos: RefCell::new(bond_infos),
+            active_profile_index,
         }
+    }
+
+    pub fn set_bond_info(&self, profile_index: u8, bond_info: Option<BondInfo>) {
+        *self
+            .bond_infos
+            .borrow_mut()
+            .get_mut(profile_index as usize)
+            .unwrap() = bond_info;
+    }
+
+    fn set_active_bond_info(&self, bond_info: Option<BondInfo>) {
+        let profile_index = self.active_profile_index.load(Ordering::SeqCst);
+        self.set_bond_info(profile_index, bond_info);
     }
 }
 
@@ -139,20 +163,22 @@ impl SecurityHandler for Bonder {
             },
             sys_attr: SystemAttribute::default(),
         };
-        *self.bond_info.borrow_mut() = Some(new_bond_info.clone());
-        info!(
-            "Sending BLE storage message: {:?}",
-            StoreBondInfoMessage(new_bond_info.clone())
-        );
-        CHANNEL.send(StoreBondInfoMessage(new_bond_info));
+        self.set_active_bond_info(Some(new_bond_info.clone()));
+        CHANNEL.send(StoreBondInfoMessage {
+            bond_info: new_bond_info,
+            profile_index: self.active_profile_index.load(Ordering::SeqCst),
+        });
     }
 
     fn get_key(&self, _conn: &Connection, master_id: MasterId) -> Option<EncryptionInfo> {
         // Reconnecting with an existing bond
         debug!("Getting bond for {}", master_id);
 
-        let bond_info = self.bond_info.borrow();
-        match &*bond_info {
+        let bond_infos = self.bond_infos.borrow();
+        let bond_info = bond_infos
+            .get(self.active_profile_index.load(Ordering::SeqCst) as usize)
+            .unwrap();
+        match bond_info {
             Some(bond_info) if bond_info.peer.master_id == master_id => Some(bond_info.peer.key),
             _ => None,
         }
@@ -163,7 +189,10 @@ impl SecurityHandler for Bonder {
         let addr = conn.peer_address();
         info!("Saving system attributes for {}", addr);
 
-        let mut bond_info = self.bond_info.borrow_mut();
+        let mut bond_infos = self.bond_infos.borrow_mut();
+        let bond_info = bond_infos
+            .get_mut(self.active_profile_index.load(Ordering::SeqCst) as usize)
+            .unwrap();
 
         match bond_info.as_mut() {
             Some(bond_info) if bond_info.peer.peer_id.is_match(addr) => {
@@ -175,15 +204,14 @@ impl SecurityHandler for Bonder {
                         {
                             bond_info.sys_attr.length = length;
                             bond_info.sys_attr.data[0..length].copy_from_slice(&buf[0..length]);
-                            info!(
-                                "Sending BLE storage message: {:?}",
-                                StoreBondInfoMessage(bond_info.clone())
-                            );
-                            CHANNEL.send(StoreBondInfoMessage(bond_info.clone()));
+                            CHANNEL.send(StoreBondInfoMessage {
+                                bond_info: bond_info.clone(),
+                                profile_index: self.active_profile_index.load(Ordering::SeqCst),
+                            });
                         }
                     }
                     Err(e) => {
-                        error!("Get system attr for {} error: {}", bond_info, e);
+                        error!("Get system attr error: {}", e);
                     }
                 };
             }
@@ -197,7 +225,10 @@ impl SecurityHandler for Bonder {
         let addr = conn.peer_address();
         info!("Loading system attributes for {}", addr);
 
-        let bond_info = self.bond_info.borrow();
+        let bond_infos = self.bond_infos.borrow();
+        let bond_info = bond_infos
+            .get(self.active_profile_index.load(Ordering::SeqCst) as usize)
+            .unwrap();
 
         let sys_attr = match bond_info.as_ref() {
             Some(bond_info)
