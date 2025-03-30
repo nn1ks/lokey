@@ -417,12 +417,13 @@ pub trait Hook {
 }
 
 #[cfg(feature = "ble")]
-pub use ble::BleAdvertisementHook;
+pub use ble::{BleAdvertisementHook, BleProfileHook};
 
 #[cfg(feature = "ble")]
 mod ble {
     use super::*;
     use crate::external;
+    use alloc::vec;
 
     pub struct BleAdvertisementHook;
 
@@ -452,6 +453,37 @@ mod ble {
                             }
                         }
                         _ => {}
+                    }
+                }
+            }
+            unwrap!(
+                context
+                    .spawner
+                    .spawn(task(context.address, context.internal_channel))
+            );
+        }
+    }
+
+    pub struct BleProfileHook;
+
+    impl Hook for BleProfileHook {
+        fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
+            #[embassy_executor::task]
+            async fn task(device_address: Address, internal_channel: internal::DynChannel) {
+                let mut receiver = internal_channel.receiver::<external::ble::Event>();
+                loop {
+                    let message = receiver.next().await;
+                    if let external::ble::Event::SwitchedProfile {
+                        profile_index,
+                        changed: _,
+                    } = message
+                    {
+                        let action_id = ActionId::new(device_address);
+                        let action = Action::Individual {
+                            indices: vec![profile_index as usize],
+                            timeout_ms: Some(1000),
+                        };
+                        internal_channel.send(Message::new(action_id, action));
                     }
                 }
             }
