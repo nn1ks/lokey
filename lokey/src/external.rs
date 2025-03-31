@@ -2,6 +2,7 @@
 pub mod ble;
 mod channel;
 pub mod empty;
+pub mod toggle;
 #[cfg(feature = "usb")]
 pub mod usb;
 #[cfg(all(feature = "usb", feature = "ble"))]

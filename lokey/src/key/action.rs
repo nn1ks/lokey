@@ -1,4 +1,5 @@
-use crate::{DynContext, LayerId, LayerManagerEntry, external};
+use crate::external::{self, toggle};
+use crate::{DynContext, LayerId, LayerManagerEntry};
 use alloc::boxed::Box;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
@@ -277,6 +278,36 @@ impl<H: Action, T: Action> Action for HoldTap<H, T> {
             self.tap_action.on_release(context).await;
         }
     }
+}
+
+pub struct ToggleExternalTransport;
+
+impl Action for ToggleExternalTransport {
+    async fn on_press(&'static self, context: DynContext) {
+        context.internal_channel.send(toggle::Message::Toggle);
+    }
+
+    async fn on_release(&'static self, _: DynContext) {}
+}
+
+pub struct ActivateExternalTransport;
+
+impl Action for ActivateExternalTransport {
+    async fn on_press(&'static self, context: DynContext) {
+        context.internal_channel.send(toggle::Message::Activate);
+    }
+
+    async fn on_release(&'static self, _: DynContext) {}
+}
+
+pub struct DeactivateExternalTransport;
+
+impl Action for DeactivateExternalTransport {
+    async fn on_press(&'static self, context: DynContext) {
+        context.internal_channel.send(toggle::Message::Deactivate);
+    }
+
+    async fn on_release(&'static self, _: DynContext) {}
 }
 
 #[cfg(feature = "ble")]
