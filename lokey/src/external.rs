@@ -375,6 +375,20 @@ pub trait TransportConfig<M: Mcu> {
 
 pub trait Transport: Any {
     fn send(&self, message: Message);
+
+    /// Activates or deactivates the transport.
+    ///
+    /// Returns `false` if this transport does not support deactivating, otherwise `true`.
+    fn set_active(&self, value: bool) -> bool {
+        let _ = value;
+        false
+    }
+
+    /// Returns whether the transport is currently activated.
+    fn is_active(&self) -> bool {
+        true
+    }
+
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(core::future::pending())
     }

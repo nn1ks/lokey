@@ -14,7 +14,7 @@ use bonder::Bonder;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
 use embassy_executor::Spawner;
-use embassy_futures::join::join;
+use embassy_futures::join::join4;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
@@ -31,6 +31,8 @@ use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
 use usbd_hid::descriptor::KeyboardReport;
 
 static CHANNEL: Channel<CriticalSectionRawMutex, external::Message> = Channel::new();
+static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
+static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 
 #[non_exhaustive]
 pub struct Transport {}
@@ -38,6 +40,20 @@ pub struct Transport {}
 impl external::Transport for Transport {
     fn send(&self, message: external::Message) {
         CHANNEL.send(message);
+    }
+
+    fn set_active(&self, value: bool) -> bool {
+        info!(
+            "Setting active status of external BLE transport to {}",
+            value
+        );
+        IS_ACTIVE.store(value, Ordering::Release);
+        ACTIVE_SIGNAL.signal(value);
+        true
+    }
+
+    fn is_active(&self) -> bool {
+        IS_ACTIVE.load(Ordering::Acquire)
     }
 }
 
@@ -134,12 +150,17 @@ async fn task(
         BLE_ADDRESS_WAS_SET.store(true, Ordering::SeqCst);
     }
 
+    let cancel_activation_wait = Signal::<CriticalSectionRawMutex, ()>::new();
     let cancel_advertisement = Signal::<CriticalSectionRawMutex, ()>::new();
 
     let connection = Mutex::<CriticalSectionRawMutex, _>::new(None);
     let active_profile_index: AtomicU8 = AtomicU8::new(0);
     let run_ble_server = async {
         loop {
+            while !IS_ACTIVE.load(Ordering::Acquire) {
+                cancel_activation_wait.wait().await;
+            }
+
             let profile_index = active_profile_index.load(Ordering::SeqCst);
             let found_bond_info = bonder.bond_infos.borrow()[profile_index as usize].is_some();
             bonder
@@ -383,9 +404,21 @@ async fn task(
             }
         }
     };
-    join(
-        join(run_ble_server, send_keyboard_report),
+    let handle_activation = async {
+        loop {
+            ACTIVE_SIGNAL.wait().await;
+            if let Some(connection) = &mut *connection.lock().await {
+                let _ = connection.disconnect();
+            }
+            cancel_activation_wait.signal(());
+            cancel_advertisement.signal(());
+        }
+    };
+    join4(
+        run_ble_server,
+        send_keyboard_report,
         handle_internal_messages,
+        handle_activation,
     )
     .await;
 }

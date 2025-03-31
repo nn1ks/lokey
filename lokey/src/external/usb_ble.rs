@@ -70,6 +70,18 @@ impl<Usb: external::Transport, Ble: external::Transport> external::Transport
         })
     }
 
+    fn set_active(&self, value: bool) -> bool {
+        let usb_supported = self.usb_transport.set_active(value);
+        let ble_supported = self.ble_transport.set_active(value);
+        usb_supported || ble_supported
+    }
+
+    fn is_active(&self) -> bool {
+        let usb_is_active = self.usb_transport.is_active();
+        let ble_is_active = self.ble_transport.is_active();
+        usb_is_active && ble_is_active
+    }
+
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(async { self.activation_request.wait().await })
     }
