@@ -5,8 +5,11 @@ use alloc::boxed::Box;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_executor::Spawner;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::signal::Signal;
 use portable_atomic::AtomicBool;
 
+static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -81,8 +84,21 @@ impl<T: external::TransportConfig<M>, M: Mcu> external::TransportConfig<M> for T
         let transport = Box::leak(Box::new(
             T::init(self.transport, mcu, address, spawner, internal_channel).await,
         ));
-        ACTIVE.store(self.active, Ordering::SeqCst);
+        ACTIVE.store(self.active, Ordering::Release);
         external::Transport::set_active(transport, self.active);
+
+        if !self.ignore_activation_request {
+            #[embassy_executor::task]
+            async fn handle_activation_request(transport: &'static dyn external::Transport) {
+                loop {
+                    transport.wait_for_activation_request().await;
+                    ACTIVE.store(true, Ordering::Release);
+                    transport.set_active(true);
+                    ACTIVATION_REQUEST.signal(());
+                }
+            }
+            unwrap!(spawner.spawn(handle_activation_request(transport)));
+        }
 
         #[embassy_executor::task]
         async fn handle_internal_messages(
@@ -109,16 +125,12 @@ impl<T: external::TransportConfig<M>, M: Mcu> external::TransportConfig<M> for T
         }
         unwrap!(spawner.spawn(handle_internal_messages(internal_channel, transport)));
 
-        Transport {
-            transport,
-            ignore_activation_request: self.ignore_activation_request,
-        }
+        Transport { transport }
     }
 }
 
 pub struct Transport<T: 'static> {
     transport: &'static T,
-    ignore_activation_request: bool,
 }
 
 impl<T: external::Transport> external::Transport for Transport<T> {
@@ -137,13 +149,13 @@ impl<T: external::Transport> external::Transport for Transport<T> {
     }
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        if self.ignore_activation_request {
-            Box::pin(core::future::pending())
-        } else {
-            Box::pin(async {
-                self.transport.wait_for_activation_request().await;
-                ACTIVE.store(true, Ordering::Release);
-            })
-        }
+        Box::pin(async {
+            loop {
+                ACTIVATION_REQUEST.wait().await;
+                if ACTIVE.load(Ordering::Acquire) {
+                    break;
+                }
+            }
+        })
     }
 }
