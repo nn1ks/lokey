@@ -9,7 +9,7 @@ use sequential_storage::cache::NoCache;
 use sequential_storage::map::{fetch_item, remove_item, store_item};
 use typenum::Unsigned;
 
-const ENTRY_TAG_SIZE: usize = 4;
+const ENTRY_TAG_SIZE: usize = 8;
 
 pub trait Entry {
     /// The length of the byte array that this type is serialized to.

@@ -52,8 +52,8 @@ impl storage::Entry for BondInfo {
 
     type TagParams = u8;
 
-    fn tag(params: Self::TagParams) -> [u8; 4] {
-        [0x68, 0xb6, 0xa9, params]
+    fn tag(params: Self::TagParams) -> [u8; 8] {
+        [0x68, 0xb6, 0xa9, 0x22, 0xdc, 0xd9, 0xeb, params]
     }
 
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
