@@ -1,5 +1,5 @@
 use crate::external::{self, toggle};
-use crate::{DynContext, LayerId, LayerManagerEntry};
+use crate::{Address, DynContext, LayerId, LayerManagerEntry};
 use alloc::boxed::Box;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
@@ -280,31 +280,37 @@ impl<H: Action, T: Action> Action for HoldTap<H, T> {
     }
 }
 
-pub struct ToggleExternalTransport;
+pub struct ToggleExternalTransport(pub Address);
 
 impl Action for ToggleExternalTransport {
     async fn on_press(&'static self, context: DynContext) {
-        context.internal_channel.send(toggle::Message::Toggle);
+        context
+            .internal_channel
+            .send(toggle::Message::Toggle(self.0));
     }
 
     async fn on_release(&'static self, _: DynContext) {}
 }
 
-pub struct ActivateExternalTransport;
+pub struct ActivateExternalTransport(pub Address);
 
 impl Action for ActivateExternalTransport {
     async fn on_press(&'static self, context: DynContext) {
-        context.internal_channel.send(toggle::Message::Activate);
+        context
+            .internal_channel
+            .send(toggle::Message::Activate(self.0));
     }
 
     async fn on_release(&'static self, _: DynContext) {}
 }
 
-pub struct DeactivateExternalTransport;
+pub struct DeactivateExternalTransport(pub Address);
 
 impl Action for DeactivateExternalTransport {
     async fn on_press(&'static self, context: DynContext) {
-        context.internal_channel.send(toggle::Message::Deactivate);
+        context
+            .internal_channel
+            .send(toggle::Message::Deactivate(self.0));
     }
 
     async fn on_release(&'static self, _: DynContext) {}
