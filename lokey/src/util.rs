@@ -1,6 +1,7 @@
 pub mod channel;
 pub mod pubsub;
 
+#[allow(unused)]
 #[collapse_debuginfo(yes)]
 macro_rules! unwrap {
     ($($x:tt)*) => {{
@@ -9,6 +10,19 @@ macro_rules! unwrap {
         #[cfg(not(feature = "defmt"))]
         { $($x)*.unwrap() }
     }}
+}
+
+#[allow(unused)]
+#[collapse_debuginfo(yes)]
+macro_rules! panic {
+    ($($x:tt)*) => {
+        {
+            #[cfg(feature = "defmt")]
+            defmt::panic!($($x)*);
+            #[cfg(not(feature = "defmt"))]
+            core::panic!($($x)*);
+        }
+    };
 }
 
 #[allow(unused)]
@@ -64,11 +78,4 @@ macro_rules! debug {
 }
 
 #[allow(unused)]
-pub(crate) use debug;
-#[allow(unused)]
-pub(crate) use error;
-#[allow(unused)]
-pub(crate) use info;
-pub(crate) use unwrap;
-#[allow(unused)]
-pub(crate) use warn_ as warn;
+pub(crate) use {debug, error, info, panic, unwrap, warn_ as warn};

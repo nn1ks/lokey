@@ -1,3 +1,4 @@
+use crate::util::panic;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Range;
