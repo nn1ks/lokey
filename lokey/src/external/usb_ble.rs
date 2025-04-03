@@ -97,7 +97,6 @@ pub struct TransportConfig {
     pub model_number: Option<&'static str>,
     pub serial_number: Option<&'static str>,
     pub self_powered: bool,
-    pub ble_address: Option<[u8; 6]>,
     pub num_ble_profiles: u8,
 }
 
@@ -113,7 +112,6 @@ impl Default for TransportConfig {
             model_number: None,
             serial_number: None,
             self_powered: false,
-            ble_address: None,
             num_ble_profiles: 4,
         }
     }
