@@ -1,6 +1,7 @@
 pub mod channel;
 pub mod pubsub;
 
+#[collapse_debuginfo(yes)]
 macro_rules! unwrap {
     ($($x:tt)*) => {{
         #[cfg(feature = "defmt")]
@@ -11,6 +12,7 @@ macro_rules! unwrap {
 }
 
 #[allow(unused)]
+#[collapse_debuginfo(yes)]
 macro_rules! error {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -23,6 +25,7 @@ macro_rules! error {
 }
 
 #[allow(unused)]
+#[collapse_debuginfo(yes)]
 macro_rules! warn_ {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -35,6 +38,7 @@ macro_rules! warn_ {
 }
 
 #[allow(unused)]
+#[collapse_debuginfo(yes)]
 macro_rules! info {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -47,6 +51,7 @@ macro_rules! info {
 }
 
 #[allow(unused)]
+#[collapse_debuginfo(yes)]
 macro_rules! debug {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
