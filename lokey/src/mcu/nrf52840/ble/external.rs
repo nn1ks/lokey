@@ -159,6 +159,7 @@ async fn task(
         loop {
             while !IS_ACTIVE.load(Ordering::Acquire) {
                 cancel_activation_wait.wait().await;
+                cancel_advertisement.reset();
             }
 
             let profile_index = active_profile_index.load(Ordering::SeqCst);
@@ -187,7 +188,6 @@ async fn task(
             let new_connection = match select(advertise, cancel_advertisement.wait()).await {
                 Either::First(v) => v,
                 Either::Second(()) => {
-                    cancel_advertisement.reset();
                     info!("Cancelled BLE advertisement");
                     internal_channel.send(Event::StoppedAdvertising {
                         scannable: !found_bond_info,
@@ -195,7 +195,6 @@ async fn task(
                     continue;
                 }
             };
-            cancel_advertisement.reset();
 
             let new_connection = match new_connection {
                 Ok(v) => v,
@@ -241,6 +240,7 @@ async fn task(
                 },
             })
             .await;
+            cancel_advertisement.reset();
 
             warn!("GATT server disconnected");
             *connection.lock().await = None;
