@@ -58,6 +58,7 @@ pub struct Transport<Usb, Ble> {
     ble_transport: Arc<Ble>,
     active: Arc<Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>>,
     activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
+    deactivate_unused_transport: bool,
 }
 
 impl<Usb: external::Transport, Ble: external::Transport> external::Transport
@@ -71,15 +72,26 @@ impl<Usb: external::Transport, Ble: external::Transport> external::Transport
     }
 
     fn set_active(&self, value: bool) -> bool {
-        let usb_supported = self.usb_transport.set_active(value);
-        let ble_supported = self.ble_transport.set_active(value);
-        usb_supported || ble_supported
+        if value && self.deactivate_unused_transport {
+            let active = self.active.lock(|v| v.get());
+            let usb_supported = self
+                .usb_transport
+                .set_active(active == TransportSelection::Usb);
+            let ble_supported = self
+                .ble_transport
+                .set_active(active == TransportSelection::Ble);
+            usb_supported || ble_supported
+        } else {
+            let usb_supported = self.usb_transport.set_active(value);
+            let ble_supported = self.ble_transport.set_active(value);
+            usb_supported || ble_supported
+        }
     }
 
     fn is_active(&self) -> bool {
         let usb_is_active = self.usb_transport.is_active();
         let ble_is_active = self.ble_transport.is_active();
-        usb_is_active && ble_is_active
+        usb_is_active || ble_is_active
     }
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
@@ -98,6 +110,7 @@ pub struct TransportConfig {
     pub serial_number: Option<&'static str>,
     pub self_powered: bool,
     pub num_ble_profiles: u8,
+    pub deactivate_unused_transport: bool,
 }
 
 impl Default for TransportConfig {
@@ -113,6 +126,7 @@ impl Default for TransportConfig {
             serial_number: None,
             self_powered: false,
             num_ble_profiles: 4,
+            deactivate_unused_transport: true,
         }
     }
 }
@@ -191,7 +205,8 @@ where
             usb_transport_clone,
             ble_transport_clone,
             Arc::clone(&active),
-            Arc::clone(&activation_request)
+            Arc::clone(&activation_request),
+            self.deactivate_unused_transport,
         )));
 
         #[embassy_executor::task]
@@ -200,6 +215,7 @@ where
             ble_transport: Arc<dyn external::Transport>,
             active: Arc<Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>>,
             activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
+            deactivate_unused_transport: bool,
         ) {
             loop {
                 let future1 = usb_transport.wait_for_activation_request();
@@ -209,7 +225,13 @@ where
                     Either::Second(()) => TransportSelection::Ble,
                 };
                 info!("Setting active transport to {}", transport_selection);
-                active.lock(|v| v.replace(transport_selection));
+                let previous_transport_selection = active.lock(|v| v.replace(transport_selection));
+                if deactivate_unused_transport
+                    && previous_transport_selection != transport_selection
+                {
+                    usb_transport.set_active(transport_selection == TransportSelection::Usb);
+                    usb_transport.set_active(transport_selection == TransportSelection::Ble);
+                }
                 activation_request.signal(());
             }
         }
@@ -240,6 +262,7 @@ where
             ble_transport,
             active,
             activation_request,
+            deactivate_unused_transport: self.deactivate_unused_transport,
         }
     }
 }
