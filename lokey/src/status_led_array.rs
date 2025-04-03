@@ -416,6 +416,28 @@ pub trait Hook {
     fn init<const N: usize>(self, status_led_array: &StatusLedArray<N>, context: DynContext);
 }
 
+pub struct BootHook;
+
+impl Hook for BootHook {
+    fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
+        #[embassy_executor::task]
+        async fn task(device_address: Address, internal_channel: internal::DynChannel) {
+            Timer::after_millis(50).await;
+            let action_id = ActionId::new(device_address);
+            let action = Action::SlideBackwards {
+                duration_ms: 800,
+                count: Some(1),
+            };
+            internal_channel.send(Message::new(action_id, action));
+        }
+        unwrap!(
+            context
+                .spawner
+                .spawn(task(context.address, context.internal_channel))
+        );
+    }
+}
+
 #[cfg(feature = "ble")]
 pub use ble::{BleAdvertisementHook, BleProfileHook};
 
