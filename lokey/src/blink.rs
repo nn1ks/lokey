@@ -2,6 +2,7 @@ use crate::Component;
 use crate::util::{error, unwrap};
 use alloc::boxed::Box;
 use embassy_executor::Spawner;
+use embassy_executor::raw::TaskStorage;
 use embassy_time::Timer;
 
 pub struct Blink;
@@ -27,9 +28,10 @@ impl<T: embedded_hal::digital::OutputPin> OutputPin for T {
 
 impl Blink {
     pub fn init(self, led: impl embedded_hal::digital::OutputPin + 'static, spawner: Spawner) {
-        unwrap!(spawner.spawn(task(Box::new(led))));
+        let task_storage = Box::leak(Box::new(TaskStorage::new()));
+        let task = task_storage.spawn(|| task(Box::new(led)));
+        unwrap!(spawner.spawn(task));
 
-        #[embassy_executor::task]
         async fn task(mut led: Box<dyn OutputPin>) {
             loop {
                 led.set_high();
