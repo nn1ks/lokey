@@ -82,7 +82,7 @@ async fn main(context: Context<KeyboardLeft, Central>) {
         .enable(Keys::<MatrixConfig, NUM_KEYS>::new().layout(layout))
         .await;
 
-    context.enable(Blink).await;
+    context.enable(Blink::new()).await;
 
     // context.spawner.spawn(task()).unwrap();
     // #[embassy_executor::task]

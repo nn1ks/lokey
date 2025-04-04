@@ -15,7 +15,7 @@ async fn main(context: Context<KeyboardRight, Peripheral>) {
         .enable(Keys::<DirectPinsConfig, NUM_KEYS>::new())
         .await;
 
-    context.enable(Blink).await;
+    context.enable(Blink::new()).await;
 
     // context.spawner.spawn(task()).unwrap();
     // #[embassy_executor::task]
