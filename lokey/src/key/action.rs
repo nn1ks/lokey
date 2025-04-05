@@ -78,13 +78,13 @@ impl Layer {
 
 impl Action for Layer {
     async fn on_press(&'static self, context: DynContext) {
-        let entry = context.layer_manager.push(self.layer);
+        let entry = context.layer_manager.push(self.layer).await;
         *self.layer_manager_entry.lock().await = Some(entry);
     }
 
     async fn on_release(&'static self, context: DynContext) {
         if let Some(entry) = self.layer_manager_entry.lock().await.take() {
-            context.layer_manager.remove(entry);
+            context.layer_manager.remove(entry).await;
         }
     }
 }
@@ -105,7 +105,7 @@ impl<const N: usize> PerLayer<N> {
 
 impl<const N: usize> Action for PerLayer<N> {
     async fn on_press(&'static self, context: DynContext) {
-        let active_layer_id = context.layer_manager.active();
+        let active_layer_id = context.layer_manager.active().await;
         if let Some((_, action)) = self
             .actions
             .iter()
