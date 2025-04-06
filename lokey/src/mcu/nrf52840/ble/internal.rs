@@ -7,7 +7,7 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::future::Future;
 use core::pin::Pin;
-use core::sync::atomic::Ordering;
+use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -53,14 +53,17 @@ struct Client {
 
 static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
 static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
+static HAS_CONNECTION: AtomicBool = AtomicBool::new(false);
 
 #[non_exhaustive]
 pub struct Transport {}
 
 impl internal::Transport for Transport {
     fn send(&self, message_bytes: &[u8]) {
-        let message = Message(Vec::from(message_bytes));
-        SEND_CHANNEL.send(message);
+        if HAS_CONNECTION.load(Ordering::Acquire) {
+            let message = Message(Vec::from(message_bytes));
+            SEND_CHANNEL.send(message);
+        }
     }
 
     fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {
@@ -149,7 +152,9 @@ async fn central(softdevice: &'static Softdevice, peripheral_addresses: &'static
             }
         };
 
-        select(recv, send).await;
+        HAS_CONNECTION.store(true, Ordering::Release);
+        select(send, recv).await;
+        HAS_CONNECTION.store(false, Ordering::Release);
 
         warn!("GATT client disconnected");
     }
@@ -199,7 +204,9 @@ async fn peripheral(softdevice: &'static Softdevice, server: Server, central_add
             }
         };
 
+        HAS_CONNECTION.store(true, Ordering::Release);
         select(recv, send).await;
+        HAS_CONNECTION.store(false, Ordering::Release);
 
         warn!("GATT server disconnected");
     }
