@@ -2,6 +2,7 @@
 pub mod ble;
 mod channel;
 pub mod empty;
+mod r#override;
 pub mod toggle;
 #[cfg(feature = "usb")]
 pub mod usb;
@@ -16,6 +17,7 @@ use core::any::Any;
 use core::future::Future;
 use core::pin::Pin;
 use embassy_executor::Spawner;
+pub use r#override::{MessageSender, Override};
 
 pub type DeviceTransport<D, T> =
     <<T as Transports<<D as Device>::Mcu>>::ExternalTransportConfig as TransportConfig<
