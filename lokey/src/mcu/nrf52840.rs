@@ -17,12 +17,14 @@ use nrf_softdevice::{Flash, Softdevice, raw};
 
 pub struct Config {
     pub storage_flash_range: Range<u32>,
+    pub ble_gap_device_name: Option<&'static str>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             storage_flash_range: 0x6_0000..0x7_0000,
+            ble_gap_device_name: None,
         }
     }
 }
@@ -39,7 +41,7 @@ impl McuInit for Nrf52840 {
 
     fn create<E, I>(
         config: Self::Config,
-        external_transport_config: &E,
+        _external_transport_config: &E,
         _internal_transport_config: &I,
         _spawner: Spawner,
     ) -> Self
@@ -51,11 +53,6 @@ impl McuInit for Nrf52840 {
         nrf_config.gpiote_interrupt_priority = Priority::P2;
         nrf_config.time_interrupt_priority = Priority::P2;
         embassy_nrf::init(nrf_config);
-
-        let external_ble_config: &dyn core::any::Any = external_transport_config;
-        let device_name = external_ble_config
-            .downcast_ref::<external::ble::TransportConfig>()
-            .map(|v| v.name);
 
         let nrf_config = nrf_softdevice::Config {
             clock: Some(raw::nrf_clock_lf_cfg_t {
@@ -79,14 +76,16 @@ impl McuInit for Nrf52840 {
                 central_sec_count: 0,
                 _bitfield_1: raw::ble_gap_cfg_role_count_t::new_bitfield_1(0),
             }),
-            gap_device_name: device_name.map(|device_name| raw::ble_gap_cfg_device_name_t {
-                p_value: device_name.as_ptr() as _,
-                current_len: device_name.len() as u16,
-                max_len: device_name.len() as u16,
-                write_perm: unsafe { mem::zeroed() },
-                _bitfield_1: raw::ble_gap_cfg_device_name_t::new_bitfield_1(
-                    raw::BLE_GATTS_VLOC_STACK as u8,
-                ),
+            gap_device_name: config.ble_gap_device_name.map(|device_name| {
+                raw::ble_gap_cfg_device_name_t {
+                    p_value: device_name.as_ptr() as _,
+                    current_len: device_name.len() as u16,
+                    max_len: device_name.len() as u16,
+                    write_perm: unsafe { mem::zeroed() },
+                    _bitfield_1: raw::ble_gap_cfg_device_name_t::new_bitfield_1(
+                        raw::BLE_GATTS_VLOC_STACK as u8,
+                    ),
+                }
             }),
             ..Default::default()
         };
