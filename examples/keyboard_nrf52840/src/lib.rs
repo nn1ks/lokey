@@ -10,11 +10,19 @@ use lokey::blink::Blink;
 use lokey::external::{KeyMessage, Messages0, Messages1};
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use lokey::mcu::{Nrf52840, nrf52840};
-use lokey::{Address, ComponentSupport, Context, Device, Transports, external, internal};
+use lokey::{
+    Address, ComponentSupport, Context, Device, LayerManager, State, StateContainer, Transports,
+    external, internal,
+};
 use switch_hal::IntoSwitch;
 use {defmt_rtt as _, panic_probe as _};
 
 pub const NUM_KEYS: usize = 36;
+
+#[derive(Default, State)]
+pub struct DefaultState {
+    pub layer_manager: LayerManager,
+}
 
 pub struct Central;
 
@@ -86,18 +94,18 @@ impl Device for KeyboardLeft {
     }
 }
 
-impl ComponentSupport<Blink> for KeyboardLeft {
-    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T>) {
+impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
+    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T, S>) {
         let pin = unsafe { embassy_nrf::peripherals::P0_17::steal() };
         let led = Output::new(pin, Level::Low, OutputDrive::Standard);
         component.init(led, context.spawner);
     }
 }
 
-impl ComponentSupport<Keys<MatrixConfig, NUM_KEYS>> for KeyboardLeft {
+impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for KeyboardLeft {
     async fn enable<T: Transports<Self::Mcu>>(
         component: Keys<MatrixConfig, NUM_KEYS>,
-        context: Context<Self, T>,
+        context: Context<Self, T, S>,
     ) {
         let matrix = unsafe {
             Matrix::new::<NUM_KEYS>(
@@ -162,18 +170,18 @@ impl Device for KeyboardRight {
     }
 }
 
-impl ComponentSupport<Blink> for KeyboardRight {
-    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T>) {
+impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardRight {
+    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T, S>) {
         let pin = unsafe { embassy_nrf::peripherals::P0_17::steal() };
         let led = Output::new(pin, Level::Low, OutputDrive::Standard);
         component.init(led, context.spawner);
     }
 }
 
-impl ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>> for KeyboardRight {
+impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
     async fn enable<T: Transports<Self::Mcu>>(
         component: Keys<DirectPinsConfig, NUM_KEYS>,
-        context: Context<Self, T>,
+        context: Context<Self, T, S>,
     ) {
         let input_pins =
             unsafe { [Input::new(P1_11::steal().degrade(), Pull::Up).into_active_low_switch()] };

@@ -10,9 +10,17 @@ use lokey::external::{self, Key, KeyMessage, Messages1};
 use lokey::key::action::KeyCode;
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, layout};
 use lokey::mcu::{Rp2040, rp2040};
-use lokey::{Address, ComponentSupport, Context, Device, Transports, internal};
+use lokey::{
+    Address, ComponentSupport, Context, Device, LayerManager, State, StateContainer, Transports,
+    internal,
+};
 use switch_hal::IntoSwitch;
 use {defmt_rtt as _, panic_probe as _};
+
+#[derive(Default, State)]
+struct DefaultState {
+    layer_manager: LayerManager,
+}
 
 struct Central;
 
@@ -47,8 +55,8 @@ impl Device for KeyboardLeft {
     }
 }
 
-impl ComponentSupport<Blink> for KeyboardLeft {
-    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T>) {
+impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
+    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T, S>) {
         let pin = unsafe { embassy_rp::peripherals::PIN_16::steal() };
         let led = Output::new(pin, Level::Low);
         component.init(led, context.spawner);
@@ -57,10 +65,10 @@ impl ComponentSupport<Blink> for KeyboardLeft {
 
 const NUM_KEYS: usize = 1;
 
-impl ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>> for KeyboardLeft {
+impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> for KeyboardLeft {
     async fn enable<T: Transports<Self::Mcu>>(
         component: Keys<DirectPinsConfig, NUM_KEYS>,
-        context: Context<Self, T>,
+        context: Context<Self, T, S>,
     ) {
         let input_pins =
             unsafe { [Input::new(PIN_0::steal().degrade(), Pull::Up).into_active_low_switch()] };
@@ -71,7 +79,7 @@ impl ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>> for KeyboardLeft {
 }
 
 #[lokey::device]
-async fn main(context: Context<KeyboardLeft, Central>) {
+async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
     let layout = layout!(
         // Layer 0
         [KeyCode::new(Key::A)],

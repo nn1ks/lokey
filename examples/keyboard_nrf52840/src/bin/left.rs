@@ -4,7 +4,7 @@
 #![feature(type_alias_impl_trait)]
 
 use embassy_nrf::gpio::{Level, Output, OutputDrive, Pin};
-use keyboard_nrf52840::{Central, KeyboardLeft, LedAction, NUM_KEYS};
+use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, LedAction, NUM_KEYS};
 use lokey::Context;
 use lokey::blink::Blink;
 use lokey::external::Key;
@@ -13,7 +13,7 @@ use lokey::key::{Keys, MatrixConfig, layout};
 use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
-async fn main(context: Context<KeyboardLeft, Central>) {
+async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
     let layout = layout!(
         // Layer 0
         [

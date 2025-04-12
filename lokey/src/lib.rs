@@ -5,24 +5,25 @@
 //! ```no_run
 #![doc = include_str!("./doctest_setup")]
 //! # use core::unimplemented;
-//! use lokey::{Address, ComponentSupport, Context, Device, Transports, mcu::DummyMcu};
+//! # use lokey::mcu::DummyMcu;
+//! use lokey::{Address, ComponentSupport, Context, Device, LayerManager, State, StateContainer, Transports};
 //! use lokey::key::{self, DirectPins, DirectPinsConfig, Keys};
 //!
 //! struct Keyboard;
 //!
 //! impl Device for Keyboard {
 //!     const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
-//!     type Mcu = lokey::mcu::DummyMcu;
+//!     type Mcu = DummyMcu;
 //!     fn mcu_config() {
 //!        // ...
 //!     }
 //! }
 //!
 //! // Adds support for the Keys component
-//! impl ComponentSupport<Keys<DirectPinsConfig, 8>> for Keyboard {
+//! impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, 8>, S> for Keyboard {
 //!     async fn enable<T: Transports<DummyMcu>>(
 //!         component: Keys<DirectPinsConfig, 8>,
-//!         context: Context<Self, T>,
+//!         context: Context<Self, T, S>,
 //!     ) {
 //!         # unimplemented!()
 //!         // ...
@@ -45,8 +46,13 @@
 //!     }
 //! }
 //!
+//! #[derive(Default, State)]
+//! struct DefaultState {
+//!     layer_manager: LayerManager,
+//! }
+//!
 //! #[lokey::device]
-//! async fn main(context: Context<Keyboard, Central>) {
+//! async fn main(context: Context<Keyboard, Central, DefaultState>) {
 //!     // The component can then be enabled with the Context type
 //!     context.enable(Keys::new()).await;
 //! }
@@ -64,6 +70,7 @@ pub mod internal;
 pub mod key;
 mod layer;
 pub mod mcu;
+mod state;
 pub mod status_led_array;
 pub mod util;
 
@@ -75,18 +82,19 @@ use embassy_executor::Spawner;
 #[doc(hidden)]
 pub use embedded_alloc;
 pub use layer::{LayerId, LayerManager, LayerManagerEntry};
-pub use lokey_macros::device;
+pub use lokey_macros::{State, device};
+pub use state::{DynState, State, StateContainer};
 
-pub struct Context<D: Device, T: Transports<D::Mcu>> {
+pub struct Context<D: Device, T: Transports<D::Mcu>, S: StateContainer> {
     pub spawner: Spawner,
     pub address: Address,
     pub mcu: &'static D::Mcu,
     pub internal_channel: internal::Channel<internal::DeviceTransport<D, T>>,
     pub external_channel: external::Channel<external::DeviceTransport<D, T>>,
-    pub layer_manager: LayerManager,
+    pub state: &'static S,
 }
 
-impl<D: Device, T: Transports<D::Mcu>> Context<D, T> {
+impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Context<D, T, S> {
     pub fn as_dyn(&self) -> DynContext {
         let mcu = self.mcu;
         DynContext {
@@ -95,26 +103,26 @@ impl<D: Device, T: Transports<D::Mcu>> Context<D, T> {
             mcu,
             internal_channel: self.internal_channel.as_dyn(),
             external_channel: self.external_channel.as_dyn(),
-            layer_manager: self.layer_manager,
+            state: DynState::from_ref(self.state),
         }
     }
 
     pub async fn enable<C>(&self, component: C)
     where
         C: Component,
-        D: ComponentSupport<C>,
+        D: ComponentSupport<C, S>,
     {
         D::enable::<T>(component, *self).await
     }
 }
 
-impl<D: Device, T: Transports<D::Mcu>> Clone for Context<D, T> {
+impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Clone for Context<D, T, S> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<D: Device, T: Transports<D::Mcu>> Copy for Context<D, T> {}
+impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Copy for Context<D, T, S> {}
 
 /// A dynamic dispatch version of [`Context`].
 #[derive(Clone, Copy)]
@@ -124,7 +132,7 @@ pub struct DynContext {
     pub mcu: &'static dyn mcu::Mcu,
     pub internal_channel: internal::DynChannel,
     pub external_channel: external::DynChannel,
-    pub layer_manager: LayerManager,
+    pub state: &'static DynState,
 }
 
 /// A random static address for a device.
@@ -149,10 +157,10 @@ pub trait Transports<M: mcu::Mcu> {
 pub trait Component {}
 
 /// Trait for adding support of a component to a device.
-pub trait ComponentSupport<C: Component>: Device {
+pub trait ComponentSupport<C: Component, S: StateContainer>: Device {
     /// Enables the specified component for this device.
     fn enable<T: Transports<Self::Mcu>>(
         component: C,
-        context: Context<Self, T>,
+        context: Context<Self, T, S>,
     ) -> impl Future<Output = ()>;
 }

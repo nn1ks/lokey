@@ -1,5 +1,5 @@
 use crate::external::{self, toggle};
-use crate::{Address, DynContext, LayerId, LayerManagerEntry};
+use crate::{Address, DynContext, LayerId, LayerManager, LayerManagerEntry};
 use alloc::boxed::Box;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
@@ -78,13 +78,17 @@ impl Layer {
 
 impl Action for Layer {
     async fn on_press(&'static self, context: DynContext) {
-        let entry = context.layer_manager.push(self.layer).await;
-        *self.layer_manager_entry.lock().await = Some(entry);
+        if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
+            let entry = layer_manager.push(self.layer).await;
+            *self.layer_manager_entry.lock().await = Some(entry);
+        }
     }
 
     async fn on_release(&'static self, context: DynContext) {
         if let Some(entry) = self.layer_manager_entry.lock().await.take() {
-            context.layer_manager.remove(entry).await;
+            if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
+                layer_manager.remove(entry).await;
+            }
         }
     }
 }
@@ -105,14 +109,16 @@ impl<const N: usize> PerLayer<N> {
 
 impl<const N: usize> Action for PerLayer<N> {
     async fn on_press(&'static self, context: DynContext) {
-        let active_layer_id = context.layer_manager.active().await;
-        if let Some((_, action)) = self
-            .actions
-            .iter()
-            .find(|(layer_id, _)| *layer_id == active_layer_id)
-        {
-            action.on_press(context).await;
-            *self.active_action.lock().await = Some(*action);
+        if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
+            let active_layer_id = layer_manager.active().await;
+            if let Some((_, action)) = self
+                .actions
+                .iter()
+                .find(|(layer_id, _)| *layer_id == active_layer_id)
+            {
+                action.on_press(context).await;
+                *self.active_action.lock().await = Some(*action);
+            }
         }
     }
 

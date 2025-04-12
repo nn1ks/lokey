@@ -1,3 +1,5 @@
+mod state;
+
 use darling::FromMeta;
 use darling::ast::NestedMeta;
 use proc_macro::TokenStream;
@@ -28,34 +30,39 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     let invalid_device_type_error = "Parameter must be of type `Context`";
     let invalid_device_argument_error = "Expected device type as argument";
 
-    let (device_type_path, transports_type_path) = match function.sig.inputs.first() {
-        Some(syn::FnArg::Typed(pattern)) => match &*pattern.ty {
-            syn::Type::Path(v) => {
-                let last_segment = &v.path.segments.last().unwrap();
-                match &last_segment.arguments {
-                    syn::PathArguments::AngleBracketed(v) => {
-                        if v.args.len() != 2 {
-                            abort!(v.args.span(), "Expected two type arguments");
+    let (device_type_path, transports_type_path, state_type_path) =
+        match function.sig.inputs.first() {
+            Some(syn::FnArg::Typed(pattern)) => match &*pattern.ty {
+                syn::Type::Path(v) => {
+                    let last_segment = &v.path.segments.last().unwrap();
+                    match &last_segment.arguments {
+                        syn::PathArguments::AngleBracketed(v) => {
+                            if v.args.len() != 3 {
+                                abort!(v.args.span(), "Expected 3 type arguments");
+                            }
+                            let mut iter = v.args.iter();
+                            let a = match iter.next().unwrap() {
+                                syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                                _ => abort!(v.span(), invalid_device_argument_error),
+                            };
+                            let b = match iter.next().unwrap() {
+                                syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                                _ => abort!(v.span(), invalid_device_argument_error),
+                            };
+                            let c = match iter.next().unwrap() {
+                                syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                                _ => abort!(v.span(), invalid_device_argument_error),
+                            };
+                            (a, b, c)
                         }
-                        let mut iter = v.args.iter();
-                        let a = match iter.next().unwrap() {
-                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_device_argument_error),
-                        };
-                        let b = match iter.next().unwrap() {
-                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_device_argument_error),
-                        };
-                        (a, b)
+                        _ => abort!(v.span(), invalid_device_argument_error),
                     }
-                    _ => abort!(v.span(), invalid_device_argument_error),
                 }
-            }
-            _ => abort!(pattern.ty.span(), invalid_device_type_error),
-        },
-        Some(arg @ syn::FnArg::Receiver(_)) => abort!(arg.span(), invalid_device_type_error),
-        None => abort!(function.sig.inputs.span(), invalid_device_type_error),
-    };
+                _ => abort!(pattern.ty.span(), invalid_device_type_error),
+            },
+            Some(arg @ syn::FnArg::Receiver(_)) => abort!(arg.span(), invalid_device_type_error),
+            None => abort!(function.sig.inputs.span(), invalid_device_type_error),
+        };
 
     let heap_size = match args.heap_size {
         Some(v) => v.to_token_stream(),
@@ -161,13 +168,17 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 ::lokey::external::Channel::new(transport)
             };
 
+            let state = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
+                <#state_type_path as ::core::default::Default>::default()
+            ));
+
             let context = ::lokey::Context {
                 spawner,
                 address,
                 mcu,
                 external_channel,
                 internal_channel,
-                layer_manager: ::lokey::LayerManager::new(),
+                state,
             };
 
             ::lokey::mcu::McuInit::run(mcu, context.as_dyn());
@@ -334,4 +345,10 @@ pub fn static_layout(item: TokenStream) -> TokenStream {
         static #static_ident: ::lokey::key::Layout<#num_keys> = __build_layout();
     }
     .into()
+}
+
+#[proc_macro_error]
+#[proc_macro_derive(State)]
+pub fn state_derive(item: TokenStream) -> TokenStream {
+    state::state_derive(item)
 }
