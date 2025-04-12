@@ -32,6 +32,7 @@
 //! struct Central;
 //!
 //! impl Transports<DummyMcu> for Central {
+//!     type ExternalMessages = lokey::external::Messages0;
 //!     type ExternalTransportConfig = lokey::external::empty::TransportConfig;
 //!     type InternalTransportConfig = lokey::internal::empty::TransportConfig;
 //!     fn external_transport_config() -> Self::ExternalTransportConfig {
