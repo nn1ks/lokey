@@ -33,9 +33,7 @@ impl external::Transport for ExternalTransport {
     type Messages = Messages1<external::KeyMessage>;
 
     fn send(&self, message: Messages1<external::KeyMessage>) {
-        let message = match message {
-            Messages1::Message1(v) => v,
-        };
+        let Messages1::Message1(message) = message;
         CHANNEL.send(message);
     }
 
