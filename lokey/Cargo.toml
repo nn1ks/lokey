@@ -60,7 +60,7 @@ rp2040 = [
 [dependencies]
 bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }
 defmt = { version = "0.3.5", features = ["alloc"], optional = true }
-dyn-clone = "1.0.19"
+dyn-clone = { git = "https://github.com/nn1ks/dyn-clone", branch = "fix-arc-usage" }
 embassy-executor = { version = "0.7.0", features = ["executor-thread", "executor-interrupt", "nightly"] }
 embassy-futures = "0.1.1"
 embassy-nrf = { version = "0.3.1", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"], optional = true }
