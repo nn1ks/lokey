@@ -21,6 +21,7 @@ use dyn_clone::DynClone;
 use embassy_executor::Spawner;
 pub use key_override::KeyOverride;
 pub use r#override::{MessageSender, Override};
+use seq_macro::seq;
 
 pub type DeviceTransport<D, T> =
     <<T as Transports<<D as Device>::Mcu>>::ExternalTransportConfig as TransportConfig<
@@ -376,60 +377,40 @@ pub trait Messages: Sized + 'static {
     fn upcast(self) -> Box<dyn Message>;
 }
 
-pub enum Messages0 {}
+macro_rules! define_messages_enums {
+    ($num:literal) => {
+        seq!(N in 0..=$num {
+            #(define_messages_enums!(@ Messages~N, N);)*
+        });
+    };
+    (@ $ident:ident, $num:literal) => {
+        seq!(N in 1..=$num {
+            pub enum $ident<#(M~N,)*> {
+                #(Message~N(M~N),)*
+            }
 
-impl Messages for Messages0 {
-    fn downcast(_: Box<dyn Message>) -> Option<Self> {
-        None
-    }
+            impl<#(M~N: Message,)*> Messages for $ident<#(M~N,)*> {
+                fn downcast(message: Box<dyn Message>) -> Option<Self> {
+                    #![allow(unused_variables)]
+                    let message: Box<dyn Any> = message;
+                    #(let message = match message.downcast::<M~N>() {
+                        Ok(v) => return Some(Self::Message~N(*v)),
+                        Err(v) => v,
+                    };)*
+                    None
+                }
 
-    fn upcast(self) -> Box<dyn Message> {
-        match self {}
-    }
+                fn upcast(self) -> Box<dyn Message> {
+                    match self {
+                        #(Self::Message~N(v) => Box::new(v),)*
+                    }
+                }
+            }
+        });
+    };
 }
 
-pub enum Messages1<M1> {
-    Message1(M1),
-}
-
-impl<M1: Message> Messages for Messages1<M1> {
-    fn downcast(message: Box<dyn Message>) -> Option<Self> {
-        match (message as Box<dyn Any>).downcast::<M1>() {
-            Ok(v) => Some(Self::Message1(*v)),
-            Err(_) => None,
-        }
-    }
-
-    fn upcast(self) -> Box<dyn Message> {
-        match self {
-            Messages1::Message1(v) => Box::new(v),
-        }
-    }
-}
-
-pub enum Messages2<M1, M2> {
-    Message1(M1),
-    Message2(M2),
-}
-
-impl<M1: Message, M2: Message> Messages for Messages2<M1, M2> {
-    fn downcast(message: Box<dyn Message>) -> Option<Self> {
-        match (message as Box<dyn Any>).downcast::<M1>() {
-            Ok(v) => Some(Self::Message1(*v)),
-            Err(message) => match message.downcast::<M2>() {
-                Ok(v) => Some(Self::Message2(*v)),
-                Err(_) => None,
-            },
-        }
-    }
-
-    fn upcast(self) -> Box<dyn Message> {
-        match self {
-            Messages2::Message1(v) => Box::new(v),
-            Messages2::Message2(v) => Box::new(v),
-        }
-    }
-}
+define_messages_enums!(8);
 
 pub trait Message: Any + DynClone + Send + Sync {}
 

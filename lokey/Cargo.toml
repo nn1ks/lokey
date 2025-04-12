@@ -79,6 +79,7 @@ nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice", rev = "
 once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 portable-atomic-util = { version = "0.2.0", features = ["alloc"] }
+seq-macro = "0.3.6"
 sequential-storage = "4.0.1"
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
