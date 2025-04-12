@@ -1,5 +1,5 @@
 use super::Rp2040;
-use crate::external::{self, usb};
+use crate::external::{self, Messages1, usb};
 use crate::util::channel::Channel;
 use crate::util::unwrap;
 use crate::{Address, internal};
@@ -23,14 +23,19 @@ impl usb::CreateDriver for Rp2040 {
     }
 }
 
-static CHANNEL: Channel<CriticalSectionRawMutex, external::Message> = Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, external::KeyMessage> = Channel::new();
 static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
 
 #[non_exhaustive]
 pub struct ExternalTransport {}
 
 impl external::Transport for ExternalTransport {
-    fn send(&self, message: external::Message) {
+    type Messages = Messages1<external::KeyMessage>;
+
+    fn send(&self, message: Messages1<external::KeyMessage>) {
+        let message = match message {
+            Messages1::Message1(v) => v,
+        };
         CHANNEL.send(message);
     }
 
@@ -43,7 +48,7 @@ impl external::Transport for ExternalTransport {
     }
 }
 
-impl external::TransportConfig<Rp2040> for usb::TransportConfig {
+impl external::TransportConfig<Rp2040, Messages1<external::KeyMessage>> for usb::TransportConfig {
     type Transport = ExternalTransport;
 
     async fn init(

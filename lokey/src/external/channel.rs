@@ -1,21 +1,24 @@
-use super::{Message, MessageSender, Override, Transport};
+use super::{DynTransport, Message, MessageSender, Messages, Override, Transport};
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use core::any::Any;
 use core::cell::RefCell;
+use core::marker::PhantomData;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
-static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Message> = PubSubChannel::new();
+static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>> =
+    PubSubChannel::new();
 
-pub type DynChannel = Channel<dyn Transport>;
+pub type DynChannel = Channel<dyn DynTransport>;
 
 pub struct Channel<T: ?Sized + 'static> {
     inner: &'static T,
     overrides: &'static Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
 }
 
-impl<T: Transport> Channel<T> {
+impl<T: Transport<Messages = M>, M: Messages + 'static> Channel<T> {
     /// Creates a new external channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
@@ -41,21 +44,49 @@ impl<T: Transport> Channel<T> {
             overrides: self.overrides,
         }
     }
+
+    pub fn send(&self, message: M) {
+        self.try_send_dyn(message.upcast());
+    }
+
+    pub fn try_send<U: Message>(&self, message: U) {
+        self.as_dyn().try_send(message)
+    }
+
+    pub fn try_send_dyn(&self, message: Box<dyn Message>) {
+        self.as_dyn().try_send_dyn(message)
+    }
+
+    pub fn receiver<U: Message>(&self) -> Receiver<U> {
+        Receiver {
+            subscriber: INNER_CHANNEL.subscriber(),
+            phantom: PhantomData,
+        }
+    }
 }
 
-impl<T: Transport + ?Sized> Channel<T> {
-    pub fn send(&self, message: Message) {
+impl Channel<dyn DynTransport> {
+    pub async fn add_override<O: Override + 'static>(&self, message_override: O) {
+        self.overrides
+            .lock(|v| v.borrow_mut().push(Box::new(message_override)));
+    }
+
+    pub fn try_send<U: Message>(&self, message: U) {
+        self.try_send_dyn(Box::new(message));
+    }
+
+    pub fn try_send_dyn(&self, message: Box<dyn Message>) {
         self.overrides.lock(|overrides| {
             let mut overrides = overrides.borrow_mut();
-            fn send_messages<T: Transport + ?Sized>(
+            fn send_messages(
                 index: usize,
-                message: Message,
+                message: Box<dyn Message>,
                 overrides: &mut Vec<Box<dyn Override>>,
-                transport: &'static T,
+                transport: &'static dyn DynTransport,
             ) {
                 if index == overrides.len() {
                     INNER_CHANNEL.publish(message.clone());
-                    transport.send(message);
+                    transport.try_send(message);
                 } else {
                     let mut sender = MessageSender {
                         messages: Vec::new(),
@@ -70,9 +101,10 @@ impl<T: Transport + ?Sized> Channel<T> {
         });
     }
 
-    pub fn receiver(&self) -> Receiver {
+    pub fn receiver<U: Message>(&self) -> Receiver<U> {
         Receiver {
             subscriber: INNER_CHANNEL.subscriber(),
+            phantom: PhantomData,
         }
     }
 }
@@ -85,12 +117,19 @@ impl<T: ?Sized> Clone for Channel<T> {
 
 impl<T: ?Sized> Copy for Channel<T> {}
 
-pub struct Receiver {
-    subscriber: Subscriber<'static, CriticalSectionRawMutex, Message>,
+pub struct Receiver<M> {
+    subscriber: Subscriber<'static, CriticalSectionRawMutex, Box<dyn Message>>,
+    phantom: PhantomData<M>,
 }
 
-impl Receiver {
-    pub async fn next(&mut self) -> Message {
-        self.subscriber.next_message().await
+impl<M: Message> Receiver<M> {
+    pub async fn next(&mut self) -> M {
+        loop {
+            let message = self.subscriber.next_message().await;
+            let message: Box<dyn Any> = message;
+            if let Ok(v) = message.downcast::<M>() {
+                return *v;
+            }
+        }
     }
 }

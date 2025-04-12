@@ -1,5 +1,5 @@
 use super::Nrf52840;
-use crate::external::{self, usb};
+use crate::external::{self, Messages1, usb};
 use crate::util::channel::Channel;
 use crate::util::{info, unwrap};
 use crate::{Address, internal};
@@ -54,14 +54,19 @@ impl usb::CreateDriver for Nrf52840 {
     }
 }
 
-static CHANNEL: Channel<CriticalSectionRawMutex, external::Message> = Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, external::KeyMessage> = Channel::new();
 static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
 
 #[non_exhaustive]
 pub struct ExternalTransport {}
 
 impl external::Transport for ExternalTransport {
-    fn send(&self, message: external::Message) {
+    type Messages = Messages1<external::KeyMessage>;
+
+    fn send(&self, message: Messages1<external::KeyMessage>) {
+        let message = match message {
+            Messages1::Message1(v) => v,
+        };
         CHANNEL.send(message);
     }
 
@@ -74,7 +79,7 @@ impl external::Transport for ExternalTransport {
     }
 }
 
-impl external::TransportConfig<Nrf52840> for usb::TransportConfig {
+impl external::TransportConfig<Nrf52840, Messages1<external::KeyMessage>> for usb::TransportConfig {
     type Transport = ExternalTransport;
 
     async fn init(

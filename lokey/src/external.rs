@@ -17,6 +17,7 @@ pub use channel::{Channel, DynChannel, Receiver};
 use core::any::Any;
 use core::future::Future;
 use core::pin::Pin;
+use dyn_clone::DynClone;
 use embassy_executor::Spawner;
 pub use key_override::KeyOverride;
 pub use r#override::{MessageSender, Override};
@@ -24,6 +25,7 @@ pub use r#override::{MessageSender, Override};
 pub type DeviceTransport<D, T> =
     <<T as Transports<<D as Device>::Mcu>>::ExternalTransportConfig as TransportConfig<
         <D as Device>::Mcu,
+        <T as Transports<<D as Device>::Mcu>>::ExternalMessages,
     >>::Transport;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -319,12 +321,14 @@ impl Key {
 }
 
 #[derive(Clone)]
-pub enum Message {
+pub enum KeyMessage {
     KeyPress(Key),
     KeyRelease(Key),
 }
 
-impl Message {
+impl Message for KeyMessage {}
+
+impl KeyMessage {
     #[cfg(any(feature = "usb", feature = "ble"))]
     pub fn update_keyboard_report(
         &self,
@@ -367,8 +371,72 @@ impl Message {
     }
 }
 
-pub trait TransportConfig<M: Mcu> {
-    type Transport: Transport;
+pub trait Messages: Sized + 'static {
+    fn downcast(message: Box<dyn Message>) -> Option<Self>;
+    fn upcast(self) -> Box<dyn Message>;
+}
+
+pub enum Messages0 {}
+
+impl Messages for Messages0 {
+    fn downcast(_: Box<dyn Message>) -> Option<Self> {
+        None
+    }
+
+    fn upcast(self) -> Box<dyn Message> {
+        match self {}
+    }
+}
+
+pub enum Messages1<M1> {
+    Message1(M1),
+}
+
+impl<M1: Message> Messages for Messages1<M1> {
+    fn downcast(message: Box<dyn Message>) -> Option<Self> {
+        match (message as Box<dyn Any>).downcast::<M1>() {
+            Ok(v) => Some(Self::Message1(*v)),
+            Err(_) => None,
+        }
+    }
+
+    fn upcast(self) -> Box<dyn Message> {
+        match self {
+            Messages1::Message1(v) => Box::new(v),
+        }
+    }
+}
+
+pub enum Messages2<M1, M2> {
+    Message1(M1),
+    Message2(M2),
+}
+
+impl<M1: Message, M2: Message> Messages for Messages2<M1, M2> {
+    fn downcast(message: Box<dyn Message>) -> Option<Self> {
+        match (message as Box<dyn Any>).downcast::<M1>() {
+            Ok(v) => Some(Self::Message1(*v)),
+            Err(message) => match message.downcast::<M2>() {
+                Ok(v) => Some(Self::Message2(*v)),
+                Err(_) => None,
+            },
+        }
+    }
+
+    fn upcast(self) -> Box<dyn Message> {
+        match self {
+            Messages2::Message1(v) => Box::new(v),
+            Messages2::Message2(v) => Box::new(v),
+        }
+    }
+}
+
+pub trait Message: Any + DynClone + Send + Sync {}
+
+dyn_clone::clone_trait_object!(Message);
+
+pub trait TransportConfig<M: Mcu, T: Messages> {
+    type Transport: Transport<Messages = T>;
     fn init(
         self,
         mcu: &'static M,
@@ -379,7 +447,19 @@ pub trait TransportConfig<M: Mcu> {
 }
 
 pub trait Transport: Any {
-    fn send(&self, message: Message);
+    type Messages: Messages;
+
+    fn send(&self, message: Self::Messages);
+
+    fn try_send(&self, message: Box<dyn Message>) -> bool {
+        match Self::Messages::downcast(message) {
+            Some(message) => {
+                self.send(message);
+                true
+            }
+            None => false,
+        }
+    }
 
     /// Activates or deactivates the transport.
     ///
@@ -396,5 +476,30 @@ pub trait Transport: Any {
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(core::future::pending())
+    }
+}
+
+pub trait DynTransport: Any {
+    fn try_send(&self, message: Box<dyn Message>) -> bool;
+    fn set_active(&self, value: bool) -> bool;
+    fn is_active(&self) -> bool;
+    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
+}
+
+impl<T: Transport<Messages = M>, M: Messages> DynTransport for T {
+    fn try_send(&self, message: Box<dyn Message>) -> bool {
+        Transport::try_send(self, message)
+    }
+
+    fn set_active(&self, value: bool) -> bool {
+        Transport::set_active(self, value)
+    }
+
+    fn is_active(&self) -> bool {
+        Transport::is_active(self)
+    }
+
+    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        Transport::wait_for_activation_request(self)
     }
 }

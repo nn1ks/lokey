@@ -5,8 +5,8 @@ pub mod pwm;
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
+use crate::DynContext;
 use crate::util::{info, unwrap};
-use crate::{DynContext, external, internal};
 use alloc::boxed::Box;
 use core::cell::UnsafeCell;
 use core::mem;
@@ -39,16 +39,7 @@ impl Mcu for Nrf52840 {}
 impl McuInit for Nrf52840 {
     type Config = Config;
 
-    fn create<E, I>(
-        config: Self::Config,
-        _external_transport_config: &E,
-        _internal_transport_config: &I,
-        _spawner: Spawner,
-    ) -> Self
-    where
-        E: external::TransportConfig<Self> + 'static,
-        I: internal::TransportConfig<Self> + 'static,
-    {
+    fn create(config: Self::Config, _spawner: Spawner) -> Self {
         let mut nrf_config = embassy_nrf::config::Config::default();
         nrf_config.gpiote_interrupt_priority = Priority::P2;
         nrf_config.time_interrupt_priority = Priority::P2;

@@ -1,3 +1,4 @@
+use super::Messages;
 use crate::mcu::Mcu;
 use crate::util::{debug, unwrap};
 use crate::{Address, external, internal};
@@ -87,7 +88,9 @@ impl<T> TransportConfig<T> {
     }
 }
 
-impl<T: external::TransportConfig<M>, M: Mcu> external::TransportConfig<M> for TransportConfig<T> {
+impl<T: external::TransportConfig<M, U>, M: Mcu, U: Messages> external::TransportConfig<M, U>
+    for TransportConfig<T>
+{
     type Transport = Transport<T::Transport>;
 
     async fn init(
@@ -105,7 +108,7 @@ impl<T: external::TransportConfig<M>, M: Mcu> external::TransportConfig<M> for T
 
         if !self.ignore_activation_request {
             #[embassy_executor::task]
-            async fn handle_activation_request(transport: &'static dyn external::Transport) {
+            async fn handle_activation_request(transport: &'static dyn external::DynTransport) {
                 loop {
                     transport.wait_for_activation_request().await;
                     ACTIVE.store(true, Ordering::Release);
@@ -120,7 +123,7 @@ impl<T: external::TransportConfig<M>, M: Mcu> external::TransportConfig<M> for T
         async fn handle_internal_messages(
             address: Address,
             internal_channel: internal::DynChannel,
-            transport: &'static dyn external::Transport,
+            transport: &'static dyn external::DynTransport,
         ) {
             let mut receiver = internal_channel.receiver::<Message>();
             loop {
@@ -157,8 +160,10 @@ pub struct Transport<T: 'static> {
     transport: &'static T,
 }
 
-impl<T: external::Transport> external::Transport for Transport<T> {
-    fn send(&self, message: external::Message) {
+impl<T: external::Transport<Messages = M>, M: Messages> external::Transport for Transport<T> {
+    type Messages = M;
+
+    fn send(&self, message: M) {
         if ACTIVE.load(Ordering::Acquire) {
             self.transport.send(message);
         }

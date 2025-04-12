@@ -6,7 +6,7 @@ use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::blink::Blink;
-use lokey::external::{self, Key};
+use lokey::external::{self, Key, KeyMessage, Messages1};
 use lokey::key::action::KeyCode;
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, layout};
 use lokey::mcu::{Rp2040, rp2040};
@@ -17,6 +17,7 @@ use {defmt_rtt as _, panic_probe as _};
 struct Central;
 
 impl Transports<Rp2040> for Central {
+    type ExternalMessages = Messages1<KeyMessage>;
     type ExternalTransportConfig = external::usb::TransportConfig;
     type InternalTransportConfig = internal::empty::TransportConfig;
 

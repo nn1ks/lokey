@@ -1,3 +1,4 @@
+use super::Messages;
 use crate::mcu::Mcu;
 use crate::util::{error, info, unwrap};
 use crate::{Address, external, internal};
@@ -61,10 +62,12 @@ pub struct Transport<Usb, Ble> {
     deactivate_unused_transport: bool,
 }
 
-impl<Usb: external::Transport, Ble: external::Transport> external::Transport
-    for Transport<Usb, Ble>
+impl<Usb: external::Transport<Messages = M>, Ble: external::Transport<Messages = M>, M: Messages>
+    external::Transport for Transport<Usb, Ble>
 {
-    fn send(&self, message: external::Message) {
+    type Messages = M;
+
+    fn send(&self, message: M) {
         self.active.lock(|selection| match selection.get() {
             TransportSelection::Usb => self.usb_transport.send(message),
             TransportSelection::Ble => self.ble_transport.send(message),
@@ -157,14 +160,14 @@ impl TransportConfig {
     }
 }
 
-impl<M: Mcu> external::TransportConfig<M> for TransportConfig
+impl<M: Mcu, T: Messages> external::TransportConfig<M, T> for TransportConfig
 where
-    external::usb::TransportConfig: external::TransportConfig<M>,
-    external::ble::TransportConfig: external::TransportConfig<M>,
+    external::usb::TransportConfig: external::TransportConfig<M, T>,
+    external::ble::TransportConfig: external::TransportConfig<M, T>,
 {
     type Transport = Transport<
-        <external::usb::TransportConfig as external::TransportConfig<M>>::Transport,
-        <external::ble::TransportConfig as external::TransportConfig<M>>::Transport,
+        <external::usb::TransportConfig as external::TransportConfig<M, T>>::Transport,
+        <external::ble::TransportConfig as external::TransportConfig<M, T>>::Transport,
     >;
 
     async fn init(
@@ -191,13 +194,13 @@ where
         let usb_transport_clone = {
             let arc = Arc::clone(&usb_transport);
             let ptr: *const _ = Arc::into_raw(arc);
-            let ptr: *const dyn external::Transport = ptr;
+            let ptr: *const dyn external::DynTransport = ptr;
             unsafe { Arc::from_raw(ptr) }
         };
         let ble_transport_clone = {
             let arc = Arc::clone(&ble_transport);
             let ptr: *const _ = Arc::into_raw(arc);
-            let ptr: *const dyn external::Transport = ptr;
+            let ptr: *const dyn external::DynTransport = ptr;
             unsafe { Arc::from_raw(ptr) }
         };
 
@@ -211,8 +214,8 @@ where
 
         #[embassy_executor::task]
         async fn handle_activation_request(
-            usb_transport: Arc<dyn external::Transport>,
-            ble_transport: Arc<dyn external::Transport>,
+            usb_transport: Arc<dyn external::DynTransport>,
+            ble_transport: Arc<dyn external::DynTransport>,
             active: Arc<Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>>,
             activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
             deactivate_unused_transport: bool,

@@ -2,7 +2,7 @@
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
-use crate::{DynContext, external, internal};
+use crate::DynContext;
 use alloc::boxed::Box;
 use core::ops::Range;
 use embassy_executor::Spawner;
@@ -32,17 +32,7 @@ impl Mcu for Rp2040 {}
 impl McuInit for Rp2040 {
     type Config = Config;
 
-    fn create<E, I>(
-        config: Self::Config,
-        _external_transport_config: &E,
-        _internal_transport_config: &I,
-        _spawner: Spawner,
-    ) -> Self
-    where
-        Self: Sized,
-        E: external::TransportConfig<Self> + 'static,
-        I: internal::TransportConfig<Self> + 'static,
-    {
+    fn create(config: Self::Config, _spawner: Spawner) -> Self {
         let rp_config = embassy_rp::config::Config::default();
         embassy_rp::init(rp_config);
         let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() });

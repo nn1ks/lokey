@@ -1,5 +1,7 @@
-use super::{Key, Message, MessageSender, Override};
+use super::{Key, KeyMessage, Message, MessageSender, Override};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
+use core::any::Any;
 
 struct OverrideData {
     required: Vec<Key>,
@@ -40,59 +42,67 @@ impl KeyOverride {
 }
 
 impl Override for KeyOverride {
-    fn override_message(&mut self, message: Message, sender: &mut MessageSender) {
+    fn override_message(&mut self, message: Box<dyn Message>, sender: &mut MessageSender) {
+        let message_ref: &dyn Any = &message;
+        let message = match message_ref.downcast_ref::<KeyMessage>() {
+            Some(v) => v,
+            None => {
+                sender.send(message);
+                return;
+            }
+        };
         match message {
-            Message::KeyPress(key) => {
+            KeyMessage::KeyPress(key) => {
                 let mut triggered_override = false;
                 if self
                     .overrides
                     .iter()
-                    .any(|data| data.required.contains(&key))
+                    .any(|data| data.required.contains(key))
                 {
-                    self.pressed_keys.push(key);
+                    self.pressed_keys.push(*key);
                     for data in &self.overrides {
                         if data.required.iter().all(|v| self.pressed_keys.contains(v)) {
                             triggered_override = true;
                             if !data.keep {
                                 for v in &data.required {
-                                    if *v != key {
-                                        sender.send(Message::KeyRelease(*v));
+                                    if v != key {
+                                        sender.send(Box::new(KeyMessage::KeyRelease(*v)));
                                     }
                                 }
                             }
-                            sender.send(Message::KeyPress(data.then));
+                            sender.send(Box::new(KeyMessage::KeyPress(data.then)));
                         }
                     }
                 }
                 if !triggered_override {
-                    sender.send(Message::KeyPress(key));
+                    sender.send(Box::new(KeyMessage::KeyPress(*key)));
                 }
             }
-            Message::KeyRelease(key) => {
+            KeyMessage::KeyRelease(key) => {
                 let mut untriggered_override = false;
                 if self
                     .overrides
                     .iter()
-                    .any(|data| data.required.contains(&key))
+                    .any(|data| data.required.contains(key))
                 {
                     for data in &self.overrides {
                         if data.required.iter().all(|v| self.pressed_keys.contains(v)) {
                             untriggered_override = true;
                             if !data.keep {
                                 for v in &data.required {
-                                    if *v != key {
-                                        sender.send(Message::KeyPress(*v));
+                                    if v != key {
+                                        sender.send(Box::new(KeyMessage::KeyPress(*v)));
                                     }
                                 }
                             }
-                            sender.send(Message::KeyRelease(data.then));
+                            sender.send(Box::new(KeyMessage::KeyRelease(data.then)));
                         }
                     }
                 }
                 if !untriggered_override {
-                    sender.send(Message::KeyRelease(key));
+                    sender.send(Box::new(KeyMessage::KeyRelease(*key)));
                 }
-                if let Some(i) = self.pressed_keys.iter().rposition(|v| *v == key) {
+                if let Some(i) = self.pressed_keys.iter().rposition(|v| v == key) {
                     self.pressed_keys.remove(i);
                 }
             }

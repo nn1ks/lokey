@@ -2,6 +2,7 @@ mod bonder;
 mod server;
 
 use super::{BLE_ADDRESS_WAS_SET, device_address_to_ble_address};
+use crate::external::Messages1;
 use crate::external::ble::{Event, Message};
 use crate::mcu::{Nrf52840, Storage};
 use crate::util::channel::Channel;
@@ -29,7 +30,7 @@ use portable_atomic::{AtomicBool, AtomicU8};
 use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
 use usbd_hid::descriptor::KeyboardReport;
 
-static CHANNEL: Channel<CriticalSectionRawMutex, external::Message> = Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, external::KeyMessage> = Channel::new();
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 
@@ -37,7 +38,12 @@ static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 pub struct Transport {}
 
 impl external::Transport for Transport {
-    fn send(&self, message: external::Message) {
+    type Messages = Messages1<external::KeyMessage>;
+
+    fn send(&self, message: Messages1<external::KeyMessage>) {
+        let message = match message {
+            Messages1::Message1(v) => v,
+        };
         CHANNEL.send(message);
     }
 
@@ -56,7 +62,9 @@ impl external::Transport for Transport {
     }
 }
 
-impl external::TransportConfig<Nrf52840> for external::ble::TransportConfig {
+impl external::TransportConfig<Nrf52840, Messages1<external::KeyMessage>>
+    for external::ble::TransportConfig
+{
     type Transport = Transport;
     async fn init(
         self,

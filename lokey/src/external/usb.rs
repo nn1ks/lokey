@@ -79,7 +79,7 @@ impl<M: CreateDriver> Handler<M> {
         (handler, activation_request)
     }
 
-    pub async fn run<S: Stream<Item = external::Message>>(self, message_stream: S) -> ! {
+    pub async fn run<S: Stream<Item = external::KeyMessage>>(self, message_stream: S) -> ! {
         let driver = self.mcu.create_driver();
 
         let mut config = embassy_usb::Config::from(self.config);

@@ -138,8 +138,9 @@ pub trait Device: Sized {
 }
 
 pub trait Transports<M: mcu::Mcu> {
+    type ExternalMessages: external::Messages;
     type InternalTransportConfig: internal::TransportConfig<M>;
-    type ExternalTransportConfig: external::TransportConfig<M>;
+    type ExternalTransportConfig: external::TransportConfig<M, Self::ExternalMessages>;
     fn internal_transport_config() -> Self::InternalTransportConfig;
     fn external_transport_config() -> Self::ExternalTransportConfig;
 }

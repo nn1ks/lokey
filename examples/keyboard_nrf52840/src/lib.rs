@@ -7,6 +7,7 @@ use embassy_nrf::peripherals::{
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::blink::Blink;
+use lokey::external::{KeyMessage, Messages0, Messages1};
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use lokey::mcu::{Nrf52840, nrf52840};
 use lokey::{Address, ComponentSupport, Context, Device, Transports, external, internal};
@@ -18,6 +19,7 @@ pub const NUM_KEYS: usize = 36;
 pub struct Central;
 
 impl Transports<Nrf52840> for Central {
+    type ExternalMessages = Messages1<KeyMessage>;
     type ExternalTransportConfig = external::usb::TransportConfig;
     // type ExternalTransportConfig = external::ble::TransportConfig;
     // type ExternalTransportConfig = external::usb_ble::TransportConfig;
@@ -57,6 +59,7 @@ impl Transports<Nrf52840> for Central {
 pub struct Peripheral;
 
 impl Transports<Nrf52840> for Peripheral {
+    type ExternalMessages = Messages0;
     type ExternalTransportConfig = external::empty::TransportConfig;
     type InternalTransportConfig = internal::ble::TransportConfig;
 
