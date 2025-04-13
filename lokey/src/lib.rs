@@ -6,7 +6,8 @@
 #![doc = include_str!("./doctest_setup")]
 //! # use core::unimplemented;
 //! # use lokey::mcu::DummyMcu;
-//! use lokey::{Address, ComponentSupport, Context, Device, LayerManager, State, StateContainer, Transports};
+//! use lokey::{Address, ComponentSupport, Context, Device, State, StateContainer, Transports};
+//! use lokey::layer::LayerManager;
 //! use lokey::key::{self, DirectPins, DirectPinsConfig, Keys};
 //!
 //! struct Keyboard;
@@ -68,7 +69,7 @@ pub mod blink;
 pub mod external;
 pub mod internal;
 pub mod key;
-mod layer;
+pub mod layer;
 pub mod mcu;
 mod state;
 pub mod status_led_array;
@@ -81,7 +82,6 @@ pub use embassy_executor;
 use embassy_executor::Spawner;
 #[doc(hidden)]
 pub use embedded_alloc;
-pub use layer::{LayerId, LayerManager, LayerManagerEntry};
 pub use lokey_macros::{State, device};
 pub use state::{DynState, State, StateContainer};
 

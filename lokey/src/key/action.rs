@@ -1,5 +1,6 @@
 use crate::external::{self, toggle};
-use crate::{Address, DynContext, LayerId, LayerManager, LayerManagerEntry};
+use crate::layer::{LayerId, LayerManager, LayerManagerEntry};
+use crate::{Address, DynContext};
 use alloc::boxed::Box;
 use core::mem::transmute;
 use core::pin::Pin;

@@ -247,7 +247,7 @@ pub fn layout(item: TokenStream) -> TokenStream {
                     let layer_index = u8::try_from(layer_index).unwrap();
                     quote! {
                         (
-                            ::lokey::LayerId(#layer_index),
+                            ::lokey::layer::LayerId(#layer_index),
                             ::lokey::key::DynAction::from_ref(::alloc::boxed::Box::leak(::alloc::boxed::Box::new(#action)))
                         )
                     }
@@ -323,7 +323,7 @@ pub fn static_layout(item: TokenStream) -> TokenStream {
                             #action
                         }
                         static ACTION: #action_type_ident = action();
-                        (::lokey::LayerId(#layer_index), ::lokey::key::DynAction::from_ref(&ACTION))
+                        (::lokey::layer::LayerId(#layer_index), ::lokey::key::DynAction::from_ref(&ACTION))
                     }}
                 })
                 .collect::<Vec<_>>();

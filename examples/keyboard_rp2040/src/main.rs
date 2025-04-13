@@ -9,10 +9,10 @@ use lokey::blink::Blink;
 use lokey::external::{self, Key, KeyMessage, Messages1};
 use lokey::key::action::KeyCode;
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, layout};
+use lokey::layer::LayerManager;
 use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
-    Address, ComponentSupport, Context, Device, LayerManager, State, StateContainer, Transports,
-    internal,
+    Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
 use switch_hal::IntoSwitch;
 use {defmt_rtt as _, panic_probe as _};

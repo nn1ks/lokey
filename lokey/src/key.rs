@@ -26,7 +26,8 @@ use embassy_futures::select::{Either, select, select_slice};
 /// ```no_run
 #[doc = include_str!("./doctest_setup_with_allocator")]
 /// use lokey::key::action::{HoldTap, KeyCode, Layer};
-/// use lokey::{external::Key, key::layout, LayerId};
+/// use lokey::layer::LayerId;
+/// use lokey::{external::Key, key::layout};
 ///
 /// # fn function() {
 /// let layout = layout!(
@@ -49,7 +50,7 @@ use embassy_futures::select::{Either, select, select_slice};
 ///
 /// use alloc::boxed::Box;
 /// use lokey::key::{action::PerLayer, DynAction, Layout};
-/// use lokey::LayerId;
+/// use lokey::layer::LayerId;
 ///
 /// let layout = Box::leak(Box::new(Layout::new([
 ///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([

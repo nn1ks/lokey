@@ -9,10 +9,11 @@ use embassy_sync::mutex::Mutex;
 use lokey::blink::Blink;
 use lokey::external::{KeyMessage, Messages0, Messages1};
 use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
+use lokey::layer::LayerManager;
 use lokey::mcu::{Nrf52840, nrf52840};
 use lokey::{
-    Address, ComponentSupport, Context, Device, LayerManager, State, StateContainer, Transports,
-    external, internal,
+    Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
+    internal,
 };
 use switch_hal::IntoSwitch;
 use {defmt_rtt as _, panic_probe as _};
