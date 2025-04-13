@@ -490,7 +490,7 @@ impl<T: Transport<Messages = M>, M: Messages> DynTransportTrait for T {
 pub struct DynTransport(dyn DynTransportTrait);
 
 impl DynTransport {
-    pub fn from_ref<T: Transport>(value: &T) -> &Self {
+    pub const fn from_ref<T: Transport>(value: &T) -> &Self {
         let value: &dyn DynTransportTrait = value;
         unsafe { transmute(value) }
     }
