@@ -12,23 +12,22 @@ pub trait StateContainer: 'static {
 }
 
 #[repr(transparent)]
-pub struct DynState {
-    pub(crate) state: dyn StateContainer,
-}
+pub struct DynState(dyn StateContainer);
 
 impl DynState {
-    pub(crate) fn from_ref(value: &dyn StateContainer) -> &Self {
+    pub const fn from_ref<T: StateContainer>(value: &T) -> &Self {
+        let value: &dyn StateContainer = value;
         unsafe { transmute(value) }
     }
 
     pub fn try_get<T: 'static>(&self) -> Option<&T> {
-        self.state
+        self.0
             .try_get_raw(TypeId::of::<T>())
             .map(|v| v.downcast_ref().unwrap())
     }
 
     pub fn try_get_mut<T: 'static>(&mut self) -> Option<&mut T> {
-        self.state
+        self.0
             .try_get_mut_raw(TypeId::of::<T>())
             .map(|v| v.downcast_mut().unwrap())
     }
