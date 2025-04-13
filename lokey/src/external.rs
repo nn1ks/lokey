@@ -16,6 +16,7 @@ use alloc::boxed::Box;
 pub use channel::{Channel, DynChannel, Receiver};
 use core::any::Any;
 use core::future::Future;
+use core::mem::transmute;
 use core::pin::Pin;
 use dyn_clone::DynClone;
 use embassy_executor::Spawner;
@@ -460,14 +461,14 @@ pub trait Transport: Any {
     }
 }
 
-pub trait DynTransport: Any {
+trait DynTransportTrait: Any {
     fn try_send(&self, message: Box<dyn Message>) -> bool;
     fn set_active(&self, value: bool) -> bool;
     fn is_active(&self) -> bool;
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
 }
 
-impl<T: Transport<Messages = M>, M: Messages> DynTransport for T {
+impl<T: Transport<Messages = M>, M: Messages> DynTransportTrait for T {
     fn try_send(&self, message: Box<dyn Message>) -> bool {
         Transport::try_send(self, message)
     }
@@ -482,5 +483,31 @@ impl<T: Transport<Messages = M>, M: Messages> DynTransport for T {
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Transport::wait_for_activation_request(self)
+    }
+}
+
+#[repr(transparent)]
+pub struct DynTransport(dyn DynTransportTrait);
+
+impl DynTransport {
+    pub fn from_ref<T: Transport>(value: &T) -> &Self {
+        let value: &dyn DynTransportTrait = value;
+        unsafe { transmute(value) }
+    }
+
+    pub fn try_send(&self, message: Box<dyn Message>) -> bool {
+        self.0.try_send(message)
+    }
+
+    pub fn set_active(&self, value: bool) -> bool {
+        self.0.set_active(value)
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.0.is_active()
+    }
+
+    pub fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
+        self.0.wait_for_activation_request()
     }
 }

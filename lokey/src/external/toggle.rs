@@ -108,7 +108,7 @@ impl<T: external::TransportConfig<M, U>, M: Mcu, U: Messages> external::Transpor
 
         if !self.ignore_activation_request {
             #[embassy_executor::task]
-            async fn handle_activation_request(transport: &'static dyn external::DynTransport) {
+            async fn handle_activation_request(transport: &'static external::DynTransport) {
                 loop {
                     transport.wait_for_activation_request().await;
                     ACTIVE.store(true, Ordering::Release);
@@ -116,14 +116,18 @@ impl<T: external::TransportConfig<M, U>, M: Mcu, U: Messages> external::Transpor
                     ACTIVATION_REQUEST.signal(());
                 }
             }
-            unwrap!(spawner.spawn(handle_activation_request(transport)));
+            unwrap!(
+                spawner.spawn(handle_activation_request(external::DynTransport::from_ref(
+                    transport
+                )))
+            );
         }
 
         #[embassy_executor::task]
         async fn handle_internal_messages(
             address: Address,
             internal_channel: internal::DynChannel,
-            transport: &'static dyn external::DynTransport,
+            transport: &'static external::DynTransport,
         ) {
             let mut receiver = internal_channel.receiver::<Message>();
             loop {
@@ -149,7 +153,7 @@ impl<T: external::TransportConfig<M, U>, M: Mcu, U: Messages> external::Transpor
         unwrap!(spawner.spawn(handle_internal_messages(
             address,
             internal_channel,
-            transport
+            external::DynTransport::from_ref(transport)
         )));
 
         Transport { transport }

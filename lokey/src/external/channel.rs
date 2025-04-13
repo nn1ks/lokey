@@ -11,7 +11,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>> =
     PubSubChannel::new();
 
-pub type DynChannel = Channel<dyn DynTransport>;
+pub type DynChannel = Channel<DynTransport>;
 
 pub struct Channel<T: ?Sized + 'static> {
     inner: &'static T,
@@ -29,20 +29,20 @@ impl<T: Transport<Messages = M>, M: Messages + 'static> Channel<T> {
         }
     }
 
-    pub async fn add_override<O: Override + 'static>(&self, message_override: O) {
-        self.overrides
-            .lock(|v| v.borrow_mut().push(Box::new(message_override)));
-    }
-
     /// Converts this channel into a dynamic one.
     ///
     /// This can be useful if you want to pass the channel to an embassy task as they can't have
     /// generic parameters.
     pub fn as_dyn(&self) -> DynChannel {
         Channel {
-            inner: self.inner,
+            inner: DynTransport::from_ref(self.inner),
             overrides: self.overrides,
         }
+    }
+
+    pub async fn add_override<O: Override + 'static>(&self, message_override: O) {
+        self.overrides
+            .lock(|v| v.borrow_mut().push(Box::new(message_override)));
     }
 
     pub fn send(&self, message: M) {
@@ -65,7 +65,7 @@ impl<T: Transport<Messages = M>, M: Messages + 'static> Channel<T> {
     }
 }
 
-impl Channel<dyn DynTransport> {
+impl Channel<DynTransport> {
     pub async fn add_override<O: Override + 'static>(&self, message_override: O) {
         self.overrides
             .lock(|v| v.borrow_mut().push(Box::new(message_override)));
@@ -82,7 +82,7 @@ impl Channel<dyn DynTransport> {
                 index: usize,
                 message: Box<dyn Message>,
                 overrides: &mut Vec<Box<dyn Override>>,
-                transport: &'static dyn DynTransport,
+                transport: &'static DynTransport,
             ) {
                 if index == overrides.len() {
                     INNER_CHANNEL.publish(message.clone());

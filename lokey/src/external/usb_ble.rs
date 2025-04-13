@@ -194,13 +194,15 @@ where
         let usb_transport_clone = {
             let arc = Arc::clone(&usb_transport);
             let ptr: *const _ = Arc::into_raw(arc);
-            let ptr: *const dyn external::DynTransport = ptr;
+            let ptr: *const dyn external::DynTransportTrait = ptr;
+            let ptr: *const external::DynTransport = unsafe { core::mem::transmute(ptr) };
             unsafe { Arc::from_raw(ptr) }
         };
         let ble_transport_clone = {
             let arc = Arc::clone(&ble_transport);
             let ptr: *const _ = Arc::into_raw(arc);
-            let ptr: *const dyn external::DynTransport = ptr;
+            let ptr: *const dyn external::DynTransportTrait = ptr;
+            let ptr: *const external::DynTransport = unsafe { core::mem::transmute(ptr) };
             unsafe { Arc::from_raw(ptr) }
         };
 
@@ -214,8 +216,8 @@ where
 
         #[embassy_executor::task]
         async fn handle_activation_request(
-            usb_transport: Arc<dyn external::DynTransport>,
-            ble_transport: Arc<dyn external::DynTransport>,
+            usb_transport: Arc<external::DynTransport>,
+            ble_transport: Arc<external::DynTransport>,
             active: Arc<Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>>,
             activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
             deactivate_unused_transport: bool,
