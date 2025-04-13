@@ -1,6 +1,7 @@
 use crate::external::{self, toggle};
 use crate::{Address, DynContext, LayerId, LayerManager, LayerManagerEntry};
 use alloc::boxed::Box;
+use core::mem::transmute;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::select::{Either, select};
@@ -15,18 +16,36 @@ pub trait Action: Send + Sync + 'static {
     fn on_release(&'static self, context: DynContext) -> impl Future<Output = ()>;
 }
 
-pub trait DynAction: Send + Sync + 'static {
+trait DynActionTrait: Send + Sync + 'static {
     fn on_press(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>>;
     fn on_release(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>>;
 }
 
-impl<T: Action> DynAction for T {
+impl<T: Action> DynActionTrait for T {
     fn on_press(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
         Box::pin(Action::on_press(self, context))
     }
 
     fn on_release(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
         Box::pin(Action::on_release(self, context))
+    }
+}
+
+#[repr(transparent)]
+pub struct DynAction(dyn DynActionTrait);
+
+impl DynAction {
+    pub const fn from_ref<T: Action>(value: &T) -> &Self {
+        let value: &dyn DynActionTrait = value;
+        unsafe { transmute(value) }
+    }
+
+    pub fn on_press(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
+        self.0.on_press(context)
+    }
+
+    pub fn on_release(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
+        self.0.on_release(context)
     }
 }
 
@@ -94,12 +113,12 @@ impl Action for Layer {
 }
 
 pub struct PerLayer<const N: usize> {
-    actions: [(LayerId, &'static dyn DynAction); N],
-    active_action: Mutex<CriticalSectionRawMutex, Option<&'static dyn DynAction>>,
+    actions: [(LayerId, &'static DynAction); N],
+    active_action: Mutex<CriticalSectionRawMutex, Option<&'static DynAction>>,
 }
 
 impl<const N: usize> PerLayer<N> {
-    pub const fn new(actions: [(LayerId, &'static dyn DynAction); N]) -> Self {
+    pub const fn new(actions: [(LayerId, &'static DynAction); N]) -> Self {
         Self {
             actions,
             active_action: Mutex::new(None),

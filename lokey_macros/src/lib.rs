@@ -248,15 +248,15 @@ pub fn layout(item: TokenStream) -> TokenStream {
                     quote! {
                         (
                             ::lokey::LayerId(#layer_index),
-                            ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(#action))
+                            ::lokey::key::DynAction::from_ref(::alloc::boxed::Box::leak(::alloc::boxed::Box::new(#action)))
                         )
                     }
                 })
                 .collect::<Vec<_>>();
             quote! {
-                ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
+                ::lokey::key::DynAction::from_ref(::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
                     ::lokey::key::action::PerLayer::new([#(#v,)*])
-                ))
+                )))
             }
         })
         .collect::<Vec<_>>();
@@ -323,7 +323,7 @@ pub fn static_layout(item: TokenStream) -> TokenStream {
                             #action
                         }
                         static ACTION: #action_type_ident = action();
-                        (::lokey::LayerId(#layer_index), &ACTION)
+                        (::lokey::LayerId(#layer_index), ::lokey::key::DynAction::from_ref(&ACTION))
                     }}
                 })
                 .collect::<Vec<_>>();
@@ -331,7 +331,7 @@ pub fn static_layout(item: TokenStream) -> TokenStream {
             quote! {{
                 static PER_LAYER_ACTION: ::lokey::key::action::PerLayer<#num_actions> =
                     ::lokey::key::action::PerLayer::new([#(#v,)*]);
-                &PER_LAYER_ACTION
+                ::lokey::key::DynAction::from_ref(&PER_LAYER_ACTION)
             }}
         })
         .collect::<Vec<_>>();

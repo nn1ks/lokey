@@ -48,25 +48,25 @@ use embassy_futures::select::{Either, select, select_slice};
 /// // The layout built with the macro is equivalent to this layout:
 ///
 /// use alloc::boxed::Box;
-/// use lokey::key::{action::PerLayer, Layout};
+/// use lokey::key::{action::PerLayer, DynAction, Layout};
 /// use lokey::LayerId;
 ///
 /// let layout = Box::leak(Box::new(Layout::new([
-///     Box::leak(Box::new(PerLayer::new([
-///         (LayerId(0), Box::leak(Box::new(KeyCode::new(Key::A)))),
-///         (LayerId(1), Box::leak(Box::new(KeyCode::new(Key::C)))),
-///     ]))),
-///     Box::leak(Box::new(PerLayer::new([
-///         (LayerId(0), Box::leak(Box::new(HoldTap::new(
+///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([
+///         (LayerId(0), DynAction::from_ref(Box::leak(Box::new(KeyCode::new(Key::A))))),
+///         (LayerId(1), DynAction::from_ref(Box::leak(Box::new(KeyCode::new(Key::C))))),
+///     ])))),
+///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([
+///         (LayerId(0), DynAction::from_ref(Box::leak(Box::new(HoldTap::new(
 ///             KeyCode::new(Key::LControl),
 ///             KeyCode::new(Key::B)
-///         )))),
-///         (LayerId(1), Box::leak(Box::new(KeyCode::new(Key::D)))),
-///     ]))),
-///     Box::leak(Box::new(PerLayer::new([
-///         (LayerId(0), Box::leak(Box::new(Layer::new(LayerId(1))))),
-///         (LayerId(1), Box::leak(Box::new(Layer::new(LayerId(1))))),
-///     ]))),
+///         ))))),
+///         (LayerId(1), DynAction::from_ref(Box::leak(Box::new(KeyCode::new(Key::D))))),
+///     ])))),
+///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([
+///         (LayerId(0), DynAction::from_ref(Box::leak(Box::new(Layer::new(LayerId(1)))))),
+///         (LayerId(1), DynAction::from_ref(Box::leak(Box::new(Layer::new(LayerId(1)))))),
+///     ])))),
 /// ])));
 /// # }
 /// ```
@@ -76,11 +76,11 @@ pub use matrix::{Matrix, MatrixConfig};
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
-    actions: [&'static dyn DynAction; NUM_KEYS],
+    actions: [&'static DynAction; NUM_KEYS],
 }
 
 impl<const NUM_KEYS: usize> Layout<NUM_KEYS> {
-    pub const fn new(actions: [&'static dyn DynAction; NUM_KEYS]) -> Self {
+    pub const fn new(actions: [&'static DynAction; NUM_KEYS]) -> Self {
         Self { actions }
     }
 }
@@ -130,7 +130,7 @@ impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
             unwrap!(context.spawner.spawn(task));
 
             async fn handle_internal_message(
-                actions: &'static [&'static dyn DynAction],
+                actions: &'static [&'static DynAction],
                 context: DynContext,
             ) {
                 let mut receiver = context.internal_channel.receiver::<Message>();
