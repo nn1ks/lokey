@@ -2,7 +2,7 @@ use super::Nrf52840;
 use crate::external::{self, Messages1, usb};
 use crate::util::channel::Channel;
 use crate::util::{info, unwrap};
-use crate::{Address, internal};
+use crate::{Address, internal, keyboard};
 use alloc::boxed::Box;
 use core::future::Future;
 use core::pin::Pin;
@@ -54,16 +54,16 @@ impl usb::CreateDriver for Nrf52840 {
     }
 }
 
-static CHANNEL: Channel<CriticalSectionRawMutex, external::KeyMessage> = Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, keyboard::ExternalMessage> = Channel::new();
 static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
 
 #[non_exhaustive]
 pub struct ExternalTransport {}
 
 impl external::Transport for ExternalTransport {
-    type Messages = Messages1<external::KeyMessage>;
+    type Messages = Messages1<keyboard::ExternalMessage>;
 
-    fn send(&self, message: Messages1<external::KeyMessage>) {
+    fn send(&self, message: Messages1<keyboard::ExternalMessage>) {
         let Messages1::Message1(message) = message;
         CHANNEL.send(message);
     }
@@ -77,7 +77,9 @@ impl external::Transport for ExternalTransport {
     }
 }
 
-impl external::TransportConfig<Nrf52840, Messages1<external::KeyMessage>> for usb::TransportConfig {
+impl external::TransportConfig<Nrf52840, Messages1<keyboard::ExternalMessage>>
+    for usb::TransportConfig
+{
     type Transport = ExternalTransport;
 
     async fn init(

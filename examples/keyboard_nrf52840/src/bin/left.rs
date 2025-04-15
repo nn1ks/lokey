@@ -5,12 +5,11 @@
 
 use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::blink::Blink;
-use lokey::external::{Key, KeyOverride};
 use lokey::keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
     ToggleExternalTransport,
 };
-use lokey::keyboard::{Keys, MatrixConfig, layout};
+use lokey::keyboard::{Key, KeyOverride, Keys, MatrixConfig, layout};
 use lokey::layer::LayerId;
 use lokey::status_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray};
 use lokey::{Context, Device};

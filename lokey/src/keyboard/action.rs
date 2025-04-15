@@ -1,4 +1,5 @@
-use crate::external::{self, toggle};
+use super::{ExternalMessage, Key};
+use crate::external::toggle;
 use crate::layer::{LayerId, LayerManager, LayerManagerEntry};
 use crate::util::warn;
 use crate::{Address, DynContext};
@@ -60,11 +61,11 @@ impl Action for NoOp {
 }
 
 pub struct KeyCode {
-    pub key: external::Key,
+    pub key: Key,
 }
 
 impl KeyCode {
-    pub const fn new(key: external::Key) -> Self {
+    pub const fn new(key: Key) -> Self {
         Self { key }
     }
 }
@@ -73,13 +74,13 @@ impl Action for KeyCode {
     async fn on_press(&'static self, context: DynContext) {
         context
             .external_channel
-            .try_send(external::KeyMessage::KeyPress(self.key));
+            .try_send(ExternalMessage::KeyPress(self.key));
     }
 
     async fn on_release(&'static self, context: DynContext) {
         context
             .external_channel
-            .try_send(external::KeyMessage::KeyRelease(self.key));
+            .try_send(ExternalMessage::KeyRelease(self.key));
     }
 }
 
@@ -227,13 +228,13 @@ impl<A: Action> Sticky<A> {
 impl<A: Action> Action for Sticky<A> {
     async fn on_press(&'static self, context: DynContext) {
         self.is_held.store(true, Ordering::SeqCst);
-        let mut receiver = context.external_channel.receiver::<external::KeyMessage>();
+        let mut receiver = context.external_channel.receiver::<ExternalMessage>();
         if !self.lazy {
             self.action.on_press(context).await;
         }
         let fut1 = async {
             loop {
-                if let external::KeyMessage::KeyPress(key) = receiver.next().await {
+                if let ExternalMessage::KeyPress(key) = receiver.next().await {
                     if self.ignore_modifiers && key.is_modifier() {
                         continue;
                     }

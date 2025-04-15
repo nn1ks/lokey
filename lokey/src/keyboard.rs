@@ -1,10 +1,12 @@
 pub mod action;
 mod debounce;
 mod direct_pins;
+mod key;
+mod key_override;
 mod matrix;
 
 use crate::util::{debug, error, unwrap};
-use crate::{Component, DynContext, internal};
+use crate::{Component, DynContext, external, internal};
 pub use action::{Action, DynAction};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -14,6 +16,8 @@ pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_executor::raw::TaskStorage;
 use embassy_futures::select::{Either, select, select_slice};
+pub use key::{HidReportByte, Key};
+pub use key_override::KeyOverride;
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -26,8 +30,8 @@ use embassy_futures::select::{Either, select, select_slice};
 /// ```no_run
 #[doc = include_str!("./doctest_setup_with_allocator")]
 /// use lokey::keyboard::action::{HoldTap, KeyCode, Layer};
+/// use lokey::keyboard::{layout, Key};
 /// use lokey::layer::LayerId;
-/// use lokey::{external::Key, keyboard::layout};
 ///
 /// # fn function() {
 /// let layout = layout!(
@@ -226,5 +230,56 @@ impl internal::Message for Message {
                 [1, bytes[0], bytes[1]]
             }
         }
+    }
+}
+
+#[derive(Clone)]
+pub enum ExternalMessage {
+    KeyPress(Key),
+    KeyRelease(Key),
+}
+
+impl external::Message for ExternalMessage {}
+
+impl ExternalMessage {
+    #[cfg(any(feature = "usb", feature = "ble"))]
+    pub fn update_keyboard_report(
+        &self,
+        report: &mut usbd_hid::descriptor::KeyboardReport,
+    ) -> bool {
+        let mut changed = false;
+        match self {
+            Self::KeyPress(key) => match key.to_hid_report_byte() {
+                HidReportByte::Key(v) => {
+                    if !report.keycodes.contains(&v) {
+                        if let Some(i) = report.keycodes.iter().position(|keycode| *keycode == 0) {
+                            report.keycodes[i] = v;
+                        }
+                        changed = true;
+                    }
+                }
+                HidReportByte::Modifier(v) => {
+                    if report.modifier & v == 0 {
+                        report.modifier |= v;
+                        changed = true;
+                    }
+                }
+            },
+            Self::KeyRelease(key) => match key.to_hid_report_byte() {
+                HidReportByte::Key(v) => {
+                    if let Some(i) = report.keycodes.iter().position(|keycode| *keycode == v) {
+                        report.keycodes[i] = 0;
+                        changed = true;
+                    }
+                }
+                HidReportByte::Modifier(v) => {
+                    if report.modifier & v == v {
+                        report.modifier &= !v;
+                        changed = true;
+                    }
+                }
+            },
+        }
+        changed
     }
 }

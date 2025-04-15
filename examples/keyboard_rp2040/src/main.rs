@@ -6,9 +6,9 @@ use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::blink::Blink;
-use lokey::external::{self, Key, KeyMessage, Messages1};
+use lokey::external::{self, Messages1};
 use lokey::keyboard::action::KeyCode;
-use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Keys, layout};
+use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Key, Keys, layout};
 use lokey::layer::LayerManager;
 use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
@@ -25,7 +25,7 @@ struct DefaultState {
 struct Central;
 
 impl Transports<Rp2040> for Central {
-    type ExternalMessages = Messages1<KeyMessage>;
+    type ExternalMessages = Messages1<keyboard::ExternalMessage>;
     type ExternalTransportConfig = external::usb::TransportConfig;
     type InternalTransportConfig = internal::empty::TransportConfig;
 

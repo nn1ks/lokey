@@ -1,4 +1,5 @@
-use super::{Key, KeyMessage, Message, MessageSender, Override};
+use super::{ExternalMessage, Key};
+use crate::external::{Message, MessageSender, Override};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::any::Any;
@@ -44,7 +45,7 @@ impl KeyOverride {
 impl Override for KeyOverride {
     fn override_message(&mut self, message: Box<dyn Message>, sender: &mut MessageSender) {
         let message_ref: &dyn Any = &message;
-        let message = match message_ref.downcast_ref::<KeyMessage>() {
+        let message = match message_ref.downcast_ref::<ExternalMessage>() {
             Some(v) => v,
             None => {
                 sender.send(message);
@@ -52,7 +53,7 @@ impl Override for KeyOverride {
             }
         };
         match message {
-            KeyMessage::KeyPress(key) => {
+            ExternalMessage::KeyPress(key) => {
                 let mut triggered_override = false;
                 if self
                     .overrides
@@ -66,19 +67,19 @@ impl Override for KeyOverride {
                             if !data.keep {
                                 for v in &data.required {
                                     if v != key {
-                                        sender.send(Box::new(KeyMessage::KeyRelease(*v)));
+                                        sender.send(Box::new(ExternalMessage::KeyRelease(*v)));
                                     }
                                 }
                             }
-                            sender.send(Box::new(KeyMessage::KeyPress(data.then)));
+                            sender.send(Box::new(ExternalMessage::KeyPress(data.then)));
                         }
                     }
                 }
                 if !triggered_override {
-                    sender.send(Box::new(KeyMessage::KeyPress(*key)));
+                    sender.send(Box::new(ExternalMessage::KeyPress(*key)));
                 }
             }
-            KeyMessage::KeyRelease(key) => {
+            ExternalMessage::KeyRelease(key) => {
                 let mut untriggered_override = false;
                 if self
                     .overrides
@@ -91,16 +92,16 @@ impl Override for KeyOverride {
                             if !data.keep {
                                 for v in &data.required {
                                     if v != key {
-                                        sender.send(Box::new(KeyMessage::KeyPress(*v)));
+                                        sender.send(Box::new(ExternalMessage::KeyPress(*v)));
                                     }
                                 }
                             }
-                            sender.send(Box::new(KeyMessage::KeyRelease(data.then)));
+                            sender.send(Box::new(ExternalMessage::KeyRelease(data.then)));
                         }
                     }
                 }
                 if !untriggered_override {
-                    sender.send(Box::new(KeyMessage::KeyRelease(*key)));
+                    sender.send(Box::new(ExternalMessage::KeyRelease(*key)));
                 }
                 if let Some(i) = self.pressed_keys.iter().rposition(|v| v == key) {
                     self.pressed_keys.remove(i);

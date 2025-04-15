@@ -7,7 +7,7 @@ use crate::external::ble::{Event, Message};
 use crate::mcu::{Nrf52840, Storage};
 use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap, warn};
-use crate::{Address, external, internal};
+use crate::{Address, external, internal, keyboard};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use bonder::Bonder;
@@ -30,7 +30,7 @@ use portable_atomic::{AtomicBool, AtomicU8};
 use server::{BatteryServiceEvent, HidServiceEvent, Server, ServerEvent};
 use usbd_hid::descriptor::KeyboardReport;
 
-static CHANNEL: Channel<CriticalSectionRawMutex, external::KeyMessage> = Channel::new();
+static CHANNEL: Channel<CriticalSectionRawMutex, keyboard::ExternalMessage> = Channel::new();
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 
@@ -38,9 +38,9 @@ static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 pub struct Transport {}
 
 impl external::Transport for Transport {
-    type Messages = Messages1<external::KeyMessage>;
+    type Messages = Messages1<keyboard::ExternalMessage>;
 
-    fn send(&self, message: Messages1<external::KeyMessage>) {
+    fn send(&self, message: Messages1<keyboard::ExternalMessage>) {
         let Messages1::Message1(message) = message;
         CHANNEL.send(message);
     }
@@ -60,7 +60,7 @@ impl external::Transport for Transport {
     }
 }
 
-impl external::TransportConfig<Nrf52840, Messages1<external::KeyMessage>>
+impl external::TransportConfig<Nrf52840, Messages1<keyboard::ExternalMessage>>
     for external::ble::TransportConfig
 {
     type Transport = Transport;

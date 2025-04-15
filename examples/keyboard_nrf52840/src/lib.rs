@@ -11,7 +11,7 @@ use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::blink::Blink;
-use lokey::external::{KeyMessage, Messages0, Messages1};
+use lokey::external::{Messages0, Messages1};
 use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use lokey::layer::LayerManager;
 use lokey::mcu::nrf52840::pwm::Pwm;
@@ -35,7 +35,7 @@ pub struct DefaultState {
 pub struct Central;
 
 impl Transports<Nrf52840> for Central {
-    type ExternalMessages = Messages1<KeyMessage>;
+    type ExternalMessages = Messages1<keyboard::ExternalMessage>;
     type ExternalTransportConfig = external::usb::TransportConfig;
     // type ExternalTransportConfig =
     //     external::toggle::TransportConfig<external::ble::TransportConfig>;
