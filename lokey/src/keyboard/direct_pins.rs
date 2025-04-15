@@ -1,5 +1,4 @@
-use super::{Debounce, Scanner};
-use crate::key::Message;
+use super::{Debounce, Message, Scanner};
 use crate::util::{error, unwrap};
 use crate::{DynContext, internal};
 use alloc::boxed::Box;

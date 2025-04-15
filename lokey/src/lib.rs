@@ -68,7 +68,7 @@ extern crate alloc;
 pub mod blink;
 pub mod external;
 pub mod internal;
-pub mod key;
+pub mod keyboard;
 pub mod layer;
 pub mod mcu;
 mod state;

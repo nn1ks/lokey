@@ -1,5 +1,6 @@
 use crate::external::{self, toggle};
 use crate::layer::{LayerId, LayerManager, LayerManagerEntry};
+use crate::util::warn;
 use crate::{Address, DynContext};
 use alloc::boxed::Box;
 use core::mem::transmute;
@@ -98,6 +99,15 @@ impl Layer {
 
 impl Action for Layer {
     async fn on_press(&'static self, context: DynContext) {
+        if let Some(entry) = self.layer_manager_entry.lock().await.take() {
+            warn!(
+                "on_press was called again without calling on_release first for layer {}",
+                self.layer.0
+            );
+            if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
+                layer_manager.remove(entry).await;
+            }
+        }
         if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
             let entry = layer_manager.push(self.layer).await;
             *self.layer_manager_entry.lock().await = Some(entry);

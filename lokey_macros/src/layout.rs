@@ -30,7 +30,7 @@ fn layer_actions(
                 {
                     match layer_actions[key_index].last() {
                         Some(v) => v.clone(),
-                        None => quote! { ::lokey::key::action::NoOp },
+                        None => quote! { ::lokey::keyboard::action::NoOp },
                     }
                 }
                 _ => expr.to_token_stream(),
@@ -57,21 +57,21 @@ pub fn layout(item: TokenStream) -> TokenStream {
                     quote! {
                         (
                             ::lokey::layer::LayerId(#layer_index),
-                            ::lokey::key::DynAction::from_ref(::alloc::boxed::Box::leak(::alloc::boxed::Box::new(#action)))
+                            ::lokey::keyboard::DynAction::from_ref(::alloc::boxed::Box::leak(::alloc::boxed::Box::new(#action)))
                         )
                     }
                 })
                 .collect::<Vec<_>>();
             quote! {
-                ::lokey::key::DynAction::from_ref(::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
-                    ::lokey::key::action::PerLayer::new([#(#v,)*])
+                ::lokey::keyboard::DynAction::from_ref(::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
+                    ::lokey::keyboard::action::PerLayer::new([#(#v,)*])
                 )))
             }
         })
         .collect::<Vec<_>>();
     quote! {
         ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
-            ::lokey::key::Layout::new([#(#combined_actions,)*])
+            ::lokey::keyboard::Layout::new([#(#combined_actions,)*])
         ))
     }
     .into()
@@ -90,21 +90,21 @@ pub fn static_layout(item: TokenStream) -> TokenStream {
                 .map(|(layer_index, action)| {
                     let layer_index = u8::try_from(layer_index).unwrap();
                     quote! {{
-                        static DYN_ACTION: &'static ::lokey::key::DynAction = ::lokey::key::DynAction::from_ref(&#action);
+                        static DYN_ACTION: &'static ::lokey::keyboard::DynAction = ::lokey::keyboard::DynAction::from_ref(&#action);
                         (::lokey::layer::LayerId(#layer_index), DYN_ACTION)
                     }}
                 })
                 .collect::<Vec<_>>();
             let num_actions = v.len();
             quote! {{
-                static PER_LAYER_ACTION: ::lokey::key::action::PerLayer<#num_actions> =
-                    ::lokey::key::action::PerLayer::new([#(#v,)*]);
-                ::lokey::key::DynAction::from_ref(&PER_LAYER_ACTION)
+                static PER_LAYER_ACTION: ::lokey::keyboard::action::PerLayer<#num_actions> =
+                    ::lokey::keyboard::action::PerLayer::new([#(#v,)*]);
+                ::lokey::keyboard::DynAction::from_ref(&PER_LAYER_ACTION)
             }}
         })
         .collect::<Vec<_>>();
     quote! {
-        ::lokey::key::Layout::new([#(#combined_actions,)*])
+        ::lokey::keyboard::Layout::new([#(#combined_actions,)*])
     }
     .into()
 }
