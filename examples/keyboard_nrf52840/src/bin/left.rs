@@ -12,9 +12,7 @@ use lokey::keyboard::action::{
 };
 use lokey::keyboard::{Keys, MatrixConfig, layout};
 use lokey::layer::LayerId;
-use lokey::status_led_array::{
-    BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray, TestHook,
-};
+use lokey::status_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray};
 use lokey::{Context, Device};
 use {defmt_rtt as _, panic_probe as _};
 
@@ -80,7 +78,6 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
     context
         .enable(
             StatusLedArray::<4>::new(context.as_dyn())
-                .hook(TestHook)
                 .hook(BootHook)
                 .hook(BleAdvertisementHook)
                 .hook(BleProfileHook),
