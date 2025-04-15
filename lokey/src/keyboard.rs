@@ -25,9 +25,9 @@ use embassy_futures::select::{Either, select, select_slice};
 ///
 /// ```no_run
 #[doc = include_str!("./doctest_setup_with_allocator")]
-/// use lokey::key::action::{HoldTap, KeyCode, Layer};
+/// use lokey::keyboard::action::{HoldTap, KeyCode, Layer};
 /// use lokey::layer::LayerId;
-/// use lokey::{external::Key, key::layout};
+/// use lokey::{external::Key, keyboard::layout};
 ///
 /// # fn function() {
 /// let layout = layout!(
@@ -49,7 +49,7 @@ use embassy_futures::select::{Either, select, select_slice};
 /// // The layout built with the macro is equivalent to this layout:
 ///
 /// use alloc::boxed::Box;
-/// use lokey::key::{action::PerLayer, DynAction, Layout};
+/// use lokey::keyboard::{action::PerLayer, DynAction, Layout};
 /// use lokey::layer::LayerId;
 ///
 /// let layout = Box::leak(Box::new(Layout::new([

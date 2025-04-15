@@ -8,7 +8,7 @@
 //! # use lokey::mcu::DummyMcu;
 //! use lokey::{Address, ComponentSupport, Context, Device, State, StateContainer, Transports};
 //! use lokey::layer::LayerManager;
-//! use lokey::key::{self, DirectPins, DirectPinsConfig, Keys};
+//! use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Keys};
 //!
 //! struct Keyboard;
 //!
