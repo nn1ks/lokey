@@ -7,8 +7,8 @@ use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::blink::Blink;
 use lokey::external::{self, Key, KeyMessage, Messages1};
-use lokey::key::action::KeyCode;
-use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, layout};
+use lokey::keyboard::action::KeyCode;
+use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Keys, layout};
 use lokey::layer::LayerManager;
 use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
@@ -91,10 +91,10 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
             Keys::<DirectPinsConfig, NUM_KEYS>::new()
                 .layout(layout)
                 .scanner_config(DirectPinsConfig {
-                    debounce_key_press: key::Debounce::Defer {
+                    debounce_key_press: keyboard::Debounce::Defer {
                         duration: Duration::from_millis(30),
                     },
-                    debounce_key_release: key::Debounce::Defer {
+                    debounce_key_release: keyboard::Debounce::Defer {
                         duration: Duration::from_millis(30),
                     },
                 }),

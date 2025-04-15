@@ -1,16 +1,23 @@
 #![no_std]
 
+extern crate alloc;
+
+use alloc::boxed::Box;
 use embassy_nrf::gpio::{Input, Level, Output, OutputDrive, Pin, Pull};
 use embassy_nrf::peripherals::{
     P0_02, P0_03, P0_09, P0_10, P0_28, P1_11, P1_12, P1_13, P1_14, P1_15,
 };
+use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::blink::Blink;
 use lokey::external::{KeyMessage, Messages0, Messages1};
-use lokey::key::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
+use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use lokey::layer::LayerManager;
+use lokey::mcu::nrf52840::pwm::Pwm;
+use lokey::mcu::pwm::{Pwm as _, PwmChannel};
 use lokey::mcu::{Nrf52840, nrf52840};
+use lokey::status_led_array::StatusLedArray;
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
     internal,
@@ -30,7 +37,8 @@ pub struct Central;
 impl Transports<Nrf52840> for Central {
     type ExternalMessages = Messages1<KeyMessage>;
     type ExternalTransportConfig = external::usb::TransportConfig;
-    // type ExternalTransportConfig = external::ble::TransportConfig;
+    // type ExternalTransportConfig =
+    //     external::toggle::TransportConfig<external::ble::TransportConfig>;
     // type ExternalTransportConfig = external::usb_ble::TransportConfig;
     // type InternalTransportConfig = internal::empty::TransportConfig;
     type InternalTransportConfig = internal::ble::TransportConfig;
@@ -42,12 +50,12 @@ impl Transports<Nrf52840> for Central {
             self_powered: true,
             ..Default::default()
         }
-        // external::ble::TransportConfig {
+        // external::toggle::TransportConfig::new(external::ble::TransportConfig {
         //     // name: "keyboard_nrf52840",
         //     name: "keyboard",
         //     manufacturer: Some("n1ks"),
         //     ..Default::default()
-        // }
+        // })
         // external::usb_ble::TransportConfig {
         //     name: "keyboard_nrf52840",
         //     manufacturer: Some("n1ks"),
@@ -91,7 +99,10 @@ impl Device for KeyboardLeft {
     type Mcu = Nrf52840;
 
     fn mcu_config() -> nrf52840::Config {
-        nrf52840::Config::default()
+        nrf52840::Config {
+            ble_gap_device_name: Some("keyboard"),
+            ..Default::default()
+        }
     }
 }
 
@@ -159,6 +170,29 @@ impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for Ke
     }
 }
 
+impl<S: StateContainer> ComponentSupport<StatusLedArray<4>, S> for KeyboardLeft {
+    async fn enable<T: Transports<Self::Mcu>>(
+        component: StatusLedArray<4>,
+        _context: Context<Self, T, S>,
+    ) {
+        let pwm1 = unsafe { embassy_nrf::peripherals::PWM1::steal() };
+        let ch0 = unsafe { embassy_nrf::peripherals::P1_11::steal().degrade() };
+        let ch1 = unsafe { embassy_nrf::peripherals::P0_05::steal().degrade() };
+        let ch2 = unsafe { embassy_nrf::peripherals::P0_04::steal().degrade() };
+        let ch3 = unsafe { embassy_nrf::peripherals::P0_29::steal().degrade() };
+        let simple_pwm = SimplePwm::new_4ch(pwm1, ch0, ch1, ch2, ch3);
+        // frequency = base clock of NRF52840 / prescaler * max_duty
+        // frequency = 16MHz / 1 * 1_000 = 16kHz
+        let max_duty = 1_000;
+        let pwm = Pwm::<_, 4>::new(simple_pwm, max_duty);
+        let channels = pwm.split().map(|channel| {
+            let b: Box<dyn PwmChannel> = Box::new(channel);
+            b
+        });
+        component.init(channels);
+    }
+}
+
 pub struct KeyboardRight;
 
 impl Device for KeyboardRight {
@@ -204,7 +238,7 @@ impl LedAction {
     }
 }
 
-impl key::Action for LedAction {
+impl keyboard::Action for LedAction {
     async fn on_press(&'static self, _context: lokey::DynContext) {
         self.pin.lock().await.set_high();
     }

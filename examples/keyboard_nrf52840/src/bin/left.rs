@@ -3,13 +3,19 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(type_alias_impl_trait)]
 
-use embassy_nrf::gpio::{Level, Output, OutputDrive, Pin};
-use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, LedAction, NUM_KEYS};
-use lokey::Context;
+use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::blink::Blink;
-use lokey::external::Key;
-use lokey::key::action::{HoldTap, KeyCode, NoOp, Toggle};
-use lokey::key::{Keys, MatrixConfig, layout};
+use lokey::external::{Key, KeyOverride};
+use lokey::keyboard::action::{
+    BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
+    ToggleExternalTransport,
+};
+use lokey::keyboard::{Keys, MatrixConfig, layout};
+use lokey::layer::LayerId;
+use lokey::status_led_array::{
+    BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray, TestHook,
+};
+use lokey::{Context, Device};
 use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
@@ -17,42 +23,19 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
     let layout = layout!(
         // Layer 0
         [
-            LedAction::new(Output::new(
-                unsafe { embassy_nrf::peripherals::P1_11::steal().degrade() },
-                Level::Low,
-                OutputDrive::Standard,
-            )),
-            LedAction::new(Output::new(
-                unsafe { embassy_nrf::peripherals::P0_05::steal().degrade() },
-                Level::Low,
-                OutputDrive::Standard,
-            )),
-            Toggle::new(LedAction::new(Output::new(
-                unsafe { embassy_nrf::peripherals::P0_04::steal().degrade() },
-                Level::Low,
-                OutputDrive::Standard,
-            ))),
-            HoldTap::new(
-                LedAction::new(Output::new(
-                    unsafe { embassy_nrf::peripherals::P0_05::steal().degrade() },
-                    Level::Low,
-                    OutputDrive::Standard,
-                )),
-                LedAction::new(Output::new(
-                    unsafe { embassy_nrf::peripherals::P0_29::steal().degrade() },
-                    Level::Low,
-                    OutputDrive::Standard,
-                )),
-            ),
+            KeyCode::new(Key::Z),
+            BleClearActive,
+            BleNextProfile,
+            BlePreviousProfile,
+            ToggleExternalTransport(KeyboardLeft::DEFAULT_ADDRESS),
+            KeyCode::new(Key::A),
+            KeyCode::new(Key::B),
+            KeyCode::new(Key::C),
+            KeyCode::new(Key::LShift),
             NoOp,
-            NoOp,
-            NoOp,
-            NoOp,
-            NoOp,
-            NoOp,
-            NoOp,
-            NoOp,
-            NoOp,
+            Layer::new(LayerId(1)),
+            Layer::new(LayerId(2)),
+            Layer::new(LayerId(3)),
             NoOp,
             NoOp,
             NoOp,
@@ -79,10 +62,30 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
         ],
     );
     context
+        .state
+        .layer_manager
+        .add_conditional_layer([LayerId(1), LayerId(2)], LayerId(4))
+        .await;
+    context
         .enable(Keys::<MatrixConfig, NUM_KEYS>::new().layout(layout))
         .await;
 
     context.enable(Blink::new()).await;
+
+    context
+        .external_channel
+        .add_override(KeyOverride::new().with([Key::LShift, Key::A], Key::E))
+        .await;
+
+    context
+        .enable(
+            StatusLedArray::<4>::new(context.as_dyn())
+                .hook(TestHook)
+                .hook(BootHook)
+                .hook(BleAdvertisementHook)
+                .hook(BleProfileHook),
+        )
+        .await;
 
     // context.spawner.spawn(task()).unwrap();
     // #[embassy_executor::task]
