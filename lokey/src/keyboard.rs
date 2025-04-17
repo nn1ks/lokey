@@ -4,6 +4,8 @@ mod direct_pins;
 mod key;
 mod key_override;
 mod matrix;
+#[cfg(feature = "usb")]
+mod usb_transport;
 
 use crate::util::{debug, error, unwrap};
 use crate::{Component, DynContext, external, internal};

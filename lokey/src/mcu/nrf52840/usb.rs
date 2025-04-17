@@ -1,18 +1,10 @@
 use super::Nrf52840;
-use crate::external::{self, Messages1, usb};
-use crate::util::channel::Channel;
+use crate::external::usb;
 use crate::util::{info, unwrap};
-use crate::{Address, internal, keyboard};
-use alloc::boxed::Box;
-use core::future::Future;
-use core::pin::Pin;
-use embassy_executor::Spawner;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::{InterruptExt, Priority};
 use embassy_nrf::peripherals::USBD;
 use embassy_nrf::usb::vbus_detect::{SoftwareVbusDetect, VbusDetect};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use once_cell::sync::OnceCell;
 
 struct SoftwareVbusDetectWrapper(SoftwareVbusDetect);
 
@@ -52,56 +44,4 @@ impl usb::CreateDriver for Nrf52840 {
         let vbus_detect = SoftwareVbusDetectWrapper(SoftwareVbusDetect::new(true, true));
         embassy_nrf::usb::Driver::new(usbd, Irqs, vbus_detect)
     }
-}
-
-static CHANNEL: Channel<CriticalSectionRawMutex, keyboard::ExternalMessage> = Channel::new();
-static ACTIVATION_REQUEST: OnceCell<usb::ActivationRequest> = OnceCell::new();
-
-#[non_exhaustive]
-pub struct ExternalTransport {}
-
-impl external::Transport for ExternalTransport {
-    type Messages = Messages1<keyboard::ExternalMessage>;
-
-    fn send(&self, message: Messages1<keyboard::ExternalMessage>) {
-        let Messages1::Message1(message) = message;
-        CHANNEL.send(message);
-    }
-
-    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            if let Some(activation_request) = ACTIVATION_REQUEST.get() {
-                activation_request.wait().await;
-            }
-        })
-    }
-}
-
-impl external::TransportConfig<Nrf52840, Messages1<keyboard::ExternalMessage>>
-    for usb::TransportConfig
-{
-    type Transport = ExternalTransport;
-
-    async fn init(
-        self,
-        mcu: &'static Nrf52840,
-        _address: Address,
-        spawner: Spawner,
-        _internal_channel: internal::DynChannel,
-    ) -> Self::Transport {
-        if ACTIVATION_REQUEST.get().is_some() {
-            // Channel was already intialized
-            return ExternalTransport {};
-        }
-
-        let (handler, activation_request) = usb::Handler::new(self, mcu);
-        unwrap!(spawner.spawn(task(handler)));
-        let _ = ACTIVATION_REQUEST.set(activation_request);
-        ExternalTransport {}
-    }
-}
-
-#[embassy_executor::task]
-async fn task(handler: usb::Handler<Nrf52840>) {
-    handler.run(CHANNEL.receiver()).await
 }
