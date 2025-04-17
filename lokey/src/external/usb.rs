@@ -8,12 +8,11 @@ use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_executor::Spawner;
 use embassy_executor::raw::TaskStorage;
-use embassy_futures::join::join3;
+use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-use embassy_usb::class::hid::{HidReaderWriter, ReportId};
-use embassy_usb::control::OutResponse;
+use embassy_usb::class::hid::HidWriter;
 use portable_atomic::AtomicBool;
 use portable_atomic_util::Arc;
 use usbd_hid::descriptor::{AsInputReport, SerializedDescriptor};
@@ -209,13 +208,9 @@ where
                 poll_ms: 60,
                 max_packet_size: 64,
             };
-            let hid = HidReaderWriter::<_, 1, 8>::new(&mut builder, &mut state, hid_config);
-
-            let (reader, mut writer) = hid.split();
+            let mut hid_writer = HidWriter::<_, 8>::new(&mut builder, &mut state, hid_config);
 
             let mut usb = builder.build();
-
-            let mut request_handler = RequestHandler {};
 
             let remote_wakeup: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
@@ -240,18 +235,14 @@ where
                         info!("Triggering remote wakeup");
                         remote_wakeup.signal(());
                     } else if let Some(report) = handle_message(message) {
-                        if let Err(e) = writer.write_serialize(&report).await {
+                        if let Err(e) = hid_writer.write_serialize(&report).await {
                             error!("Failed to write input report: {}", e);
                         }
                     }
                 }
             };
 
-            let handle_requests = async { reader.run(false, &mut request_handler).await };
-
-            join3(wakeup, write_keyboard_report, handle_requests)
-                .await
-                .0
+            join(wakeup, write_keyboard_report).await.0
         }
 
         let channel_clone = Arc::clone(&channel);
@@ -282,28 +273,5 @@ where
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(self.activation_request_signal.wait())
-    }
-}
-
-struct RequestHandler {}
-
-impl embassy_usb::class::hid::RequestHandler for RequestHandler {
-    fn get_report(&mut self, id: ReportId, _buf: &mut [u8]) -> Option<usize> {
-        debug!("Get report for {:?}", id);
-        None
-    }
-
-    fn set_report(&mut self, id: ReportId, data: &[u8]) -> OutResponse {
-        debug!("Set report for {:?}: {=[u8]}", id, data);
-        OutResponse::Accepted
-    }
-
-    fn set_idle_ms(&mut self, id: Option<ReportId>, dur: u32) {
-        debug!("Set idle rate for {:?} to {:?}", id, dur);
-    }
-
-    fn get_idle_ms(&mut self, id: Option<ReportId>) -> Option<u32> {
-        debug!("Get idle rate for {:?}", id);
-        None
     }
 }
