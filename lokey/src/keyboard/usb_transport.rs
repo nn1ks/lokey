@@ -9,7 +9,7 @@ use usbd_hid::descriptor::KeyboardReport;
 impl<M: Mcu + CreateDriver> TransportConfig<M, Messages1<ExternalMessage>>
     for usb::TransportConfig
 {
-    type Transport = usb::HidTransport<M, Messages1<ExternalMessage>, KeyboardReport>;
+    type Transport = usb::HidTransport<9, M, Messages1<ExternalMessage>, KeyboardReport>;
 
     async fn init(
         self,

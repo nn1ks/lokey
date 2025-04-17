@@ -139,13 +139,13 @@ impl embassy_usb::Handler for DeviceHandler {
     }
 }
 
-pub struct HidTransport<M, T, R> {
+pub struct HidTransport<const REPORT_SIZE: usize, M, T, R> {
     channel: Arc<Channel<CriticalSectionRawMutex, T>>,
     activation_request_signal: Arc<Signal<CriticalSectionRawMutex, ()>>,
     phantom: PhantomData<(M, R)>,
 }
 
-impl<M, T, R> HidTransport<M, T, R>
+impl<const REPORT_SIZE: usize, M, T, R> HidTransport<REPORT_SIZE, M, T, R>
 where
     M: Mcu + CreateDriver,
     T: Messages,
@@ -166,6 +166,7 @@ where
         let activation_request_signal = Arc::clone(device_handler.activation_request_signal());
 
         async fn run<
+            const REPORT_SIZE: usize,
             M: Mcu + CreateDriver,
             T: Messages,
             R: AsInputReport + SerializedDescriptor,
@@ -208,7 +209,8 @@ where
                 poll_ms: 60,
                 max_packet_size: 64,
             };
-            let mut hid_writer = HidWriter::<_, 8>::new(&mut builder, &mut state, hid_config);
+            let mut hid_writer =
+                HidWriter::<_, REPORT_SIZE>::new(&mut builder, &mut state, hid_config);
 
             let mut usb = builder.build();
 
@@ -247,8 +249,15 @@ where
 
         let channel_clone = Arc::clone(&channel);
         let task_storage = Box::leak(Box::new(TaskStorage::new()));
-        let task =
-            task_storage.spawn(|| run(config, mcu, channel_clone, device_handler, handle_message));
+        let task = task_storage.spawn(|| {
+            run::<REPORT_SIZE, _, _, _, _>(
+                config,
+                mcu,
+                channel_clone,
+                device_handler,
+                handle_message,
+            )
+        });
         unwrap!(spawner.spawn(task));
 
         Self {
@@ -259,7 +268,7 @@ where
     }
 }
 
-impl<M, T, R> Transport for HidTransport<M, T, R>
+impl<const REPORT_SIZE: usize, M, T, R> Transport for HidTransport<REPORT_SIZE, M, T, R>
 where
     M: Mcu,
     T: Messages,
