@@ -1,6 +1,6 @@
 pub mod pwm;
 #[cfg(feature = "usb")]
-pub mod usb;
+mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
 use crate::mcu::McuBle;
