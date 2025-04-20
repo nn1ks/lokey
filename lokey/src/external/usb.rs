@@ -224,7 +224,9 @@ where
                             suspended.store(false, Ordering::Release);
                         }
                         Either::Second(()) => {
-                            unwrap!(usb.remote_wakeup().await);
+                            if let Err(e) = usb.remote_wakeup().await {
+                                error!("Failed to initialize remote wakeup: {}", e);
+                            }
                         }
                     }
                 }
