@@ -114,6 +114,7 @@ where
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn task<
     M: Mcu + McuBle + McuStorage,
     T,
@@ -269,7 +270,7 @@ async fn task<
                     }
                 };
             let device_address = Address(new_connection.peer_address().into_inner());
-            let new_connection = match new_connection.with_attribute_server(&server) {
+            let new_connection = match new_connection.with_attribute_server(server) {
                 Ok(v) => v,
                 Err(e) => {
                     error!("Failed to add attribute server: {}", e);
@@ -362,7 +363,7 @@ async fn task<
             let message = channel.receive().await;
             match &*connection.read().await {
                 Some(connection) => {
-                    handle_message(message, &*connection).await;
+                    handle_message(message, connection).await;
                 }
                 None => info!("Ignoring external message because BLE is disconnected"),
             }
@@ -387,7 +388,7 @@ async fn task<
                         if is_different_profile {
                             active_profile_index.store(index, Ordering::SeqCst);
                             if let Some(connection) = &*connection.read().await {
-                                let _ = connection.raw().disconnect();
+                                connection.raw().disconnect();
                             }
                             cancel_advertisement.signal(());
                         }
@@ -407,7 +408,7 @@ async fn task<
                     info!("Switching to profile {}", new_profile_index);
                     active_profile_index.store(new_profile_index, Ordering::SeqCst);
                     if let Some(connection) = &*connection.read().await {
-                        let _ = connection.raw().disconnect();
+                        connection.raw().disconnect();
                     }
                     cancel_advertisement.signal(());
                     internal_channel.send(Event::SwitchedProfile {
@@ -425,7 +426,7 @@ async fn task<
                     info!("Switching to profile {}", new_profile_index);
                     active_profile_index.store(new_profile_index, Ordering::SeqCst);
                     if let Some(connection) = &*connection.read().await {
-                        let _ = connection.raw().disconnect();
+                        connection.raw().disconnect();
                     }
                     cancel_advertisement.signal(());
                     internal_channel.send(Event::SwitchedProfile {
@@ -435,7 +436,7 @@ async fn task<
                 }
                 Message::DisconnectActive => {
                     if let Some(connection) = &*connection.read().await {
-                        let _ = connection.raw().disconnect();
+                        connection.raw().disconnect();
                     }
                 }
                 Message::Clear { profile_index } => {
@@ -455,7 +456,7 @@ async fn task<
                         bond_infos.lock().await[profile_index as usize] = None;
                         if active_profile_index.load(Ordering::SeqCst) == profile_index {
                             if let Some(connection) = &*connection.read().await {
-                                let _ = connection.raw().disconnect();
+                                connection.raw().disconnect();
                             }
                             cancel_advertisement.signal(());
                         }
@@ -471,7 +472,7 @@ async fn task<
                     }
                     bond_infos.lock().await[profile_index as usize] = None;
                     if let Some(connection) = &*connection.read().await {
-                        let _ = connection.raw().disconnect();
+                        connection.raw().disconnect();
                     }
                     cancel_advertisement.signal(());
                 }
@@ -486,7 +487,7 @@ async fn task<
                         bond_infos.lock().await[i as usize] = None;
                     }
                     if let Some(connection) = &*connection.read().await {
-                        let _ = connection.raw().disconnect();
+                        connection.raw().disconnect();
                     }
                     cancel_advertisement.signal(());
                 }
@@ -498,7 +499,7 @@ async fn task<
         loop {
             ACTIVE_SIGNAL.wait().await;
             if let Some(connection) = &*connection.read().await {
-                let _ = connection.raw().disconnect();
+                connection.raw().disconnect();
             }
             cancel_activation_wait.signal(());
             cancel_advertisement.signal(());

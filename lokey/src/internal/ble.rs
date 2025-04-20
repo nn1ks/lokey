@@ -16,8 +16,8 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_time::Timer;
 use trouble_host::gatt::{GattClient, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
-    AddrKind, Advertisement, AdvertisementParameters, AsGatt, Characteristic, ConnectConfig,
-    FromGatt, ScanConfig, Uuid,
+    AddrKind, Advertisement, AdvertisementParameters, AsGatt, BdAddr, Characteristic,
+    ConnectConfig, FromGatt, ScanConfig, Uuid,
 };
 use trouble_host::types::gatt_traits::FromGattError;
 
@@ -60,6 +60,8 @@ impl FromGatt for Message {
 }
 
 mod peripheral {
+    #![allow(clippy::useless_conversion)] // Produced by the macros from trouble_host
+
     use super::{
         MESSAGE_TO_CENTRAL_CHARACTERISTIC_UUID, MESSAGE_TO_PERIPHERAL_CHARACTERISTIC_UUID, Message,
         SERVICE_UUID,
@@ -127,7 +129,11 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
 
     let filter_accept_list = peripheral_addresses
         .iter()
-        .map(|address| (AddrKind::RANDOM, unsafe { transmute(&address.0) }))
+        .map(|address| {
+            (AddrKind::RANDOM, unsafe {
+                transmute::<&[u8; 6], &BdAddr>(&address.0)
+            })
+        })
         .collect::<Vec<_>>();
     let config = ConnectConfig {
         scan_config: ScanConfig {
