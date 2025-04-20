@@ -230,15 +230,12 @@ async fn task<
             info!("Starting BLE advertisement");
             internal_channel.send(Event::StartedAdvertising { scannable });
 
-            let advertise_result = select(
+            let advertiser = match select(
                 host.peripheral.advertise(&adv_params, adv),
                 cancel_advertisement.wait(),
             )
-            .await;
-
-            internal_channel.send(Event::StoppedAdvertising { scannable });
-
-            let advertiser = match advertise_result {
+            .await
+            {
                 Either::First(Ok(v)) => v,
                 Either::First(Err(e)) => {
                     match e {
@@ -249,10 +246,12 @@ async fn task<
                             error!("Failed to advertise: {}", e)
                         }
                     }
+                    internal_channel.send(Event::StoppedAdvertising { scannable });
                     continue;
                 }
                 Either::Second(()) => {
                     debug!("Cancelling advertisement");
+                    internal_channel.send(Event::StoppedAdvertising { scannable });
                     continue;
                 }
             };
@@ -262,13 +261,16 @@ async fn task<
                     Either::First(Ok(v)) => v,
                     Either::First(Err(e)) => {
                         error!("Failed to accept connection: {}", e);
+                        internal_channel.send(Event::StoppedAdvertising { scannable });
                         continue;
                     }
                     Either::Second(()) => {
                         debug!("Cancelling advertisement");
+                        internal_channel.send(Event::StoppedAdvertising { scannable });
                         continue;
                     }
                 };
+            internal_channel.send(Event::StoppedAdvertising { scannable });
             let device_address = Address(new_connection.peer_address().into_inner());
             let new_connection = match new_connection.with_attribute_server(server) {
                 Ok(v) => v,
