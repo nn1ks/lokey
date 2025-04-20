@@ -1,5 +1,8 @@
+mod generic_transport;
+
 use crate::util::error;
 use crate::{Address, internal};
+pub use generic_transport::GenericTransport;
 
 pub struct TransportConfig {
     pub name: &'static str,

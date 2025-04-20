@@ -10,7 +10,7 @@ use sequential_storage::cache::NoCache;
 use sequential_storage::map::{fetch_item, remove_item, store_item};
 use typenum::Unsigned;
 
-const ENTRY_TAG_SIZE: usize = 8;
+pub const ENTRY_TAG_SIZE: usize = 8;
 
 pub trait Entry {
     /// The length of the byte array that this type is serialized to.
@@ -37,6 +37,7 @@ pub trait Entry {
     fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
 }
 
+#[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error<E> {
     Flash(E),

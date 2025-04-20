@@ -134,6 +134,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             // Create MCU
             let mcu = <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(
                 mcu_config,
+                address,
                 spawner
             );
             let mcu = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(mcu));

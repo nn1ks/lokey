@@ -1,4 +1,6 @@
 pub mod action;
+#[cfg(feature = "ble")]
+mod ble_transport;
 mod debounce;
 mod direct_pins;
 mod key;

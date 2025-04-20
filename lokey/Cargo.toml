@@ -24,7 +24,9 @@ defmt = [
   "embassy-usb/defmt",
   "embedded-hal/defmt-03",
   "embedded-hal-async/defmt-03",
-  "nrf-softdevice?/defmt",
+  "trouble-host?/defmt",
+  "nrf-sdc?/defmt",
+  "nrf-mpsl?/defmt",
   "sequential-storage/defmt-03",
   "usbd-hid?/defmt",
 ]
@@ -36,20 +38,18 @@ usb = [
 ble = [
   "dep:usbd-hid",
   "dep:ssmarshal",
-  "nrf-softdevice?/ble-sec",
-  "nrf-softdevice?/ble-central",
-  "nrf-softdevice?/ble-peripheral",
-  "nrf-softdevice?/ble-gatt-server",
-  "nrf-softdevice?/ble-gatt-client"
+  "dep:trouble-host",
+  "dep:rand_chacha",
 ]
 
 nrf52840 = [
   "embassy-executor/arch-cortex-m",
   "dep:embassy-nrf",
   "embassy-nrf/nrf52840",
-  "dep:nrf-softdevice",
-  "nrf-softdevice?/nrf52840",
-  "nrf-softdevice?/s140"
+  "dep:nrf-mpsl",
+  "dep:nrf-sdc",
+  "nrf-mpsl?/nrf52840",
+  "nrf-sdc?/nrf52840",
 ]
 rp2040 = [
   "embassy-executor/arch-cortex-m",
@@ -66,6 +66,8 @@ embassy-futures = "0.1.1"
 embassy-nrf = { version = "0.3.1", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"], optional = true }
 embassy-rp = { version = "0.3.1", features = ["critical-section-impl", "time-driver"], optional = true }
 embassy-sync = "0.6.2"
+# TODO: Remove once a new version of embassy-sync is released (with RwLock)
+embassy-sync-new = { git = "https://github.com/embassy-rs/embassy", package = "embassy-sync" }
 embassy-time = "0.4.0"
 embassy-usb = { version = "0.4.0", features = ["usbd-hid"], optional = true }
 embedded-alloc = "0.6.0"
@@ -75,14 +77,18 @@ embedded-storage-async = "0.4.1"
 futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
 generic-array = "1.0.0"
 lokey_macros = { path = "../lokey_macros", version = "0.0.1" }
-nrf-softdevice = { git = "https://github.com/embassy-rs/nrf-softdevice", rev = "bb1600b728c8acbaecf974741ee5867b472289f3", features = ["critical-section-impl", "usable-from-interrupts"], optional = true }
+nrf-mpsl = { git = "https://github.com/nn1ks/nrf-sdc", features = ["critical-section-impl"], optional = true }
+nrf-sdc = { git = "https://github.com/nn1ks/nrf-sdc", features = ["central", "peripheral"], optional = true }
 once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 portable-atomic-util = { version = "0.2.0", features = ["alloc"] }
+rand_chacha = { version = "0.3.1", default-features = false, optional = true }
 seq-macro = "0.3.6"
 sequential-storage = "4.0.1"
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }
+static_cell = "2.1.0"
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
+trouble-host = { git = "https://github.com/embassy-rs/trouble", rev = "3d77c0b", features = ["security"], optional = true }
 typenum = "1.17.0"
 usbd-hid = { version = "0.8.2", optional = true }
 

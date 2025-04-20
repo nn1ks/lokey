@@ -26,11 +26,15 @@
           probe-rs
           libusb1
           libusb1.dev
+          libclang
         ];
       in {
         # `nix develop`
         devShell = pkgs.mkShell {
           inherit buildInputs;
+          shellHook = ''
+            export LIBCLANG_PATH=${pkgs.libclang.lib}/lib
+          '';
         };
       }
     );

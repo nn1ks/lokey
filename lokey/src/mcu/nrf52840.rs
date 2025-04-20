@@ -1,19 +1,25 @@
-#[cfg(feature = "ble")]
-pub mod ble;
 pub mod pwm;
 #[cfg(feature = "usb")]
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
-use crate::DynContext;
-use crate::util::{info, unwrap};
+use crate::mcu::McuBle;
+use crate::util::unwrap;
+use crate::{Address, DynContext};
 use alloc::boxed::Box;
-use core::cell::UnsafeCell;
-use core::mem;
 use core::ops::Range;
 use embassy_executor::Spawner;
+use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
-use nrf_softdevice::{Flash, Softdevice, raw};
+use embassy_nrf::peripherals::RNG;
+use embassy_nrf::rng::Rng;
+use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
+use nrf_sdc::SoftdeviceController;
+use rand_chacha::ChaCha12Rng;
+use rand_chacha::rand_core::SeedableRng;
+use static_cell::StaticCell;
+use trouble_host::prelude::{AddrKind, BdAddr};
+use trouble_host::{HostResources, Stack};
 
 pub struct Config {
     pub storage_flash_range: Range<u32>,
@@ -29,83 +35,125 @@ impl Default for Config {
     }
 }
 
+bind_interrupts!(struct Irqs {
+    RNG => embassy_nrf::rng::InterruptHandler<RNG>;
+    EGU0_SWI0 => nrf_mpsl::LowPrioInterruptHandler;
+    CLOCK_POWER => nrf_mpsl::ClockInterruptHandler, embassy_nrf::usb::vbus_detect::InterruptHandler;
+    RADIO => nrf_mpsl::HighPrioInterruptHandler;
+    TIMER0 => nrf_mpsl::HighPrioInterruptHandler;
+    RTC0 => nrf_mpsl::HighPrioInterruptHandler;
+    USBD => embassy_nrf::usb::InterruptHandler<embassy_nrf::peripherals::USBD>;
+});
+
+fn build_sdc<'d, const N: usize>(
+    p: nrf_sdc::Peripherals<'d>,
+    rng: &'d mut Rng<RNG>,
+    mpsl: &'d MultiprotocolServiceLayer,
+    mem: &'d mut nrf_sdc::Mem<N>,
+) -> Result<SoftdeviceController<'d>, nrf_sdc::Error> {
+    // TODO
+    nrf_sdc::Builder::new()?
+        .support_adv()?
+        .support_scan()?
+        .support_central()?
+        .support_peripheral()?
+        .central_count(1)?
+        .peripheral_count(1)?
+        .buffer_cfg(72, 72, 3, 3)?
+        .build(p, rng, mpsl, mem)
+}
+
+fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
+    trouble_host::Address {
+        kind: AddrKind::RANDOM,
+        addr: BdAddr::new(address.0),
+    }
+}
+
 pub struct Nrf52840 {
-    softdevice: &'static UnsafeCell<Softdevice>,
-    storage: &'static Storage<Flash>,
+    storage: &'static Storage<Flash<'static>>,
+    mpsl: &'static MultiprotocolServiceLayer<'static>,
+    ble_stack: Stack<'static, SoftdeviceController<'static>>,
 }
 
 impl Mcu for Nrf52840 {}
 
+impl McuBle for Nrf52840 {
+    type Controller = SoftdeviceController<'static>;
+
+    fn ble_stack(&self) -> &trouble_host::Stack<'static, Self::Controller> {
+        &self.ble_stack
+    }
+}
+
 impl McuInit for Nrf52840 {
     type Config = Config;
 
-    fn create(config: Self::Config, _spawner: Spawner) -> Self {
+    fn create(config: Self::Config, address: Address, _spawner: Spawner) -> Self {
         let mut nrf_config = embassy_nrf::config::Config::default();
         nrf_config.gpiote_interrupt_priority = Priority::P2;
         nrf_config.time_interrupt_priority = Priority::P2;
-        embassy_nrf::init(nrf_config);
+        let p = embassy_nrf::init(nrf_config);
 
-        let nrf_config = nrf_softdevice::Config {
-            clock: Some(raw::nrf_clock_lf_cfg_t {
-                source: raw::NRF_CLOCK_LF_SRC_RC as u8,
-                rc_ctiv: 16,
-                rc_temp_ctiv: 2,
-                accuracy: raw::NRF_CLOCK_LF_ACCURACY_500_PPM as u8,
-            }),
-            conn_gap: Some(raw::ble_gap_conn_cfg_t {
-                conn_count: 6,
-                event_length: 24,
-            }),
-            conn_gatt: Some(raw::ble_gatt_conn_cfg_t { att_mtu: 256 }),
-            gatts_attr_tab_size: Some(raw::ble_gatts_cfg_attr_tab_size_t {
-                attr_tab_size: raw::BLE_GATTS_ATTR_TAB_SIZE_DEFAULT,
-            }),
-            gap_role_count: Some(raw::ble_gap_cfg_role_count_t {
-                adv_set_count: 1,
-                periph_role_count: 3,
-                central_role_count: 3,
-                central_sec_count: 0,
-                _bitfield_1: raw::ble_gap_cfg_role_count_t::new_bitfield_1(0),
-            }),
-            gap_device_name: config.ble_gap_device_name.map(|device_name| {
-                raw::ble_gap_cfg_device_name_t {
-                    p_value: device_name.as_ptr() as _,
-                    current_len: device_name.len() as u16,
-                    max_len: device_name.len() as u16,
-                    write_perm: unsafe { mem::zeroed() },
-                    _bitfield_1: raw::ble_gap_cfg_device_name_t::new_bitfield_1(
-                        raw::BLE_GATTS_VLOC_STACK as u8,
-                    ),
-                }
-            }),
-            ..Default::default()
+        let mpsl_p = nrf_mpsl::Peripherals::new(
+            p.RTC0, p.TIMER0, p.TEMP, p.PPI_CH19, p.PPI_CH30, p.PPI_CH31,
+        );
+        let lfclk_cfg = nrf_mpsl::raw::mpsl_clock_lfclk_cfg_t {
+            source: nrf_mpsl::raw::MPSL_CLOCK_LF_SRC_RC as u8,
+            rc_ctiv: nrf_mpsl::raw::MPSL_RECOMMENDED_RC_CTIV as u8,
+            rc_temp_ctiv: nrf_mpsl::raw::MPSL_RECOMMENDED_RC_TEMP_CTIV as u8,
+            accuracy_ppm: nrf_mpsl::raw::MPSL_DEFAULT_CLOCK_ACCURACY_PPM as u16,
+            skip_wait_lfclk_started: nrf_mpsl::raw::MPSL_DEFAULT_SKIP_WAIT_LFCLK_STARTED != 0,
         };
-        let softdevice = Softdevice::enable(&nrf_config);
-        info!("Finished nRF softdevice setup");
+        static SESSION_MEM: StaticCell<SessionMem<1>> = StaticCell::new();
+        static MPSL: StaticCell<MultiprotocolServiceLayer> = StaticCell::new();
+        let mpsl = MPSL.init(unwrap!(
+            nrf_mpsl::MultiprotocolServiceLayer::with_timeslots(
+                mpsl_p,
+                Irqs,
+                lfclk_cfg,
+                SESSION_MEM.init(SessionMem::new())
+            )
+        ));
 
-        let flash = Flash::take(softdevice);
+        let sdc_p = nrf_sdc::Peripherals::new(
+            p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
+            p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
+        );
+
+        static RNG_CELL: StaticCell<Rng<'static, RNG>> = StaticCell::new();
+        let mut rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
+        let mut rng2 = ChaCha12Rng::from_rng(&mut rng).unwrap();
+
+        static SDC_MEM: StaticCell<nrf_sdc::Mem<3848>> = StaticCell::new();
+        let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
+        let sdc = unwrap!(build_sdc(sdc_p, rng, mpsl, sdc_mem));
+
+        let flash = Flash::take(mpsl, p.NVMC);
         let storage = Storage::new(flash, config.storage_flash_range);
 
-        // SAFETY: UnsafeCell<T> has the same in-memory layout as T.
-        let softdevice = unsafe {
-            core::mem::transmute::<&'static mut Softdevice, &'static UnsafeCell<Softdevice>>(
-                softdevice,
-            )
-        };
+        static RESOURCES: StaticCell<HostResources<2, 2, 72>> = StaticCell::new();
+        let resources = RESOURCES.init(HostResources::new());
+        let ble_stack = trouble_host::new(sdc, resources)
+            .set_random_address(device_address_to_ble_address(&address))
+            .set_random_generator_seed(&mut rng2);
 
         Self {
-            softdevice,
             storage: Box::leak(Box::new(storage)),
+            mpsl,
+            ble_stack,
         }
     }
 
     fn run(&'static self, context: DynContext) {
-        unwrap!(context.spawner.spawn(softdevice_task(self)));
+        context.spawner.must_spawn(mpsl_task(self.mpsl));
     }
 }
 
-impl McuStorage<Flash> for Nrf52840 {
-    fn storage(&self) -> &'static Storage<Flash> {
+impl McuStorage for Nrf52840 {
+    type Flash = Flash<'static>;
+
+    fn storage(&self) -> &'static Storage<Flash<'static>> {
         self.storage
     }
 }
@@ -116,7 +164,6 @@ impl HeapSize for Nrf52840 {
 }
 
 #[embassy_executor::task]
-async fn softdevice_task(mcu: &'static Nrf52840) -> ! {
-    let softdevice: &'static Softdevice = unsafe { &*mcu.softdevice.get() };
-    softdevice.run().await
+async fn mpsl_task(mpsl: &'static MultiprotocolServiceLayer<'static>) -> ! {
+    mpsl.run().await
 }
