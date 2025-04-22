@@ -42,6 +42,7 @@ jobs:
             features: "defmt usb"
     steps:
     - uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
     - name: Build
       run: cargo build --verbose --target ${{ matrix.target }} --no-default-features --features "${{ matrix.features }} ${{ matrix.mcu_features }}"
     - name: Run clippy
@@ -58,6 +59,9 @@ jobs:
         example: [keyboard_nrf52840, keyboard_rp2040]
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/${{ matrix.example }}
       - name: Check formatting
         run: cargo fmt --verbose --check
         working-directory: examples/${{ matrix.example }}
