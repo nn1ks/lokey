@@ -12,7 +12,7 @@
 </div>
 
 <div align="center">
-Lokey is an extensible keyboard firmware written in Rust.
+Lokey is a firmware framework for input devices written in Rust.
 </div>
 
 ---
@@ -21,32 +21,6 @@ Lokey is an extensible keyboard firmware written in Rust.
 
 - nRF52840
 - RP2040
-
-Note that the Atmega32u4 microcontroller (commonly used in Pro Micro controllers) is not supported and also won't be supported in the future because this firmware requires more flash memory and RAM than the microcontroller has.
-
-#### Features
-
-- USB Connectivity
-- Bluetooth Low Energy (BLE)
-- Split Keyboard Support
-- Keymaps and Layers
-- Predefined key behaviours (Hold Tap, Sticky, Toggle, ...)
-- Custom key behaviours
-- Custom keyboard features
-
-See [issues tagged as enhancement](https://github.com/nn1ks/lokey/labels/enhancement) for planned and work-in-progress features.
-
-#### Comparison to [ZMK](https://zmk.dev) and [QMK](https://qmk.fm)
-
-The main benefit this firmware provides over ZMK and QMK is that it  is extensible, meaning you can
-
-- write custom key behaviours
-- implement custom keyboard features (e.g. status LEDs)
-- and add support for microcontrollers
-
-without having to fork the codebase.
-
-ZMK and QMK do however have a lot more features out of the box and are obviously more battle-tested than this firmware.
 
 ## Test
 
