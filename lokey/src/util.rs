@@ -1,9 +1,10 @@
 pub mod channel;
 pub mod pubsub;
 
-#[allow(unused)]
+#[macro_export]
+#[doc(hidden)]
 #[collapse_debuginfo(yes)]
-macro_rules! unwrap {
+macro_rules! __unwrap {
     ($($x:tt)*) => {{
         #[cfg(feature = "defmt")]
         { defmt::unwrap!($($x)*) }
@@ -12,9 +13,10 @@ macro_rules! unwrap {
     }}
 }
 
-#[allow(unused)]
+#[macro_export]
+#[doc(hidden)]
 #[collapse_debuginfo(yes)]
-macro_rules! panic {
+macro_rules! __panic {
     ($($x:tt)*) => {
         {
             #[cfg(feature = "defmt")]
@@ -25,9 +27,10 @@ macro_rules! panic {
     };
 }
 
-#[allow(unused)]
+#[macro_export]
+#[doc(hidden)]
 #[collapse_debuginfo(yes)]
-macro_rules! error {
+macro_rules! __error {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
             #[cfg(feature = "defmt")]
@@ -38,9 +41,10 @@ macro_rules! error {
     };
 }
 
-#[allow(unused)]
+#[macro_export]
+#[doc(hidden)]
 #[collapse_debuginfo(yes)]
-macro_rules! warn_ {
+macro_rules! __warn {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
             #[cfg(feature = "defmt")]
@@ -51,9 +55,10 @@ macro_rules! warn_ {
     };
 }
 
-#[allow(unused)]
+#[macro_export]
+#[doc(hidden)]
 #[collapse_debuginfo(yes)]
-macro_rules! info {
+macro_rules! __info {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
             #[cfg(feature = "defmt")]
@@ -64,9 +69,10 @@ macro_rules! info {
     };
 }
 
-#[allow(unused)]
+#[macro_export]
+#[doc(hidden)]
 #[collapse_debuginfo(yes)]
-macro_rules! debug {
+macro_rules! __debug {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
             #[cfg(feature = "defmt")]
@@ -77,5 +83,8 @@ macro_rules! debug {
     };
 }
 
-#[allow(unused)]
-pub(crate) use {debug, error, info, panic, unwrap, warn_ as warn};
+#[doc(inline)]
+pub use {
+    __debug as debug, __error as error, __info as info, __panic as panic, __unwrap as unwrap,
+    __warn as warn,
+};
