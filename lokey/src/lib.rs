@@ -3,12 +3,15 @@
 //! # Example
 //!
 //! ```no_run
-#![doc = include_str!("./doctest_setup")]
+#![doc = include_str!("../../doctest_setup")]
 //! # use core::unimplemented;
 //! # use lokey::mcu::DummyMcu;
-//! use lokey::{Address, ComponentSupport, Context, Device, State, StateContainer, Transports};
+//! use lokey::{
+//!     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
+//!     external
+//! };
+//! use lokey::external::Messages0;
 //! use lokey::layer::LayerManager;
-//! use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Keys};
 //!
 //! struct Keyboard;
 //!
@@ -20,10 +23,14 @@
 //!     }
 //! }
 //!
+//! struct ExampleComponent;
+//!
+//! impl lokey::Component for ExampleComponent {}
+//!
 //! // Adds support for the Keys component
-//! impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, 8>, S> for Keyboard {
+//! impl<S: StateContainer> ComponentSupport<ExampleComponent, S> for Keyboard {
 //!     async fn enable<T: Transports<DummyMcu>>(
-//!         component: Keys<DirectPinsConfig, 8>,
+//!         component: ExampleComponent,
 //!         context: Context<Self, T, S>,
 //!     ) {
 //!         # unimplemented!()
@@ -34,14 +41,13 @@
 //! struct Central;
 //!
 //! impl Transports<DummyMcu> for Central {
-//!     type ExternalMessages = lokey::external::Messages0;
-//!     type ExternalTransportConfig = lokey::external::empty::TransportConfig;
-//!     type InternalTransportConfig = lokey::internal::empty::TransportConfig;
-//!     fn external_transport_config() -> Self::ExternalTransportConfig {
+//!     type ExternalTransport = external::empty::Transport<DummyMcu, Messages0>;
+//!     type InternalTransport = internal::empty::Transport<DummyMcu>;
+//!     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
 //!         # unimplemented!()
 //!         // ...
 //!     }
-//!     fn internal_transport_config() -> Self::InternalTransportConfig {
+//!     fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
 //!         # unimplemented!()
 //!         // ...
 //!     }
@@ -55,7 +61,7 @@
 //! #[lokey::device]
 //! async fn main(context: Context<Keyboard, Central, DefaultState>) {
 //!     // The component can then be enabled with the Context type
-//!     context.enable(Keys::new()).await;
+//!     context.enable(ExampleComponent).await;
 //! }
 //! ```
 

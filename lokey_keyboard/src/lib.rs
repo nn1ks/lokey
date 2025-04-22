@@ -39,10 +39,10 @@ use lokey::{Component, DynContext, external, internal};
 /// # Example
 ///
 /// ```no_run
-// #[doc = include_str!("./doctest_setup_with_allocator")] // TODO
-/// use lokey::keyboard::action::{HoldTap, KeyCode, Layer};
-/// use lokey::keyboard::{layout, Key};
+#[doc = include_str!("../../doctest_setup_with_allocator")]
 /// use lokey::layer::LayerId;
+/// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
+/// use lokey_keyboard::{Key, layout};
 ///
 /// # fn function() {
 /// let layout = layout!(
@@ -64,8 +64,8 @@ use lokey::{Component, DynContext, external, internal};
 /// // The layout built with the macro is equivalent to this layout:
 ///
 /// use alloc::boxed::Box;
-/// use lokey::keyboard::{action::PerLayer, DynAction, Layout};
 /// use lokey::layer::LayerId;
+/// use lokey_keyboard::{action::PerLayer, DynAction, Layout};
 ///
 /// let layout = Box::leak(Box::new(Layout::new([
 ///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([
