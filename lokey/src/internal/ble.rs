@@ -9,7 +9,6 @@ use core::mem::transmute;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_executor::Spawner;
-use embassy_executor::raw::TaskStorage;
 use embassy_futures::join::join;
 use embassy_futures::select::{select, select3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -86,10 +85,35 @@ static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
 static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
 static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
 
-#[non_exhaustive]
-pub struct Transport {}
+pub struct Transport<M: 'static> {
+    config: TransportConfig,
+    mcu: &'static M,
+}
 
-impl internal::Transport for Transport {
+impl<M: Mcu + McuBle> internal::Transport for Transport<M> {
+    type Config = TransportConfig;
+    type Mcu = M;
+
+    async fn create(
+        config: Self::Config,
+        mcu: &'static Self::Mcu,
+        _address: Address,
+        _spawner: Spawner,
+    ) -> Self {
+        Self { config, mcu }
+    }
+
+    async fn run(&self) {
+        match self.config {
+            TransportConfig::Central {
+                peripheral_addresses,
+            } => central(self.mcu, peripheral_addresses).await,
+            TransportConfig::Peripheral { central_address } => {
+                peripheral(self.mcu, central_address).await
+            }
+        }
+    }
+
     fn send(&self, message_bytes: &[u8]) {
         if IS_CONNECTED.load(Ordering::Acquire) {
             SEND_CHANNEL.send(Message(Vec::from(message_bytes)));
@@ -98,28 +122,6 @@ impl internal::Transport for Transport {
 
     fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {
         Box::pin(async { RECV_CHANNEL.receive().await.0 })
-    }
-}
-
-impl<M: Mcu + McuBle> internal::TransportConfig<M> for internal::ble::TransportConfig {
-    type Transport = Transport;
-
-    async fn init(self, mcu: &'static M, _address: Address, spawner: Spawner) -> Self::Transport {
-        match self {
-            Self::Central {
-                peripheral_addresses,
-            } => {
-                let task_storage = Box::leak(Box::new(TaskStorage::new()));
-                let task = task_storage.spawn(move || central(mcu, peripheral_addresses));
-                unwrap!(spawner.spawn(task));
-            }
-            Self::Peripheral { central_address } => {
-                let task_storage = Box::leak(Box::new(TaskStorage::new()));
-                let task = task_storage.spawn(move || peripheral(mcu, central_address));
-                unwrap!(spawner.spawn(task))
-            }
-        }
-        Transport {}
     }
 }
 

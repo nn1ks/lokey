@@ -10,13 +10,11 @@ use alloc::vec::Vec;
 pub use channel::{Channel, DynChannel, Receiver};
 use core::any::Any;
 use core::future::Future;
+use core::mem::transmute;
 use core::pin::Pin;
 use embassy_executor::Spawner;
 
-pub type DeviceTransport<D, T> =
-    <<T as Transports<<D as Device>::Mcu>>::InternalTransportConfig as TransportConfig<
-        <D as Device>::Mcu,
-    >>::Transport;
+pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::InternalTransport;
 
 pub trait Message: Send + 'static {
     type Bytes: for<'a> TryFrom<&'a [u8]> + Into<Vec<u8>>;
@@ -30,17 +28,53 @@ pub trait Message: Send + 'static {
     fn to_bytes(&self) -> Self::Bytes;
 }
 
-pub trait TransportConfig<M: Mcu> {
-    type Transport: Transport;
-    fn init(
-        self,
-        mcu: &'static M,
+pub trait Transport: Any {
+    type Config;
+    type Mcu: Mcu;
+
+    fn create(
+        config: Self::Config,
+        mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
-    ) -> impl Future<Output = Self::Transport>;
+    ) -> impl Future<Output = Self>;
+
+    fn run(&self) -> impl Future<Output = ()>;
+
+    fn send(&self, message_bytes: &[u8]);
+
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>>;
 }
 
-pub trait Transport: Any {
+trait DynTransportTrait: Any {
     fn send(&self, message_bytes: &[u8]);
     fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>>;
+}
+
+impl<T: Transport> DynTransportTrait for T {
+    fn send(&self, message_bytes: &[u8]) {
+        Transport::send(self, message_bytes)
+    }
+
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {
+        Transport::receive(self)
+    }
+}
+
+#[repr(transparent)]
+pub struct DynTransport(dyn DynTransportTrait);
+
+impl DynTransport {
+    pub const fn from_ref<T: Transport>(value: &T) -> &Self {
+        let value: &dyn DynTransportTrait = value;
+        unsafe { transmute(value) }
+    }
+
+    pub fn send(&self, message_bytes: &[u8]) {
+        self.0.send(message_bytes)
+    }
+
+    pub fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {
+        self.0.receive()
+    }
 }

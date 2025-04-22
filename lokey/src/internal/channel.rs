@@ -1,9 +1,9 @@
-use super::{Message, Transport};
+use super::{DynTransport, Message, Transport};
+use crate::util::error;
 use crate::util::pubsub::{PubSubChannel, Subscriber};
-use crate::util::{error, unwrap};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use embassy_executor::Spawner;
+use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
 // TODO: Optimization:
@@ -12,7 +12,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
 static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Vec<u8>> = PubSubChannel::new();
 
-pub type DynChannel = Channel<dyn Transport>;
+pub type DynChannel = Channel<DynTransport>;
 
 pub struct Channel<T: ?Sized + 'static> {
     inner: &'static T,
@@ -22,18 +22,18 @@ impl<T: Transport> Channel<T> {
     /// Creates a new internal channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
-    pub fn new(inner: &'static T, spawner: Spawner) -> Self {
-        #[embassy_executor::task]
-        async fn task(inner: &'static dyn Transport) {
+    pub fn new(inner: &'static T) -> Self {
+        Self { inner }
+    }
+
+    pub async fn run(&self) {
+        let handle_messages = async {
             loop {
-                let message_bytes = inner.receive().await;
+                let message_bytes = self.inner.receive().await;
                 INNER_CHANNEL.publish(message_bytes);
             }
-        }
-
-        unwrap!(spawner.spawn(task(inner)));
-
-        Self { inner }
+        };
+        join(handle_messages, self.inner.run()).await;
     }
 
     /// Converts this channel into a dynamic one.
@@ -41,17 +41,13 @@ impl<T: Transport> Channel<T> {
     /// This can be useful if you want to pass the channel to an embassy task as they can't be
     /// generic.
     pub fn as_dyn(&self) -> DynChannel {
-        Channel { inner: self.inner }
+        Channel {
+            inner: DynTransport::from_ref(self.inner),
+        }
     }
-}
 
-impl<T: Transport + ?Sized> Channel<T> {
     pub fn send<M: Message>(&self, message: M) {
-        let message_tag = M::TAG;
-        let message_bytes: Vec<u8> = message.to_bytes().into();
-        let mut bytes = Vec::with_capacity(message_tag.len() + message_bytes.len());
-        bytes.extend(message_tag);
-        bytes.extend(message_bytes);
+        let bytes = build_message_bytes(message);
         self.inner.send(&bytes);
         INNER_CHANNEL.publish(bytes);
     }
@@ -62,6 +58,30 @@ impl<T: Transport + ?Sized> Channel<T> {
             _phantom: PhantomData,
         }
     }
+}
+
+impl Channel<DynTransport> {
+    pub fn send<M: Message>(&self, message: M) {
+        let bytes = build_message_bytes(message);
+        self.inner.send(&bytes);
+        INNER_CHANNEL.publish(bytes);
+    }
+
+    pub fn receiver<M: Message>(&self) -> Receiver<M> {
+        Receiver {
+            subscriber: INNER_CHANNEL.subscriber(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+fn build_message_bytes<M: Message>(message: M) -> Vec<u8> {
+    let message_tag = M::TAG;
+    let message_bytes: Vec<u8> = message.to_bytes().into();
+    let mut bytes = Vec::with_capacity(message_tag.len() + message_bytes.len());
+    bytes.extend(message_tag);
+    bytes.extend(message_bytes);
+    bytes
 }
 
 impl<T: ?Sized> Clone for Channel<T> {
