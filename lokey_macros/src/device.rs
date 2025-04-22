@@ -136,7 +136,8 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 mcu_config,
                 address,
                 spawner
-            );
+            )
+            .await;
             let mcu = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(mcu));
 
             // Create channels
@@ -178,7 +179,11 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 state,
             };
 
-            ::lokey::mcu::McuInit::run(mcu, context.as_dyn());
+            #[::lokey::embassy_executor::task]
+            async fn __run_mcu(mcu: &'static <#device_type_path as ::lokey::Device>::Mcu, context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>) {
+                ::lokey::mcu::McuInit::run(mcu, context).await;
+            }
+            spawner.must_spawn(__run_mcu(mcu, context));
 
             #[::lokey::embassy_executor::task]
             async fn __run_internal_channel(channel: ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>) {

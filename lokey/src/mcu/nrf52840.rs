@@ -5,7 +5,7 @@ mod usb;
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
 use crate::mcu::McuBle;
 use crate::util::unwrap;
-use crate::{Address, DynContext};
+use crate::{Address, Context, Device, StateContainer, Transports};
 use alloc::boxed::Box;
 use core::ops::Range;
 use embassy_executor::Spawner;
@@ -89,7 +89,7 @@ impl McuBle for Nrf52840 {
 impl McuInit for Nrf52840 {
     type Config = Config;
 
-    fn create(config: Self::Config, address: Address, _spawner: Spawner) -> Self {
+    async fn create(config: Self::Config, address: Address, _spawner: Spawner) -> Self {
         let mut nrf_config = embassy_nrf::config::Config::default();
         nrf_config.gpiote_interrupt_priority = Priority::P2;
         nrf_config.time_interrupt_priority = Priority::P2;
@@ -145,8 +145,13 @@ impl McuInit for Nrf52840 {
         }
     }
 
-    fn run(&'static self, context: DynContext) {
-        context.spawner.must_spawn(mpsl_task(self.mpsl));
+    async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
+    where
+        D: Device<Mcu = Self>,
+        T: Transports<Self>,
+        S: StateContainer,
+    {
+        self.mpsl.run().await
     }
 }
 
@@ -161,9 +166,4 @@ impl McuStorage for Nrf52840 {
 impl HeapSize for Nrf52840 {
     // The nRF52840 has 256kB of RAM
     const DEFAULT_HEAP_SIZE: usize = 64 * 1024; // 64kB
-}
-
-#[embassy_executor::task]
-async fn mpsl_task(mpsl: &'static MultiprotocolServiceLayer<'static>) -> ! {
-    mpsl.run().await
 }

@@ -5,7 +5,7 @@ pub mod pwm;
 pub mod rp2040;
 pub mod storage;
 
-use crate::{Address, DynContext};
+use crate::{Address, Context, Device, StateContainer, Transports};
 use core::any::Any;
 use embassy_executor::Spawner;
 use embedded_storage_async::nor_flash::MultiwriteNorFlash;
@@ -24,14 +24,23 @@ pub trait McuInit: Mcu {
     /// Creates the MCU.
     ///
     /// This function must be called only once for a MCU type.
-    fn create(config: Self::Config, address: Address, spawner: Spawner) -> Self
+    fn create(
+        config: Self::Config,
+        address: Address,
+        spawner: Spawner,
+    ) -> impl Future<Output = Self>
     where
         Self: Sized;
 
     /// Runs MCU specific tasks.
     ///
     /// This function must be called only once for a MCU type.
-    fn run(&'static self, context: DynContext);
+    fn run<D, T, S>(&'static self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    where
+        D: Device<Mcu = Self>,
+        T: Transports<Self>,
+        S: StateContainer,
+        Self: Sized;
 }
 
 pub trait McuStorage {
@@ -63,11 +72,17 @@ mod dummy {
     impl McuInit for DummyMcu {
         type Config = ();
 
-        fn create(_config: Self::Config, _address: Address, _spawner: Spawner) -> Self {
+        async fn create(_config: Self::Config, _address: Address, _spawner: Spawner) -> Self {
             Self
         }
 
-        fn run(&'static self, _context: DynContext) {}
+        async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
+        where
+            D: Device<Mcu = Self>,
+            T: Transports<Self>,
+            S: StateContainer,
+        {
+        }
     }
 
     impl HeapSize for DummyMcu {
