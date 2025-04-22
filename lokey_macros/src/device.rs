@@ -104,7 +104,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             fn __modify_external_transport_config(
-                __config: &mut <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::ExternalTransportConfig
+                __config: &mut <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::Config
             ) {
                 #modify_external_transport_config
             }
@@ -152,13 +152,14 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             let external_channel = {
-                let transport = ::lokey::external::TransportConfig::init(
+                let transport = <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::create(
                     external_transport_config,
                     mcu,
                     address,
                     spawner,
                     internal_channel.as_dyn()
-                ).await;
+                )
+                .await;
                 let transport = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(transport));
                 ::lokey::external::Channel::new(transport)
             };
@@ -177,6 +178,13 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             ::lokey::mcu::McuInit::run(mcu, context.as_dyn());
+
+            #[::lokey::embassy_executor::task]
+            async fn __run_external_channel(channel: ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>) {
+                channel.run().await;
+            }
+
+            spawner.must_spawn(__run_external_channel(external_channel));
 
             #function
 

@@ -22,11 +22,7 @@ use embassy_executor::Spawner;
 pub use r#override::{MessageSender, Override};
 use seq_macro::seq;
 
-pub type DeviceTransport<D, T> =
-    <<T as Transports<<D as Device>::Mcu>>::ExternalTransportConfig as TransportConfig<
-        <D as Device>::Mcu,
-        <T as Transports<<D as Device>::Mcu>>::ExternalMessages,
-    >>::Transport;
+pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::ExternalTransport;
 
 pub trait Messages: Sized + 'static {
     fn downcast(message: Box<dyn Message>) -> Option<Self>;
@@ -72,19 +68,20 @@ pub trait Message: Any + DynClone + Send + Sync {}
 
 dyn_clone::clone_trait_object!(Message);
 
-pub trait TransportConfig<M: Mcu, T: Messages> {
-    type Transport: Transport<Messages = T>;
-    fn init(
-        self,
-        mcu: &'static M,
+pub trait Transport: Any {
+    type Config;
+    type Mcu: Mcu;
+    type Messages: Messages;
+
+    fn create(
+        config: Self::Config,
+        mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
-    ) -> impl Future<Output = Self::Transport>;
-}
+    ) -> impl Future<Output = Self>;
 
-pub trait Transport: Any {
-    type Messages: Messages;
+    fn run(&self) -> impl Future<Output = ()>;
 
     fn send(&self, message: Self::Messages);
 
@@ -123,7 +120,7 @@ trait DynTransportTrait: Any {
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
 }
 
-impl<T: Transport<Messages = M>, M: Messages> DynTransportTrait for T {
+impl<T: Transport> DynTransportTrait for T {
     fn try_send(&self, message: Box<dyn Message>) -> bool {
         Transport::try_send(self, message)
     }

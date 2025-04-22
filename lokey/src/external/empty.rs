@@ -6,28 +6,28 @@ use embassy_executor::Spawner;
 
 pub struct TransportConfig;
 
-impl<M: Mcu, T: Messages> external::TransportConfig<M, T> for TransportConfig {
-    type Transport = Transport<T>;
+pub struct Transport<M, T> {
+    phantom: PhantomData<(M, T)>,
+}
 
-    async fn init(
-        self,
-        _: &'static M,
+impl<M: Mcu, T: Messages> external::Transport for Transport<M, T> {
+    type Config = TransportConfig;
+    type Mcu = M;
+    type Messages = T;
+
+    async fn create(
+        _: Self::Config,
+        _: &'static Self::Mcu,
         _: Address,
         _: Spawner,
         _: internal::DynChannel,
-    ) -> Self::Transport {
-        Transport {
+    ) -> Self {
+        Self {
             phantom: PhantomData,
         }
     }
-}
 
-pub struct Transport<M> {
-    phantom: PhantomData<M>,
-}
+    async fn run(&self) {}
 
-impl<M: Messages> external::Transport for Transport<M> {
-    type Messages = M;
-
-    fn send(&self, _: M) {}
+    fn send(&self, _: T) {}
 }

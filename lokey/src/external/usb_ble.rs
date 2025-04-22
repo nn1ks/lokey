@@ -1,17 +1,17 @@
-use super::Messages;
+use super::{Messages, ble, usb};
 use crate::mcu::Mcu;
-use crate::util::{error, info, unwrap};
+use crate::util::{error, info};
 use crate::{Address, external, internal};
 use alloc::boxed::Box;
 use core::cell::Cell;
 use core::future::Future;
 use core::pin::Pin;
 use embassy_executor::Spawner;
+use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-use portable_atomic_util::Arc;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -55,19 +55,102 @@ impl internal::Message for Message {
 }
 
 pub struct Transport<Usb, Ble> {
-    usb_transport: Arc<Usb>,
-    ble_transport: Arc<Ble>,
-    active: Arc<Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>>,
-    activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
+    usb_transport: Usb,
+    ble_transport: Ble,
+    active: Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>,
+    activation_request: Signal<CriticalSectionRawMutex, ()>,
     deactivate_unused_transport: bool,
+    internal_channel: internal::DynChannel,
 }
 
-impl<Usb: external::Transport<Messages = M>, Ble: external::Transport<Messages = M>, M: Messages>
-    external::Transport for Transport<Usb, Ble>
+impl<Usb, Ble, M, T> external::Transport for Transport<Usb, Ble>
+where
+    Usb: external::Transport<Config = usb::TransportConfig, Mcu = M, Messages = T>,
+    Ble: external::Transport<Config = ble::TransportConfig, Mcu = M, Messages = T>,
+    M: Mcu,
+    T: Messages,
 {
-    type Messages = M;
+    type Config = TransportConfig;
+    type Mcu = M;
+    type Messages = T;
 
-    fn send(&self, message: M) {
+    async fn create(
+        config: Self::Config,
+        mcu: &'static Self::Mcu,
+        address: Address,
+        spawner: Spawner,
+        internal_channel: internal::DynChannel,
+    ) -> Self {
+        let usb_transport = Usb::create(
+            config.to_usb_config(),
+            mcu,
+            address,
+            spawner,
+            internal_channel,
+        )
+        .await;
+        let ble_transport = Ble::create(
+            config.to_ble_config(),
+            mcu,
+            address,
+            spawner,
+            internal_channel,
+        )
+        .await;
+
+        let active = Mutex::new(Cell::new(TransportSelection::Ble));
+        let activation_request = Signal::new();
+
+        Transport {
+            usb_transport,
+            ble_transport,
+            active,
+            activation_request,
+            deactivate_unused_transport: config.deactivate_unused_transport,
+            internal_channel,
+        }
+    }
+
+    async fn run(&self) {
+        let handle_activation_request = async {
+            loop {
+                let future1 = self.usb_transport.wait_for_activation_request();
+                let future2 = self.ble_transport.wait_for_activation_request();
+                let transport_selection = match select(future1, future2).await {
+                    Either::First(()) => TransportSelection::Usb,
+                    Either::Second(()) => TransportSelection::Ble,
+                };
+                info!("Setting active transport to {}", transport_selection);
+                let previous_transport_selection =
+                    self.active.lock(|v| v.replace(transport_selection));
+                if self.deactivate_unused_transport
+                    && previous_transport_selection != transport_selection
+                {
+                    self.usb_transport
+                        .set_active(transport_selection == TransportSelection::Usb);
+                    self.usb_transport
+                        .set_active(transport_selection == TransportSelection::Ble);
+                }
+                self.activation_request.signal(());
+            }
+        };
+
+        let handle_internal_messages = async {
+            let mut receiver = self.internal_channel.receiver::<Message>();
+            loop {
+                let message = receiver.next().await;
+                match message {
+                    Message::SetActive(channel_selection) => {
+                        self.active.lock(|v| v.replace(channel_selection));
+                    }
+                }
+            }
+        };
+
+        join(handle_activation_request, handle_internal_messages).await;
+    }
+
+    fn send(&self, message: T) {
         self.active.lock(|selection| match selection.get() {
             TransportSelection::Usb => self.usb_transport.send(message),
             TransportSelection::Ble => self.ble_transport.send(message),
@@ -156,118 +239,6 @@ impl TransportConfig {
             model_number: self.model_number,
             serial_number: self.serial_number,
             num_profiles: self.num_ble_profiles,
-        }
-    }
-}
-
-impl<M: Mcu, T: Messages> external::TransportConfig<M, T> for TransportConfig
-where
-    external::usb::TransportConfig: external::TransportConfig<M, T>,
-    external::ble::TransportConfig: external::TransportConfig<M, T>,
-{
-    type Transport = Transport<
-        <external::usb::TransportConfig as external::TransportConfig<M, T>>::Transport,
-        <external::ble::TransportConfig as external::TransportConfig<M, T>>::Transport,
-    >;
-
-    async fn init(
-        self,
-        mcu: &'static M,
-        address: Address,
-        spawner: Spawner,
-        internal_channel: internal::DynChannel,
-    ) -> Self::Transport {
-        let usb_transport = Arc::new(
-            self.to_usb_config()
-                .init(mcu, address, spawner, internal_channel)
-                .await,
-        );
-        let ble_transport = Arc::new(
-            self.to_ble_config()
-                .init(mcu, address, spawner, internal_channel)
-                .await,
-        );
-
-        let active = Arc::new(Mutex::new(Cell::new(TransportSelection::Ble)));
-        let activation_request = Arc::new(Signal::new());
-
-        let usb_transport_clone = {
-            let arc = Arc::clone(&usb_transport);
-            let ptr: *const _ = Arc::into_raw(arc);
-            let ptr: *const dyn external::DynTransportTrait = ptr;
-            let ptr: *const external::DynTransport = unsafe { core::mem::transmute(ptr) };
-            unsafe { Arc::from_raw(ptr) }
-        };
-        let ble_transport_clone = {
-            let arc = Arc::clone(&ble_transport);
-            let ptr: *const _ = Arc::into_raw(arc);
-            let ptr: *const dyn external::DynTransportTrait = ptr;
-            let ptr: *const external::DynTransport = unsafe { core::mem::transmute(ptr) };
-            unsafe { Arc::from_raw(ptr) }
-        };
-
-        unwrap!(spawner.spawn(handle_activation_request(
-            usb_transport_clone,
-            ble_transport_clone,
-            Arc::clone(&active),
-            Arc::clone(&activation_request),
-            self.deactivate_unused_transport,
-        )));
-
-        #[embassy_executor::task]
-        async fn handle_activation_request(
-            usb_transport: Arc<external::DynTransport>,
-            ble_transport: Arc<external::DynTransport>,
-            active: Arc<Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>>,
-            activation_request: Arc<Signal<CriticalSectionRawMutex, ()>>,
-            deactivate_unused_transport: bool,
-        ) {
-            loop {
-                let future1 = usb_transport.wait_for_activation_request();
-                let future2 = ble_transport.wait_for_activation_request();
-                let transport_selection = match select(future1, future2).await {
-                    Either::First(()) => TransportSelection::Usb,
-                    Either::Second(()) => TransportSelection::Ble,
-                };
-                info!("Setting active transport to {}", transport_selection);
-                let previous_transport_selection = active.lock(|v| v.replace(transport_selection));
-                if deactivate_unused_transport
-                    && previous_transport_selection != transport_selection
-                {
-                    usb_transport.set_active(transport_selection == TransportSelection::Usb);
-                    usb_transport.set_active(transport_selection == TransportSelection::Ble);
-                }
-                activation_request.signal(());
-            }
-        }
-
-        unwrap!(spawner.spawn(handle_internal_message(
-            internal_channel,
-            Arc::clone(&active)
-        )));
-
-        #[embassy_executor::task]
-        async fn handle_internal_message(
-            internal_channel: internal::DynChannel,
-            active: Arc<Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>>,
-        ) {
-            let mut receiver = internal_channel.receiver::<Message>();
-            loop {
-                let message = receiver.next().await;
-                match message {
-                    Message::SetActive(channel_selection) => {
-                        active.lock(|v| v.replace(channel_selection));
-                    }
-                }
-            }
-        }
-
-        Transport {
-            usb_transport,
-            ble_transport,
-            active,
-            activation_request,
-            deactivate_unused_transport: self.deactivate_unused_transport,
         }
     }
 }

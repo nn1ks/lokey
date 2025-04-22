@@ -1,11 +1,10 @@
-use super::Messages;
-use crate::mcu::Mcu;
-use crate::util::{debug, unwrap};
+use crate::util::debug;
 use crate::{Address, external, internal};
 use alloc::boxed::Box;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_executor::Spawner;
+use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use portable_atomic::AtomicBool;
@@ -88,52 +87,46 @@ impl<T> TransportConfig<T> {
     }
 }
 
-impl<T: external::TransportConfig<M, U>, M: Mcu, U: Messages> external::TransportConfig<M, U>
-    for TransportConfig<T>
-{
-    type Transport = Transport<T::Transport>;
+pub struct Transport<T> {
+    transport: T,
+    ignore_activation_request: bool,
+    address: Address,
+    internal_channel: internal::DynChannel,
+}
 
-    async fn init(
-        self,
-        mcu: &'static M,
+impl<T: external::Transport<Messages = M>, M: external::Messages> external::Transport
+    for Transport<T>
+{
+    type Config = TransportConfig<T::Config>;
+    type Mcu = T::Mcu;
+    type Messages = M;
+
+    async fn create(
+        config: Self::Config,
+        mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
-    ) -> Self::Transport {
-        let transport = Box::leak(Box::new(
-            T::init(self.transport, mcu, address, spawner, internal_channel).await,
-        ));
-        ACTIVE.store(self.active, Ordering::Release);
-        external::Transport::set_active(transport, self.active);
+    ) -> Self {
+        let transport = T::create(config.transport, mcu, address, spawner, internal_channel).await;
+        ACTIVE.store(config.active, Ordering::Release);
+        transport.set_active(config.active);
 
-        if !self.ignore_activation_request {
-            #[embassy_executor::task]
-            async fn handle_activation_request(transport: &'static external::DynTransport) {
-                loop {
-                    transport.wait_for_activation_request().await;
-                    ACTIVE.store(true, Ordering::Release);
-                    transport.set_active(true);
-                    ACTIVATION_REQUEST.signal(());
-                }
-            }
-            unwrap!(
-                spawner.spawn(handle_activation_request(external::DynTransport::from_ref(
-                    transport
-                )))
-            );
+        Transport {
+            transport,
+            ignore_activation_request: config.ignore_activation_request,
+            address,
+            internal_channel,
         }
+    }
 
-        #[embassy_executor::task]
-        async fn handle_internal_messages(
-            address: Address,
-            internal_channel: internal::DynChannel,
-            transport: &'static external::DynTransport,
-        ) {
-            let mut receiver = internal_channel.receiver::<Message>();
+    async fn run(&self) {
+        let handle_internal_messages = async {
+            let mut receiver = self.internal_channel.receiver::<Message>();
             loop {
                 let message = receiver.next().await;
                 debug!("Received toggle message: {:?}", message);
-                if message.address() != &address {
+                if message.address() != &self.address {
                     continue;
                 }
                 let is_activated = match message {
@@ -147,25 +140,24 @@ impl<T: external::TransportConfig<M, U>, M: Mcu, U: Messages> external::Transpor
                     }
                     Message::Toggle(_) => !ACTIVE.fetch_not(Ordering::AcqRel),
                 };
-                transport.set_active(is_activated);
+                self.transport.set_active(is_activated);
             }
+        };
+
+        if self.ignore_activation_request {
+            handle_internal_messages.await;
+        } else {
+            let handle_activation_request = async {
+                loop {
+                    self.transport.wait_for_activation_request().await;
+                    ACTIVE.store(true, Ordering::Release);
+                    self.transport.set_active(true);
+                    ACTIVATION_REQUEST.signal(());
+                }
+            };
+            join(handle_internal_messages, handle_activation_request).await;
         }
-        unwrap!(spawner.spawn(handle_internal_messages(
-            address,
-            internal_channel,
-            external::DynTransport::from_ref(transport)
-        )));
-
-        Transport { transport }
     }
-}
-
-pub struct Transport<T: 'static> {
-    transport: &'static T,
-}
-
-impl<T: external::Transport<Messages = M>, M: Messages> external::Transport for Transport<T> {
-    type Messages = M;
 
     fn send(&self, message: M) {
         if ACTIVE.load(Ordering::Acquire) {

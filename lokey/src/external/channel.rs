@@ -18,7 +18,7 @@ pub struct Channel<T: ?Sized + 'static> {
     overrides: &'static Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
 }
 
-impl<T: Transport<Messages = M>, M: Messages + 'static> Channel<T> {
+impl<T: Transport> Channel<T> {
     /// Creates a new external channel.
     ///
     /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
@@ -27,6 +27,10 @@ impl<T: Transport<Messages = M>, M: Messages + 'static> Channel<T> {
             inner,
             overrides: Box::leak(Box::new(Mutex::new(RefCell::new(Vec::new())))),
         }
+    }
+
+    pub async fn run(&self) {
+        self.inner.run().await;
     }
 
     /// Converts this channel into a dynamic one.
@@ -45,7 +49,7 @@ impl<T: Transport<Messages = M>, M: Messages + 'static> Channel<T> {
             .lock(|v| v.borrow_mut().push(Box::new(message_override)));
     }
 
-    pub fn send(&self, message: M) {
+    pub fn send(&self, message: T::Messages) {
         self.try_send_dyn(message.upcast());
     }
 
