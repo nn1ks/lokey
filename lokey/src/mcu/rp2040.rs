@@ -3,7 +3,6 @@ pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
 use crate::{Address, Context, Device, StateContainer, Transports};
-use alloc::boxed::Box;
 use core::ops::Range;
 use embassy_executor::Spawner;
 use embassy_rp::flash;
@@ -24,7 +23,7 @@ impl Default for Config {
 pub type Flash = flash::Flash<'static, FLASH, flash::Async, 0x200000>;
 
 pub struct Rp2040 {
-    storage: &'static Storage<Flash>,
+    storage: Storage<Flash>,
 }
 
 impl Mcu for Rp2040 {}
@@ -37,9 +36,7 @@ impl McuInit for Rp2040 {
         embassy_rp::init(rp_config);
         let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() });
         let storage = Storage::new(flash, config.storage_flash_range);
-        Self {
-            storage: Box::leak(Box::new(storage)),
-        }
+        Self { storage }
     }
 
     async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
@@ -54,8 +51,8 @@ impl McuInit for Rp2040 {
 impl McuStorage for Rp2040 {
     type Flash = Flash;
 
-    fn storage(&self) -> &'static Storage<Flash> {
-        self.storage
+    fn storage(&self) -> &Storage<Flash> {
+        &self.storage
     }
 }
 

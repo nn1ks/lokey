@@ -45,7 +45,7 @@ pub trait McuInit: Mcu {
 
 pub trait McuStorage {
     type Flash: MultiwriteNorFlash;
-    fn storage(&self) -> &'static Storage<Self::Flash>;
+    fn storage(&self) -> &Storage<Self::Flash>;
 }
 
 pub trait HeapSize {

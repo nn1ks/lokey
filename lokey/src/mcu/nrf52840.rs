@@ -6,7 +6,6 @@ use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
 use crate::mcu::McuBle;
 use crate::util::unwrap;
 use crate::{Address, Context, Device, StateContainer, Transports};
-use alloc::boxed::Box;
 use core::ops::Range;
 use embassy_executor::Spawner;
 use embassy_nrf::bind_interrupts;
@@ -71,7 +70,7 @@ fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
 }
 
 pub struct Nrf52840 {
-    storage: &'static Storage<Flash<'static>>,
+    storage: Storage<Flash<'static>>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
     ble_stack: Stack<'static, SoftdeviceController<'static>>,
 }
@@ -116,6 +115,9 @@ impl McuInit for Nrf52840 {
             )
         ));
 
+        let flash = Flash::take(mpsl, p.NVMC);
+        let storage = Storage::new(flash, config.storage_flash_range);
+
         let sdc_p = nrf_sdc::Peripherals::new(
             p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
             p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
@@ -129,9 +131,6 @@ impl McuInit for Nrf52840 {
         let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
         let sdc = unwrap!(build_sdc(sdc_p, rng, mpsl, sdc_mem));
 
-        let flash = Flash::take(mpsl, p.NVMC);
-        let storage = Storage::new(flash, config.storage_flash_range);
-
         static RESOURCES: StaticCell<HostResources<2, 2, 72>> = StaticCell::new();
         let resources = RESOURCES.init(HostResources::new());
         let ble_stack = trouble_host::new(sdc, resources)
@@ -139,7 +138,7 @@ impl McuInit for Nrf52840 {
             .set_random_generator_seed(&mut rng2);
 
         Self {
-            storage: Box::leak(Box::new(storage)),
+            storage,
             mpsl,
             ble_stack,
         }
@@ -158,8 +157,8 @@ impl McuInit for Nrf52840 {
 impl McuStorage for Nrf52840 {
     type Flash = Flash<'static>;
 
-    fn storage(&self) -> &'static Storage<Flash<'static>> {
-        self.storage
+    fn storage(&self) -> &Storage<Flash<'static>> {
+        &self.storage
     }
 }
 
