@@ -11,8 +11,6 @@ categories = ["embedded", "no-std"]
 keywords = ["keyboard", "firmware"]
 
 [features]
-default = ["usb"]
-
 defmt = [
   "dep:defmt",
   "embassy-executor/defmt",
