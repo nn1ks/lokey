@@ -17,6 +17,7 @@ mod usb_transport;
 pub use action::{Action, DynAction};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+#[cfg(feature = "ble")]
 pub use ble_transport::BleTransport;
 use core::future::Future;
 use core::pin::Pin;
@@ -88,6 +89,7 @@ use lokey::{Component, DynContext, external, internal};
 pub use lokey_keyboard_macros::layout;
 pub use lokey_keyboard_macros::static_layout;
 pub use matrix::{Matrix, MatrixConfig};
+#[cfg(feature = "usb")]
 pub use usb_transport::UsbTransport;
 
 /// The layout of the keys.
