@@ -1,10 +1,10 @@
 use super::{Debounce, Message, Scanner};
-use crate::util::{error, unwrap};
 use crate::{DynContext, internal};
 use alloc::boxed::Box;
 use embassy_executor::raw::TaskStorage;
 use embassy_time::Timer;
 use futures_util::future::join_all;
+use lokey::util::{error, unwrap};
 use switch_hal::{InputSwitch, WaitableInputSwitch};
 
 /// Configuration for the [`DirectPins`] scanner.

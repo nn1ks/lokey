@@ -1,17 +1,16 @@
 [package]
-name = "lokey_macros"
-version = "0.0.1"
+name = "lokey_keyboard_macros"
+version = "0.0.0"
 edition = "2024"
 authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
-description = "A firmware framework for input devices (macro crate)"
+description = "Keyboard component for the lokey framework (macro crate)"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-darling = "0.20.8"
 proc-macro-error = "1.0.4"
 proc-macro2 = "1.0.69"
 quote = "1.0.33"

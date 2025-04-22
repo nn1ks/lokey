@@ -1,10 +1,10 @@
 use super::ExternalMessage;
-use crate::external::ble::GenericTransport;
-use crate::external::{self, Messages1};
-use crate::mcu::{Mcu, McuBle, McuStorage};
-use crate::util::{error, unwrap};
-use crate::{Address, internal};
 use embassy_executor::Spawner;
+use lokey::external::ble::GenericTransport;
+use lokey::external::{self, Messages1};
+use lokey::mcu::{Mcu, McuBle, McuStorage};
+use lokey::util::{error, unwrap};
+use lokey::{Address, internal};
 use static_cell::StaticCell;
 use trouble_host::prelude::*;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
@@ -32,27 +32,42 @@ pub struct HidService {
     pub output_keyboard: [u8; 1],
 }
 
-impl<M: Mcu + McuBle + McuStorage> external::TransportConfig<M, Messages1<ExternalMessage>>
-    for external::ble::TransportConfig
-{
-    type Transport = GenericTransport<M, Messages1<ExternalMessage>>;
+pub struct BleTransport<M: 'static, T> {
+    inner: GenericTransport<M, T>,
+    hid_server: &'static HidServer<'static>,
+}
 
-    async fn init(
-        self,
-        mcu: &'static M,
+impl<M: Mcu + McuBle + McuStorage> external::Transport
+    for BleTransport<M, Messages1<ExternalMessage>>
+{
+    type Config = external::ble::TransportConfig;
+    type Mcu = M;
+    type Messages = Messages1<ExternalMessage>;
+
+    async fn create(
+        config: Self::Config,
+        mcu: &'static Self::Mcu,
         _address: Address,
         spawner: Spawner,
         internal_channel: internal::DynChannel,
-    ) -> Self::Transport {
+    ) -> Self {
         const ADV_SERVICE_UUIDS: &[[u8; 2]] = &[service::HUMAN_INTERFACE_DEVICE.to_le_bytes()];
 
         static HID_SERVER: StaticCell<HidServer> = StaticCell::new();
         let hid_server = HID_SERVER.init(unwrap!(HidServer::new_with_config(
             GapConfig::Peripheral(PeripheralConfig {
-                name: self.name,
+                name: config.name,
                 appearance: &appearance::human_interface_device::KEYBOARD,
             })
         )));
+
+        Self {
+            inner: GenericTransport::new(config, mcu, spawner, internal_channel, ADV_SERVICE_UUIDS),
+            hid_server,
+        }
+    }
+
+    async fn run(&self) {
         static KEYBOARD_REPORT: StaticCell<KeyboardReport> = StaticCell::new();
         let keyboard_report = KEYBOARD_REPORT.init(KeyboardReport::default());
         let handle_message =
@@ -61,7 +76,8 @@ impl<M: Mcu + McuBle + McuStorage> external::TransportConfig<M, Messages1<Extern
                 message.update_keyboard_report(keyboard_report);
                 let mut buf = [0; 8];
                 ssmarshal::serialize(&mut buf, keyboard_report).unwrap();
-                if let Err(e) = hid_server
+                if let Err(e) = self
+                    .hid_server
                     .hid_service
                     .input_keyboard
                     .notify(connection, &buf)
@@ -70,14 +86,18 @@ impl<M: Mcu + McuBle + McuStorage> external::TransportConfig<M, Messages1<Extern
                     error!("Failed to set input report: {}", e);
                 }
             };
-        GenericTransport::init(
-            self,
-            mcu,
-            spawner,
-            internal_channel,
-            &hid_server.server,
-            ADV_SERVICE_UUIDS,
-            handle_message,
-        )
+        self.inner.run(self.hid_server, handle_message).await;
+    }
+
+    fn send(&self, message: Self::Messages) {
+        self.inner.send(message);
+    }
+
+    fn set_active(&self, value: bool) -> bool {
+        self.inner.set_active(value)
+    }
+
+    fn is_active(&self) -> bool {
+        self.inner.is_active()
     }
 }

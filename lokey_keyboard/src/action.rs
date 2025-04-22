@@ -1,8 +1,4 @@
 use super::{ExternalMessage, Key};
-use crate::external::toggle;
-use crate::layer::{LayerId, LayerManager, LayerManagerEntry};
-use crate::util::warn;
-use crate::{Address, DynContext};
 use alloc::boxed::Box;
 use core::mem::transmute;
 use core::pin::Pin;
@@ -12,6 +8,10 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
+use lokey::external::toggle;
+use lokey::layer::{LayerId, LayerManager, LayerManagerEntry};
+use lokey::util::warn;
+use lokey::{Address, DynContext};
 use portable_atomic::AtomicBool;
 
 pub trait Action: Send + Sync + 'static {

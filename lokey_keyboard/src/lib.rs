@@ -1,3 +1,8 @@
+#![no_std]
+#![feature(doc_auto_cfg)]
+
+extern crate alloc;
+
 pub mod action;
 #[cfg(feature = "ble")]
 mod ble_transport;
@@ -9,11 +14,10 @@ mod matrix;
 #[cfg(feature = "usb")]
 mod usb_transport;
 
-use crate::util::{debug, error, unwrap};
-use crate::{Component, DynContext, external, internal};
 pub use action::{Action, DynAction};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+pub use ble_transport::BleTransport;
 use core::future::Future;
 use core::pin::Pin;
 pub use debounce::Debounce;
@@ -22,6 +26,8 @@ use embassy_executor::raw::TaskStorage;
 use embassy_futures::select::{Either, select, select_slice};
 pub use key::{HidReportByte, Key};
 pub use key_override::KeyOverride;
+use lokey::util::{debug, error, unwrap};
+use lokey::{Component, DynContext, external, internal};
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -32,7 +38,7 @@ pub use key_override::KeyOverride;
 /// # Example
 ///
 /// ```no_run
-#[doc = include_str!("./doctest_setup_with_allocator")]
+// #[doc = include_str!("./doctest_setup_with_allocator")] // TODO
 /// use lokey::keyboard::action::{HoldTap, KeyCode, Layer};
 /// use lokey::keyboard::{layout, Key};
 /// use lokey::layer::LayerId;
@@ -79,9 +85,10 @@ pub use key_override::KeyOverride;
 /// ])));
 /// # }
 /// ```
-pub use lokey_macros::layout;
-pub use lokey_macros::static_layout;
+pub use lokey_keyboard_macros::layout;
+pub use lokey_keyboard_macros::static_layout;
 pub use matrix::{Matrix, MatrixConfig};
+pub use usb_transport::UsbTransport;
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {

@@ -1,10 +1,10 @@
 use super::{Debounce, Message, Scanner};
-use crate::util::{error, unwrap};
 use crate::{DynContext, internal};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use embassy_executor::raw::TaskStorage;
 use embassy_time::{Duration, Instant, Timer};
+use lokey::util::{error, unwrap};
 use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
 
 /// Configuration for the [`Matrix`] scanner.
