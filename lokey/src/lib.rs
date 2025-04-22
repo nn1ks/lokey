@@ -89,6 +89,8 @@ use embassy_executor::Spawner;
 pub use embedded_alloc;
 pub use lokey_macros::{State, device};
 pub use state::{DynState, State, StateContainer};
+#[doc(hidden)]
+pub use static_cell;
 
 pub struct Context<D: Device, T: Transports<D::Mcu>, S: StateContainer> {
     pub spawner: Spawner,

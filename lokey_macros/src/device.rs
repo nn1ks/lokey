@@ -132,43 +132,52 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             __modify_external_transport_config(&mut external_transport_config);
 
             // Create MCU
-            let mcu = <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(
-                mcu_config,
-                address,
-                spawner
-            )
-            .await;
-            let mcu = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(mcu));
+            let mcu = {
+                static MCU: ::lokey::static_cell::StaticCell<<#device_type_path as ::lokey::Device>::Mcu> = ::lokey::static_cell::StaticCell::new();
+                MCU.init(
+                    <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(
+                        mcu_config,
+                        address,
+                        spawner
+                    )
+                    .await
+                )
+            };
 
             // Create channels
             let internal_channel = {
-                let transport = <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::create(
-                    internal_transport_config,
-                    mcu,
-                    address,
-                    spawner,
-                )
-                .await;
-                let transport = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(transport));
+                static TRANSPORT: ::lokey::static_cell::StaticCell<::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path>> = ::lokey::static_cell::StaticCell::new();
+                let transport = TRANSPORT.init(
+                    <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::create(
+                        internal_transport_config,
+                        mcu,
+                        address,
+                        spawner,
+                    )
+                    .await
+                );
                 ::lokey::internal::Channel::new(transport)
             };
 
             let external_channel = {
-                let transport = <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::create(
-                    external_transport_config,
-                    mcu,
-                    address,
-                    spawner,
-                    internal_channel.as_dyn()
-                )
-                .await;
-                let transport = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(transport));
+                static TRANSPORT: ::lokey::static_cell::StaticCell<::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path>> = ::lokey::static_cell::StaticCell::new();
+                let transport = TRANSPORT.init(
+                    <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::create(
+                        external_transport_config,
+                        mcu,
+                        address,
+                        spawner,
+                        internal_channel.as_dyn()
+                    )
+                    .await
+                );
                 ::lokey::external::Channel::new(transport)
             };
 
-            let state = ::alloc::boxed::Box::leak(::alloc::boxed::Box::new(
-                <#state_type_path as ::core::default::Default>::default()
-            ));
+            let state = {
+                static TRANSPORT: ::lokey::static_cell::StaticCell<#state_type_path> = ::lokey::static_cell::StaticCell::new();
+                TRANSPORT.init(<#state_type_path as ::core::default::Default>::default())
+            };
 
             let context = ::lokey::Context {
                 spawner,
