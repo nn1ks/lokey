@@ -1,18 +1,19 @@
 #![no_main]
 #![no_std]
 #![feature(impl_trait_in_assoc_type)]
-#![feature(type_alias_impl_trait)]
 
 use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::blink::Blink;
-use lokey::keyboard::action::{
+use lokey::layer::LayerId;
+use lokey::status_led_array::{
+    BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray, TestHook,
+};
+use lokey::{Context, Device};
+use lokey_keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
     ToggleExternalTransport,
 };
-use lokey::keyboard::{Key, KeyOverride, Keys, MatrixConfig, layout};
-use lokey::layer::LayerId;
-use lokey::status_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray};
-use lokey::{Context, Device};
+use lokey_keyboard::{Key, KeyOverride, Keys, MatrixConfig, layout};
 use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]

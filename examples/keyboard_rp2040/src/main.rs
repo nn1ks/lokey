@@ -7,13 +7,13 @@ use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::blink::Blink;
 use lokey::external::{self, Messages1};
-use lokey::keyboard::action::KeyCode;
-use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Key, Keys, layout};
 use lokey::layer::LayerManager;
 use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
+use lokey_keyboard::action::KeyCode;
+use lokey_keyboard::{Debounce, DirectPins, DirectPinsConfig, Key, Keys, layout};
 use switch_hal::IntoSwitch;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -25,11 +25,11 @@ struct DefaultState {
 struct Central;
 
 impl Transports<Rp2040> for Central {
-    type ExternalMessages = Messages1<keyboard::ExternalMessage>;
-    type ExternalTransportConfig = external::usb::TransportConfig;
-    type InternalTransportConfig = internal::empty::TransportConfig;
+    type ExternalTransport =
+        lokey_keyboard::UsbTransport<Rp2040, Messages1<lokey_keyboard::ExternalMessage>>;
+    type InternalTransport = internal::empty::Transport<Rp2040>;
 
-    fn external_transport_config() -> Self::ExternalTransportConfig {
+    fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         external::usb::TransportConfig {
             manufacturer: Some("n1ks"),
             product: Some("keyboard_rp2040"),
@@ -38,7 +38,7 @@ impl Transports<Rp2040> for Central {
         }
     }
 
-    fn internal_transport_config() -> Self::InternalTransportConfig {
+    fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
         internal::empty::TransportConfig
     }
 }
@@ -91,10 +91,10 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
             Keys::<DirectPinsConfig, NUM_KEYS>::new()
                 .layout(layout)
                 .scanner_config(DirectPinsConfig {
-                    debounce_key_press: keyboard::Debounce::Defer {
+                    debounce_key_press: Debounce::Defer {
                         duration: Duration::from_millis(30),
                     },
-                    debounce_key_release: keyboard::Debounce::Defer {
+                    debounce_key_release: Debounce::Defer {
                         duration: Duration::from_millis(30),
                     },
                 }),

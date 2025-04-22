@@ -12,7 +12,6 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::blink::Blink;
 use lokey::external::{Messages0, Messages1};
-use lokey::keyboard::{self, DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use lokey::layer::LayerManager;
 use lokey::mcu::nrf52840::pwm::Pwm;
 use lokey::mcu::pwm::{Pwm as _, PwmChannel};
@@ -22,6 +21,7 @@ use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
     internal,
 };
+use lokey_keyboard::{DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use switch_hal::IntoSwitch;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -35,15 +35,15 @@ pub struct DefaultState {
 pub struct Central;
 
 impl Transports<Nrf52840> for Central {
-    type ExternalMessages = Messages1<keyboard::ExternalMessage>;
-    type ExternalTransportConfig = external::usb::TransportConfig;
+    type ExternalTransport =
+        lokey_keyboard::UsbTransport<Nrf52840, Messages1<lokey_keyboard::ExternalMessage>>;
     // type ExternalTransportConfig =
     //     external::toggle::TransportConfig<external::ble::TransportConfig>;
     // type ExternalTransportConfig = external::usb_ble::TransportConfig;
     // type InternalTransportConfig = internal::empty::TransportConfig;
-    type InternalTransportConfig = internal::ble::TransportConfig;
+    type InternalTransport = internal::ble::Transport<Nrf52840>;
 
-    fn external_transport_config() -> Self::ExternalTransportConfig {
+    fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         external::usb::TransportConfig {
             manufacturer: Some("n1ks"),
             product: Some("keyboard_nrf52840"),
@@ -65,7 +65,7 @@ impl Transports<Nrf52840> for Central {
         // }
     }
 
-    fn internal_transport_config() -> Self::InternalTransportConfig {
+    fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
         // internal::empty::TransportConfig
         internal::ble::TransportConfig::Central {
             peripheral_addresses: &[KeyboardRight::DEFAULT_ADDRESS],
@@ -76,18 +76,19 @@ impl Transports<Nrf52840> for Central {
 pub struct Peripheral;
 
 impl Transports<Nrf52840> for Peripheral {
-    type ExternalMessages = Messages0;
-    type ExternalTransportConfig = external::empty::TransportConfig;
-    type InternalTransportConfig = internal::ble::TransportConfig;
+    type ExternalTransport = external::empty::Transport<Nrf52840, Messages0>;
+    type InternalTransport = internal::empty::Transport<Nrf52840>;
+    // type InternalTransport = internal::ble::Transport<Nrf52840>;
 
-    fn external_transport_config() -> Self::ExternalTransportConfig {
+    fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         external::empty::TransportConfig
     }
 
-    fn internal_transport_config() -> Self::InternalTransportConfig {
-        internal::ble::TransportConfig::Peripheral {
-            central_address: KeyboardLeft::DEFAULT_ADDRESS,
-        }
+    fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
+        internal::empty::TransportConfig
+        // internal::ble::TransportConfig::Peripheral {
+        //     central_address: KeyboardLeft::DEFAULT_ADDRESS,
+        // }
     }
 }
 
@@ -238,7 +239,7 @@ impl LedAction {
     }
 }
 
-impl keyboard::Action for LedAction {
+impl lokey_keyboard::Action for LedAction {
     async fn on_press(&'static self, _context: lokey::DynContext) {
         self.pin.lock().await.set_high();
     }

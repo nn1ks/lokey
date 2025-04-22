@@ -6,7 +6,7 @@
 use keyboard_nrf52840::{DefaultState, KeyboardRight, NUM_KEYS, Peripheral};
 use lokey::Context;
 use lokey::blink::Blink;
-use lokey::keyboard::{DirectPinsConfig, Keys};
+use lokey_keyboard::{DirectPinsConfig, Keys};
 use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
