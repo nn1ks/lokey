@@ -5,9 +5,7 @@
 use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::blink::Blink;
 use lokey::layer::LayerId;
-use lokey::status_led_array::{
-    BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray, TestHook,
-};
+use lokey::status_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray};
 use lokey::{Context, Device};
 use lokey_keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
