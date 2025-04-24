@@ -15,7 +15,6 @@ use embassy_sync_new::rwlock::RwLock;
 use embassy_time::Timer;
 use generic_array::GenericArray;
 use portable_atomic::{AtomicBool, AtomicU8};
-use portable_atomic_util::Arc;
 use trouble_host::att::AttErrorCode;
 use trouble_host::gatt::{GattConnection, GattConnectionEvent};
 use trouble_host::prelude::{
@@ -119,10 +118,10 @@ where
         info!("Stored bond infos: {}", bond_infos);
         let bond_infos = Mutex::<CriticalSectionRawMutex, _>::new(bond_infos);
 
-        let connection = Arc::new(RwLock::<
+        let connection = RwLock::<
             embassy_sync_new::blocking_mutex::raw::CriticalSectionRawMutex,
             Option<GattConnection<'static, 'static>>,
-        >::new(None));
+        >::new(None);
 
         let cancel_activation_wait = Signal::<CriticalSectionRawMutex, ()>::new();
         let cancel_advertisement = Signal::<CriticalSectionRawMutex, ()>::new();
