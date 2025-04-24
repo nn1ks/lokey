@@ -33,8 +33,6 @@ usb = [
   "dep:usbd-hid",
 ]
 ble = [
-  "dep:usbd-hid",
-  "dep:ssmarshal",
   "dep:trouble-host",
   "dep:rand_chacha",
 ]
@@ -73,15 +71,12 @@ generic-array = "1.0.0"
 lokey_macros = { path = "../lokey_macros", version = "0.0.1" }
 nrf-mpsl = { git = "https://github.com/nn1ks/nrf-sdc", features = ["critical-section-impl"], optional = true }
 nrf-sdc = { git = "https://github.com/nn1ks/nrf-sdc", features = ["central", "peripheral"], optional = true }
-once_cell = { version = "1.19.0", default-features = false, features = ["critical-section"] }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 portable-atomic-util = { version = "0.2.0", features = ["alloc"] }
 rand_chacha = { version = "0.3.1", default-features = false, optional = true }
 seq-macro = "0.3.6"
 sequential-storage = "4.0.1"
-ssmarshal = { version = "1.0.0", default-features = false, optional = true }
 static_cell = "2.1.0"
-switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
 trouble-host = { git = "https://github.com/embassy-rs/trouble", rev = "3d77c0b", features = ["security"], optional = true }
 typenum = "1.17.0"
 usbd-hid = { version = "0.8.2", optional = true }
