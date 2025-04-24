@@ -6,6 +6,7 @@
 #![doc = include_str!("../../doctest_setup")]
 //! # use core::unimplemented;
 //! # use lokey::mcu::DummyMcu;
+//! use embassy_executor::Spawner;
 //! use lokey::{
 //!     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 //!     external
@@ -59,7 +60,7 @@
 //! }
 //!
 //! #[lokey::device]
-//! async fn main(context: Context<Keyboard, Central, DefaultState>) {
+//! async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawner) {
 //!     // The component can then be enabled with the Context type
 //!     context.enable(ExampleComponent).await;
 //! }
