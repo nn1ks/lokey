@@ -74,12 +74,12 @@ where
     type Mcu = M;
     type Messages = T;
 
-    async fn create(
+    async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
-        internal_channel: internal::DynChannelRef<'static>,
+        internal_channel: &'static internal::Channel<U>,
     ) -> Self {
         let usb_transport = Usb::create(
             config.to_usb_config(),
@@ -107,7 +107,7 @@ where
             active,
             activation_request,
             deactivate_unused_transport: config.deactivate_unused_transport,
-            internal_channel,
+            internal_channel: internal_channel.as_dyn_ref(),
         }
     }
 

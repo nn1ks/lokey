@@ -44,12 +44,12 @@ impl<M: Mcu + McuBle + McuStorage> external::Transport
     type Mcu = M;
     type Messages = Messages1<ExternalMessage>;
 
-    async fn create(
+    async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         _address: Address,
         spawner: Spawner,
-        internal_channel: internal::DynChannelRef<'static>,
+        internal_channel: &'static internal::Channel<T>,
     ) -> Self {
         const ADV_SERVICE_UUIDS: &[[u8; 2]] = &[service::HUMAN_INTERFACE_DEVICE.to_le_bytes()];
 
@@ -62,7 +62,13 @@ impl<M: Mcu + McuBle + McuStorage> external::Transport
         )));
 
         Self {
-            inner: GenericTransport::new(config, mcu, spawner, internal_channel, ADV_SERVICE_UUIDS),
+            inner: GenericTransport::new(
+                config,
+                mcu,
+                spawner,
+                internal_channel.as_dyn_ref(),
+                ADV_SERVICE_UUIDS,
+            ),
             hid_server,
         }
     }

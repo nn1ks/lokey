@@ -15,12 +15,12 @@ impl<M: Mcu> external::Transport for Transport<M, Messages0> {
     type Mcu = M;
     type Messages = Messages0;
 
-    async fn create(
+    async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         _: Self::Config,
         _: &'static Self::Mcu,
         _: Address,
         _: Spawner,
-        _: internal::DynChannelRef<'static>,
+        _: &'static internal::Channel<T>,
     ) -> Self {
         Self {
             phantom: PhantomData,

@@ -73,12 +73,12 @@ pub trait Transport: Any {
     type Mcu: Mcu;
     type Messages: Messages;
 
-    fn create(
+    fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
-        internal_channel: internal::DynChannelRef<'static>,
+        internal_channel: &'static internal::Channel<T>,
     ) -> impl Future<Output = Self>;
 
     fn run(&self) -> impl Future<Output = ()>;

@@ -15,12 +15,12 @@ impl<M: Mcu + CreateDriver> external::Transport for UsbTransport<M, Messages1<Ex
     type Mcu = M;
     type Messages = Messages1<ExternalMessage>;
 
-    async fn create(
+    async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         _address: Address,
         spawner: Spawner,
-        _internal_channel: internal::DynChannelRef<'static>,
+        _internal_channel: &'static internal::Channel<T>,
     ) -> Self {
         Self(usb::HidTransport::new(config, mcu, spawner))
     }

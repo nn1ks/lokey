@@ -177,7 +177,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                             mcu,
                             address,
                             spawner,
-                            internal_channel.as_dyn_ref()
+                            internal_channel,
                         )
                         .await
                     )

@@ -101,12 +101,12 @@ impl<T: external::Transport<Messages = M>, M: external::Messages> external::Tran
     type Mcu = T::Mcu;
     type Messages = M;
 
-    async fn create(
+    async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
-        internal_channel: internal::DynChannelRef<'static>,
+        internal_channel: &'static internal::Channel<U>,
     ) -> Self {
         let transport = T::create(config.transport, mcu, address, spawner, internal_channel).await;
         ACTIVE.store(config.active, Ordering::Release);
@@ -116,7 +116,7 @@ impl<T: external::Transport<Messages = M>, M: external::Messages> external::Tran
             transport,
             ignore_activation_request: config.ignore_activation_request,
             address,
-            internal_channel,
+            internal_channel: internal_channel.as_dyn_ref(),
         }
     }
 
