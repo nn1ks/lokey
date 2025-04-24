@@ -36,10 +36,16 @@ use lokey::{Component, DynContext, external, internal};
 /// the other arrays. The symbol `Transparent` means that the action at the same position from the
 /// previous layer is used or [`NoOp`](action::NoOp) if it is the first layer.
 ///
+/// This macro requires the nightly feature `impl_trait_in_assoc_type`.
+///
 /// # Example
 ///
 /// ```no_run
 #[doc = include_str!("../../doctest_setup_with_allocator")]
+/// # mod a {
+/// #![feature(impl_trait_in_assoc_type)]
+/// # }
+///
 /// use lokey::layer::LayerId;
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
 /// use lokey_keyboard::{Key, layout};
@@ -63,27 +69,57 @@ use lokey::{Component, DynContext, external, internal};
 ///
 /// // The layout built with the macro is equivalent to this layout:
 ///
-/// use alloc::boxed::Box;
 /// use lokey::layer::LayerId;
 /// use lokey_keyboard::{action::PerLayer, DynAction, Layout};
+/// use static_cell::StaticCell;
 ///
-/// let layout = Box::leak(Box::new(Layout::new([
-///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([
-///         (LayerId(0), DynAction::from_ref(Box::leak(Box::new(KeyCode::new(Key::A))))),
-///         (LayerId(1), DynAction::from_ref(Box::leak(Box::new(KeyCode::new(Key::C))))),
-///     ])))),
-///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([
-///         (LayerId(0), DynAction::from_ref(Box::leak(Box::new(HoldTap::new(
-///             KeyCode::new(Key::LControl),
-///             KeyCode::new(Key::B)
-///         ))))),
-///         (LayerId(1), DynAction::from_ref(Box::leak(Box::new(KeyCode::new(Key::D))))),
-///     ])))),
-///     DynAction::from_ref(Box::leak(Box::new(PerLayer::new([
-///         (LayerId(0), DynAction::from_ref(Box::leak(Box::new(Layer::new(LayerId(1)))))),
-///         (LayerId(1), DynAction::from_ref(Box::leak(Box::new(Layer::new(LayerId(1)))))),
-///     ])))),
-/// ])));
+/// let layout = {
+///     static LAYOUT: StaticCell<Layout<3>> = StaticCell::new();
+///     LAYOUT.init(Layout::new([
+///         {
+///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
+///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
+///                 {
+///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
+///                     (LayerId(0), DynAction::from_ref(ACTION.init(KeyCode::new(Key::A))))
+///                 },
+///                 {
+///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
+///                     (LayerId(1), DynAction::from_ref(ACTION.init(KeyCode::new(Key::C))))
+///                 },
+///             ])))
+///         },
+///         {
+///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
+///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
+///                 {
+///                     static ACTION: StaticCell<HoldTap<KeyCode, KeyCode>> = StaticCell::new();
+///                     (LayerId(0), DynAction::from_ref(ACTION.init(HoldTap::new(
+///                         KeyCode::new(Key::LControl),
+///                         KeyCode::new(Key::B),
+///                     ))))
+///                 },
+///                 {
+///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
+///                     (LayerId(1), DynAction::from_ref(ACTION.init(KeyCode::new(Key::D))))
+///                 },
+///             ])))
+///         },
+///         {
+///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
+///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
+///                 {
+///                     static ACTION: StaticCell<Layer> = StaticCell::new();
+///                     (LayerId(0), DynAction::from_ref(ACTION.init(Layer::new(LayerId(1)))))
+///                 },
+///                 {
+///                     static ACTION: StaticCell<Layer> = StaticCell::new();
+///                     (LayerId(1), DynAction::from_ref(ACTION.init(Layer::new(LayerId(1)))))
+///                 },
+///             ])))
+///         },
+///     ]))
+/// };
 /// # }
 /// ```
 pub use lokey_keyboard_macros::layout;
