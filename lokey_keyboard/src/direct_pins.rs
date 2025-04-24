@@ -62,7 +62,7 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const NUM_IS: usize, const 
             config: DirectPinsConfig,
             mut input_pins: [I; NUM_IS],
             transform: [Option<usize>; NUM_KEYS],
-            internal_channel: internal::DynChannel,
+            internal_channel: internal::DynChannelRef<'static>,
         ) where
             I: WaitableInputSwitch + 'static,
         {

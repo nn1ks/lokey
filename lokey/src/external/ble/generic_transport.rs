@@ -35,7 +35,7 @@ pub struct GenericTransport<M: 'static, T> {
     num_profiles: u8,
     adv_service_uuids: &'static [[u8; 2]],
     mcu: &'static M,
-    internal_channel: internal::DynChannel,
+    internal_channel: internal::DynChannelRef<'static>,
 }
 
 impl<M, T> GenericTransport<M, T>
@@ -47,7 +47,7 @@ where
         config: TransportConfig,
         mcu: &'static M,
         _spawner: Spawner,
-        internal_channel: internal::DynChannel,
+        internal_channel: internal::DynChannelRef<'static>,
         adv_service_uuids: &'static [[u8; 2]],
     ) -> Self {
         Self {

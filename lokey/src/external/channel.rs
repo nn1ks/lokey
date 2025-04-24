@@ -8,39 +8,35 @@ use core::marker::PhantomData;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
-static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>> =
-    PubSubChannel::new();
-
-pub type DynChannel = Channel<DynTransport>;
-
-pub struct Channel<T: ?Sized + 'static> {
-    inner: &'static T,
-    overrides: &'static Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
+pub struct Channel<T> {
+    transport: T,
+    overrides: Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
+    inner_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
 }
 
 impl<T: Transport> Channel<T> {
     /// Creates a new external channel.
-    ///
-    /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
-    pub fn new(inner: &'static T) -> Self {
+    pub fn new(transport: T) -> Self {
         Self {
-            inner,
-            overrides: Box::leak(Box::new(Mutex::new(RefCell::new(Vec::new())))),
+            transport,
+            overrides: Mutex::new(RefCell::new(Vec::new())),
+            inner_channel: PubSubChannel::new(),
         }
     }
 
     pub async fn run(&self) {
-        self.inner.run().await;
+        self.transport.run().await;
     }
 
     /// Converts this channel into a dynamic one.
     ///
     /// This can be useful if you want to pass the channel to an embassy task as they can't have
     /// generic parameters.
-    pub fn as_dyn(&self) -> DynChannel {
-        Channel {
-            inner: DynTransport::from_ref(self.inner),
-            overrides: self.overrides,
+    pub fn as_dyn_ref(&self) -> DynChannelRef<'_> {
+        DynChannelRef {
+            transport: DynTransport::from_ref(&self.transport),
+            overrides: &self.overrides,
+            inner_channel: &self.inner_channel,
         }
     }
 
@@ -54,22 +50,29 @@ impl<T: Transport> Channel<T> {
     }
 
     pub fn try_send<U: Message>(&self, message: U) {
-        self.as_dyn().try_send(message)
+        self.as_dyn_ref().try_send(message)
     }
 
     pub fn try_send_dyn(&self, message: Box<dyn Message>) {
-        self.as_dyn().try_send_dyn(message)
+        self.as_dyn_ref().try_send_dyn(message)
     }
 
-    pub fn receiver<U: Message>(&self) -> Receiver<U> {
+    pub fn receiver<U: Message>(&self) -> Receiver<'_, U> {
         Receiver {
-            subscriber: INNER_CHANNEL.subscriber(),
+            subscriber: self.inner_channel.subscriber(),
             phantom: PhantomData,
         }
     }
 }
 
-impl Channel<DynTransport> {
+#[derive(Clone, Copy)]
+pub struct DynChannelRef<'a> {
+    transport: &'a DynTransport,
+    overrides: &'a Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
+    inner_channel: &'a PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
+}
+
+impl DynChannelRef<'_> {
     pub async fn add_override<O: Override + 'static>(&self, message_override: O) {
         self.overrides
             .lock(|v| v.borrow_mut().push(Box::new(message_override)));
@@ -86,10 +89,11 @@ impl Channel<DynTransport> {
                 index: usize,
                 message: Box<dyn Message>,
                 overrides: &mut Vec<Box<dyn Override>>,
-                transport: &'static DynTransport,
+                transport: &DynTransport,
+                inner_channel: &PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
             ) {
                 if index == overrides.len() {
-                    INNER_CHANNEL.publish(message.clone());
+                    inner_channel.publish(message.clone());
                     transport.try_send(message);
                 } else {
                     let mut sender = MessageSender {
@@ -97,36 +101,34 @@ impl Channel<DynTransport> {
                     };
                     overrides[index].override_message(message, &mut sender);
                     for message in sender.messages {
-                        send_messages(index + 1, message, overrides, transport);
+                        send_messages(index + 1, message, overrides, transport, inner_channel);
                     }
                 }
             }
-            send_messages(0, message, &mut overrides, self.inner);
+            send_messages(
+                0,
+                message,
+                &mut overrides,
+                self.transport,
+                self.inner_channel,
+            );
         });
     }
 
-    pub fn receiver<U: Message>(&self) -> Receiver<U> {
+    pub fn receiver<U: Message>(&self) -> Receiver<'_, U> {
         Receiver {
-            subscriber: INNER_CHANNEL.subscriber(),
+            subscriber: self.inner_channel.subscriber(),
             phantom: PhantomData,
         }
     }
 }
 
-impl<T: ?Sized> Clone for Channel<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<T: ?Sized> Copy for Channel<T> {}
-
-pub struct Receiver<M> {
-    subscriber: Subscriber<'static, CriticalSectionRawMutex, Box<dyn Message>>,
+pub struct Receiver<'a, M> {
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, Box<dyn Message>>,
     phantom: PhantomData<M>,
 }
 
-impl<M: Message> Receiver<M> {
+impl<M: Message> Receiver<'_, M> {
     pub async fn next(&mut self) -> M {
         loop {
             let message = self.subscriber.next_message().await;

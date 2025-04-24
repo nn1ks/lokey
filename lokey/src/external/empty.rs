@@ -20,7 +20,7 @@ impl<M: Mcu> external::Transport for Transport<M, Messages0> {
         _: &'static Self::Mcu,
         _: Address,
         _: Spawner,
-        _: internal::DynChannel,
+        _: internal::DynChannelRef<'static>,
     ) -> Self {
         Self {
             phantom: PhantomData,

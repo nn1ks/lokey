@@ -60,7 +60,7 @@ pub struct Transport<Usb, Ble> {
     active: Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>,
     activation_request: Signal<CriticalSectionRawMutex, ()>,
     deactivate_unused_transport: bool,
-    internal_channel: internal::DynChannel,
+    internal_channel: internal::DynChannelRef<'static>,
 }
 
 impl<Usb, Ble, M, T> external::Transport for Transport<Usb, Ble>
@@ -79,7 +79,7 @@ where
         mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
-        internal_channel: internal::DynChannel,
+        internal_channel: internal::DynChannelRef<'static>,
     ) -> Self {
         let usb_transport = Usb::create(
             config.to_usb_config(),

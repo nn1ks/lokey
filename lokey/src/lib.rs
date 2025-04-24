@@ -96,8 +96,8 @@ pub struct Context<D: Device, T: Transports<D::Mcu>, S: StateContainer> {
     pub spawner: Spawner,
     pub address: Address,
     pub mcu: &'static D::Mcu,
-    pub internal_channel: internal::Channel<internal::DeviceTransport<D, T>>,
-    pub external_channel: external::Channel<external::DeviceTransport<D, T>>,
+    pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
+    pub external_channel: &'static external::Channel<external::DeviceTransport<D, T>>,
     pub state: &'static S,
 }
 
@@ -108,8 +108,8 @@ impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Context<D, T, S> {
             spawner: self.spawner,
             address: self.address,
             mcu,
-            internal_channel: self.internal_channel.as_dyn(),
-            external_channel: self.external_channel.as_dyn(),
+            internal_channel: self.internal_channel.as_dyn_ref(),
+            external_channel: self.external_channel.as_dyn_ref(),
             state: DynState::from_ref(self.state),
         }
     }
@@ -137,8 +137,8 @@ pub struct DynContext {
     pub spawner: Spawner,
     pub address: Address,
     pub mcu: &'static dyn mcu::Mcu,
-    pub internal_channel: internal::DynChannel,
-    pub external_channel: external::DynChannel,
+    pub internal_channel: internal::DynChannelRef<'static>,
+    pub external_channel: external::DynChannelRef<'static>,
     pub state: &'static DynState,
 }
 

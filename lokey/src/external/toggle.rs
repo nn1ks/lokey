@@ -91,7 +91,7 @@ pub struct Transport<T> {
     transport: T,
     ignore_activation_request: bool,
     address: Address,
-    internal_channel: internal::DynChannel,
+    internal_channel: internal::DynChannelRef<'static>,
 }
 
 impl<T: external::Transport<Messages = M>, M: external::Messages> external::Transport
@@ -106,7 +106,7 @@ impl<T: external::Transport<Messages = M>, M: external::Messages> external::Tran
         mcu: &'static Self::Mcu,
         address: Address,
         spawner: Spawner,
-        internal_channel: internal::DynChannel,
+        internal_channel: internal::DynChannelRef<'static>,
     ) -> Self {
         let transport = T::create(config.transport, mcu, address, spawner, internal_channel).await;
         ACTIVE.store(config.active, Ordering::Release);

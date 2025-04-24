@@ -49,7 +49,7 @@ impl<M: Mcu + McuBle + McuStorage> external::Transport
         mcu: &'static Self::Mcu,
         _address: Address,
         spawner: Spawner,
-        internal_channel: internal::DynChannel,
+        internal_channel: internal::DynChannelRef<'static>,
     ) -> Self {
         const ADV_SERVICE_UUIDS: &[[u8; 2]] = &[service::HUMAN_INTERFACE_DEVICE.to_le_bytes()];
 

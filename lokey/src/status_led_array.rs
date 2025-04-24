@@ -369,7 +369,7 @@ impl<const N: usize> StatusLedArray<N> {
         async fn task<const N: usize>(
             mut pwm_channels: [Box<dyn PwmChannel>; N],
             gamma_correction: fn(f32) -> f32,
-            internal_channel: internal::DynChannel,
+            internal_channel: internal::DynChannelRef<'static>,
             device_address: Address,
         ) {
             let mut receiver = internal_channel.receiver::<Message>();
@@ -421,7 +421,7 @@ pub struct BootHook;
 impl Hook for BootHook {
     fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
         #[embassy_executor::task]
-        async fn task(device_address: Address, internal_channel: internal::DynChannel) {
+        async fn task(device_address: Address, internal_channel: internal::DynChannelRef<'static>) {
             Timer::after_millis(50).await;
             let action_id = ActionId::new(device_address);
             let action = Action::SlideBackwards {
@@ -452,7 +452,10 @@ mod ble {
     impl Hook for BleAdvertisementHook {
         fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
             #[embassy_executor::task]
-            async fn task(device_address: Address, internal_channel: internal::DynChannel) {
+            async fn task(
+                device_address: Address,
+                internal_channel: internal::DynChannelRef<'static>,
+            ) {
                 let mut receiver = internal_channel.receiver::<external::ble::Event>();
                 let mut current_action_id = None;
                 loop {
@@ -491,7 +494,10 @@ mod ble {
     impl Hook for BleProfileHook {
         fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
             #[embassy_executor::task]
-            async fn task(device_address: Address, internal_channel: internal::DynChannel) {
+            async fn task(
+                device_address: Address,
+                internal_channel: internal::DynChannelRef<'static>,
+            ) {
                 let mut receiver = internal_channel.receiver::<external::ble::Event>();
                 loop {
                     let message = receiver.next().await;

@@ -146,37 +146,47 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             // Create channels
             let internal_channel = {
-                static TRANSPORT: ::lokey::static_cell::StaticCell<::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path>> = ::lokey::static_cell::StaticCell::new();
-                let transport = TRANSPORT.init(
-                    <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::create(
-                        internal_transport_config,
-                        mcu,
-                        address,
-                        spawner,
+                static CHANNEL: ::lokey::static_cell::StaticCell<
+                    ::lokey::internal::Channel<
+                        ::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path>
+                    >
+                > = ::lokey::static_cell::StaticCell::new();
+                CHANNEL.init(
+                    ::lokey::internal::Channel::new(
+                        <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::create(
+                            internal_transport_config,
+                            mcu,
+                            address,
+                            spawner,
+                        )
+                        .await
                     )
-                    .await
-                );
-                ::lokey::internal::Channel::new(transport)
+                )
             };
 
             let external_channel = {
-                static TRANSPORT: ::lokey::static_cell::StaticCell<::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path>> = ::lokey::static_cell::StaticCell::new();
-                let transport = TRANSPORT.init(
-                    <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::create(
-                        external_transport_config,
-                        mcu,
-                        address,
-                        spawner,
-                        internal_channel.as_dyn()
+                static CHANNEL: ::lokey::static_cell::StaticCell<
+                    ::lokey::external::Channel<
+                        ::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path>
+                    >
+                > = ::lokey::static_cell::StaticCell::new();
+                CHANNEL.init(
+                    ::lokey::external::Channel::new(
+                        <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::create(
+                            external_transport_config,
+                            mcu,
+                            address,
+                            spawner,
+                            internal_channel.as_dyn_ref()
+                        )
+                        .await
                     )
-                    .await
-                );
-                ::lokey::external::Channel::new(transport)
+                )
             };
 
             let state = {
-                static TRANSPORT: ::lokey::static_cell::StaticCell<#state_type_path> = ::lokey::static_cell::StaticCell::new();
-                TRANSPORT.init(<#state_type_path as ::core::default::Default>::default())
+                static STATE: ::lokey::static_cell::StaticCell<#state_type_path> = ::lokey::static_cell::StaticCell::new();
+                STATE.init(<#state_type_path as ::core::default::Default>::default())
             };
 
             let context = ::lokey::Context {
@@ -195,13 +205,13 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             spawner.must_spawn(__run_mcu(mcu, context));
 
             #[::lokey::embassy_executor::task]
-            async fn __run_internal_channel(channel: ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>) {
+            async fn __run_internal_channel(channel: &'static ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>) {
                 channel.run().await;
             }
             spawner.must_spawn(__run_internal_channel(internal_channel));
 
             #[::lokey::embassy_executor::task]
-            async fn __run_external_channel(channel: ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>) {
+            async fn __run_external_channel(channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>) {
                 channel.run().await;
             }
             spawner.must_spawn(__run_external_channel(external_channel));

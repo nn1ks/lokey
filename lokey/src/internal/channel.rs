@@ -10,66 +10,71 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 //   - Don't convert local messages to bytes and then convert it back to a message
 //   - Make a pub sub channel that only sends the relevant messages to the receivers
 
-static INNER_CHANNEL: PubSubChannel<CriticalSectionRawMutex, Vec<u8>> = PubSubChannel::new();
-
-pub type DynChannel = Channel<DynTransport>;
-
-pub struct Channel<T: ?Sized + 'static> {
-    inner: &'static T,
+pub struct Channel<T> {
+    transport: T,
+    inner_channel: PubSubChannel<CriticalSectionRawMutex, Vec<u8>>,
 }
 
 impl<T: Transport> Channel<T> {
     /// Creates a new internal channel.
-    ///
-    /// This method should not be called, as the channel is already created by the [`device`](crate::device) macro.
-    pub fn new(inner: &'static T) -> Self {
-        Self { inner }
+    pub fn new(transport: T) -> Self {
+        Self {
+            transport,
+            inner_channel: PubSubChannel::new(),
+        }
     }
 
     pub async fn run(&self) {
         let handle_messages = async {
             loop {
-                let message_bytes = self.inner.receive().await;
-                INNER_CHANNEL.publish(message_bytes);
+                let message_bytes = self.transport.receive().await;
+                self.inner_channel.publish(message_bytes);
             }
         };
-        join(handle_messages, self.inner.run()).await;
+        join(handle_messages, self.transport.run()).await;
     }
 
     /// Converts this channel into a dynamic one.
     ///
     /// This can be useful if you want to pass the channel to an embassy task as they can't be
     /// generic.
-    pub fn as_dyn(&self) -> DynChannel {
-        Channel {
-            inner: DynTransport::from_ref(self.inner),
+    pub fn as_dyn_ref(&self) -> DynChannelRef<'_> {
+        DynChannelRef {
+            transport: DynTransport::from_ref(&self.transport),
+            inner_channel: &self.inner_channel,
         }
     }
 
     pub fn send<M: Message>(&self, message: M) {
         let bytes = build_message_bytes(message);
-        self.inner.send(&bytes);
-        INNER_CHANNEL.publish(bytes);
+        self.transport.send(&bytes);
+        self.inner_channel.publish(bytes);
     }
 
     pub fn receiver<M: Message>(&self) -> Receiver<M> {
         Receiver {
-            subscriber: INNER_CHANNEL.subscriber(),
+            subscriber: self.inner_channel.subscriber(),
             _phantom: PhantomData,
         }
     }
 }
 
-impl Channel<DynTransport> {
+#[derive(Clone, Copy)]
+pub struct DynChannelRef<'a> {
+    transport: &'a DynTransport,
+    inner_channel: &'a PubSubChannel<CriticalSectionRawMutex, Vec<u8>>,
+}
+
+impl DynChannelRef<'_> {
     pub fn send<M: Message>(&self, message: M) {
         let bytes = build_message_bytes(message);
-        self.inner.send(&bytes);
-        INNER_CHANNEL.publish(bytes);
+        self.transport.send(&bytes);
+        self.inner_channel.publish(bytes);
     }
 
     pub fn receiver<M: Message>(&self) -> Receiver<M> {
         Receiver {
-            subscriber: INNER_CHANNEL.subscriber(),
+            subscriber: self.inner_channel.subscriber(),
             _phantom: PhantomData,
         }
     }
@@ -84,20 +89,12 @@ fn build_message_bytes<M: Message>(message: M) -> Vec<u8> {
     bytes
 }
 
-impl<T: ?Sized> Clone for Channel<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<T: ?Sized> Copy for Channel<T> {}
-
-pub struct Receiver<M> {
-    subscriber: Subscriber<'static, CriticalSectionRawMutex, Vec<u8>>,
+pub struct Receiver<'a, M> {
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, Vec<u8>>,
     _phantom: PhantomData<M>,
 }
 
-impl<M: Message> Receiver<M> {
+impl<M: Message> Receiver<'_, M> {
     pub async fn next(&mut self) -> M {
         loop {
             let message_bytes = self.subscriber.next_message().await;

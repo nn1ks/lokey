@@ -7,7 +7,7 @@ use crate::mcu::Mcu;
 use crate::{Address, Device, Transports};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-pub use channel::{Channel, DynChannel, Receiver};
+pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
 use core::mem::transmute;

@@ -125,7 +125,7 @@ impl<
             mut input_switches: [I; NUM_IS],
             mut output_switches: [O; NUM_OS],
             key_indices: [[Option<u16>; NUM_OS]; NUM_IS],
-            internal_channel: internal::DynChannel,
+            internal_channel: internal::DynChannelRef<'static>,
         ) where
             I: InputSwitch + WaitableInputSwitch + 'static,
             O: OutputSwitch + 'static,
