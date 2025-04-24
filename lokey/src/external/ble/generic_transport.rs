@@ -1,9 +1,8 @@
 use super::{Event, Message, TransportConfig};
-use crate::external::Messages;
-use crate::mcu::{Mcu, McuBle, McuStorage, storage};
+use crate::mcu::{self, McuBle, McuStorage, storage};
 use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap, warn};
-use crate::{Address, internal};
+use crate::{Address, external, internal};
 use alloc::vec::Vec;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
@@ -38,14 +37,14 @@ pub struct GenericTransport<M: 'static, T> {
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<M, T> GenericTransport<M, T>
+impl<Mcu, Messages> GenericTransport<Mcu, Messages>
 where
-    M: Mcu + McuBle + McuStorage,
-    T: Messages,
+    Mcu: mcu::Mcu + McuBle + McuStorage,
+    Messages: external::Messages,
 {
     pub fn new(
         config: TransportConfig,
-        mcu: &'static M,
+        mcu: &'static Mcu,
         _spawner: Spawner,
         internal_channel: internal::DynChannelRef<'static>,
         adv_service_uuids: &'static [[u8; 2]],
@@ -60,18 +59,13 @@ where
         }
     }
 
-    pub async fn run<
-        F,
-        U: RawMutex,
-        const ATT_MAX: usize,
-        const CCCD_MAX: usize,
-        const CONN_MAX: usize,
-    >(
+    pub async fn run<F, M, const ATT_MAX: usize, const CCCD_MAX: usize, const CONN_MAX: usize>(
         &self,
-        server: &'static AttributeServer<'static, U, ATT_MAX, CCCD_MAX, CONN_MAX>,
+        server: &'static AttributeServer<'static, M, ATT_MAX, CCCD_MAX, CONN_MAX>,
         mut handle_message: F,
     ) where
-        F: AsyncFnMut(T, &GattConnection<'_, '_>) + 'static,
+        F: AsyncFnMut(Messages, &GattConnection<'_, '_>) + 'static,
+        M: RawMutex,
     {
         let Some(num_profiles) = NonZeroU8::new(self.num_profiles) else {
             return;
@@ -482,7 +476,7 @@ where
         .await;
     }
 
-    pub fn send(&self, message: T) {
+    pub fn send(&self, message: Messages) {
         self.channel.send(message);
     }
 

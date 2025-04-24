@@ -1,4 +1,5 @@
-use super::{DynTransport, Message, Transport};
+use super::{DynTransport, Message};
+use crate::internal;
 use crate::util::error;
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use alloc::vec::Vec;
@@ -10,14 +11,14 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 //   - Don't convert local messages to bytes and then convert it back to a message
 //   - Make a pub sub channel that only sends the relevant messages to the receivers
 
-pub struct Channel<T> {
-    transport: T,
+pub struct Channel<Transport> {
+    transport: Transport,
     inner_channel: PubSubChannel<CriticalSectionRawMutex, Vec<u8>>,
 }
 
-impl<T: Transport> Channel<T> {
+impl<Transport: internal::Transport> Channel<Transport> {
     /// Creates a new internal channel.
-    pub fn new(transport: T) -> Self {
+    pub fn new(transport: Transport) -> Self {
         Self {
             transport,
             inner_channel: PubSubChannel::new(),
@@ -89,13 +90,13 @@ fn build_message_bytes<M: Message>(message: M) -> Vec<u8> {
     bytes
 }
 
-pub struct Receiver<'a, M> {
+pub struct Receiver<'a, Message> {
     subscriber: Subscriber<'a, CriticalSectionRawMutex, Vec<u8>>,
-    _phantom: PhantomData<M>,
+    _phantom: PhantomData<Message>,
 }
 
-impl<M: Message> Receiver<'_, M> {
-    pub async fn next(&mut self) -> M {
+impl<Message: internal::Message> Receiver<'_, Message> {
+    pub async fn next(&mut self) -> Message {
         loop {
             let message_bytes = self.subscriber.next_message().await;
             if message_bytes.len() < 4 {
@@ -106,10 +107,10 @@ impl<M: Message> Receiver<'_, M> {
                 );
                 continue;
             }
-            if message_bytes[..4] == M::TAG {
-                match M::Bytes::try_from(&message_bytes[4..]) {
+            if message_bytes[..4] == Message::TAG {
+                match Message::Bytes::try_from(&message_bytes[4..]) {
                     Ok(array) => {
-                        if let Some(message) = M::from_bytes(&array) {
+                        if let Some(message) = Message::from_bytes(&array) {
                             return message;
                         }
                     }

@@ -97,13 +97,13 @@ const fn round_up_to_word_size<F: NorFlash>(value: usize) -> usize {
     value + F::WORD_SIZE - remainder
 }
 
-pub struct Storage<F> {
-    flash: Mutex<CriticalSectionRawMutex, F>,
+pub struct Storage<Flash> {
+    flash: Mutex<CriticalSectionRawMutex, Flash>,
     flash_range: Range<u32>,
 }
 
-impl<F: MultiwriteNorFlash> Storage<F> {
-    pub fn new(flash: F, flash_range: Range<u32>) -> Self {
+impl<Flash: MultiwriteNorFlash> Storage<Flash> {
+    pub fn new(flash: Flash, flash_range: Range<u32>) -> Self {
         Self {
             flash: Mutex::new(flash),
             flash_range,
@@ -111,11 +111,14 @@ impl<F: MultiwriteNorFlash> Storage<F> {
     }
 
     fn create_buffer<E: Entry>() -> Vec<u8> {
-        let buf_len = round_up_to_word_size::<F>(E::Size::USIZE + ENTRY_TAG_SIZE);
+        let buf_len = round_up_to_word_size::<Flash>(E::Size::USIZE + ENTRY_TAG_SIZE);
         vec![0; buf_len]
     }
 
-    pub async fn remove<E: Entry>(&self, tag_params: E::TagParams) -> Result<(), Error<F::Error>> {
+    pub async fn remove<E: Entry>(
+        &self,
+        tag_params: E::TagParams,
+    ) -> Result<(), Error<Flash::Error>> {
         let mut buf = Self::create_buffer::<E>();
         remove_item(
             &mut *self.flash.lock().await,
@@ -132,7 +135,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
         &self,
         tag_params: E::TagParams,
         entry: &E,
-    ) -> Result<(), Error<F::Error>> {
+    ) -> Result<(), Error<Flash::Error>> {
         let mut buf = Self::create_buffer::<E>();
         let value_bytes = entry.to_bytes();
         store_item(
@@ -150,7 +153,7 @@ impl<F: MultiwriteNorFlash> Storage<F> {
     pub async fn fetch<E: Entry>(
         &self,
         tag_params: E::TagParams,
-    ) -> Result<Option<E>, Error<F::Error>> {
+    ) -> Result<Option<E>, Error<Flash::Error>> {
         let mut buf = Self::create_buffer::<E>();
         let data: Option<&[u8]> = fetch_item(
             &mut *self.flash.lock().await,

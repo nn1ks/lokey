@@ -1,7 +1,6 @@
-use super::{Messages, ble, usb};
-use crate::mcu::Mcu;
+use super::{ble, usb};
 use crate::util::{error, info};
-use crate::{Address, external, internal};
+use crate::{Address, external, internal, mcu};
 use alloc::boxed::Box;
 use core::cell::Cell;
 use core::future::Future;
@@ -63,16 +62,16 @@ pub struct Transport<Usb, Ble> {
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<Usb, Ble, M, T> external::Transport for Transport<Usb, Ble>
+impl<Usb, Ble, Mcu, Messages> external::Transport for Transport<Usb, Ble>
 where
-    Usb: external::Transport<Config = usb::TransportConfig, Mcu = M, Messages = T>,
-    Ble: external::Transport<Config = ble::TransportConfig, Mcu = M, Messages = T>,
-    M: Mcu,
-    T: Messages,
+    Usb: external::Transport<Config = usb::TransportConfig, Mcu = Mcu, Messages = Messages>,
+    Ble: external::Transport<Config = ble::TransportConfig, Mcu = Mcu, Messages = Messages>,
+    Mcu: mcu::Mcu,
+    Messages: external::Messages,
 {
     type Config = TransportConfig;
-    type Mcu = M;
-    type Messages = T;
+    type Mcu = Mcu;
+    type Messages = Messages;
 
     async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -150,7 +149,7 @@ where
         join(handle_activation_request, handle_internal_messages).await;
     }
 
-    fn send(&self, message: T) {
+    fn send(&self, message: Messages) {
         self.active.lock(|selection| match selection.get() {
             TransportSelection::Usb => self.usb_transport.send(message),
             TransportSelection::Ble => self.ble_transport.send(message),

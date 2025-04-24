@@ -1,6 +1,5 @@
 mod hid_transport;
 
-use super::Messages;
 use crate::mcu::Mcu;
 use crate::util::{debug, info};
 use core::sync::atomic::Ordering;

@@ -1,4 +1,4 @@
-use crate::mcu::{Mcu, McuBle};
+use crate::mcu::{self, Mcu, McuBle};
 use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap};
 use crate::{Address, internal};
@@ -85,14 +85,14 @@ static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
 static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
 static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
 
-pub struct Transport<M: 'static> {
+pub struct Transport<Mcu: 'static> {
     config: TransportConfig,
-    mcu: &'static M,
+    mcu: &'static Mcu,
 }
 
-impl<M: Mcu + McuBle> internal::Transport for Transport<M> {
+impl<Mcu: mcu::Mcu + McuBle> internal::Transport for Transport<Mcu> {
     type Config = TransportConfig;
-    type Mcu = M;
+    type Mcu = Mcu;
 
     async fn create(
         config: Self::Config,

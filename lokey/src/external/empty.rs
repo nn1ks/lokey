@@ -1,18 +1,17 @@
 use super::Messages0;
-use crate::mcu::Mcu;
-use crate::{Address, external, internal};
+use crate::{Address, external, internal, mcu};
 use core::marker::PhantomData;
 use embassy_executor::Spawner;
 
 pub struct TransportConfig;
 
-pub struct Transport<M, T> {
-    phantom: PhantomData<(M, T)>,
+pub struct Transport<Mcu, Messages> {
+    phantom: PhantomData<(Mcu, Messages)>,
 }
 
-impl<M: Mcu> external::Transport for Transport<M, Messages0> {
+impl<Mcu: mcu::Mcu> external::Transport for Transport<Mcu, Messages0> {
     type Config = TransportConfig;
-    type Mcu = M;
+    type Mcu = Mcu;
     type Messages = Messages0;
 
     async fn create<T: internal::Transport<Mcu = Self::Mcu>>(

@@ -1,4 +1,5 @@
-use super::{DynTransport, Message, MessageSender, Messages, Override, Transport};
+use super::{DynTransport, Message, MessageSender, Messages, Override};
+use crate::external;
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -8,15 +9,15 @@ use core::marker::PhantomData;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
-pub struct Channel<T> {
-    transport: T,
+pub struct Channel<Transport> {
+    transport: Transport,
     overrides: Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
     inner_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
 }
 
-impl<T: Transport> Channel<T> {
+impl<Transport: external::Transport> Channel<Transport> {
     /// Creates a new external channel.
-    pub fn new(transport: T) -> Self {
+    pub fn new(transport: Transport) -> Self {
         Self {
             transport,
             overrides: Mutex::new(RefCell::new(Vec::new())),
@@ -45,11 +46,11 @@ impl<T: Transport> Channel<T> {
             .lock(|v| v.borrow_mut().push(Box::new(message_override)));
     }
 
-    pub fn send(&self, message: T::Messages) {
+    pub fn send(&self, message: Transport::Messages) {
         self.try_send_dyn(message.upcast());
     }
 
-    pub fn try_send<U: Message>(&self, message: U) {
+    pub fn try_send<M: Message>(&self, message: M) {
         self.as_dyn_ref().try_send(message)
     }
 
@@ -57,7 +58,7 @@ impl<T: Transport> Channel<T> {
         self.as_dyn_ref().try_send_dyn(message)
     }
 
-    pub fn receiver<U: Message>(&self) -> Receiver<'_, U> {
+    pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
         Receiver {
             subscriber: self.inner_channel.subscriber(),
             phantom: PhantomData,
@@ -123,17 +124,17 @@ impl DynChannelRef<'_> {
     }
 }
 
-pub struct Receiver<'a, M> {
-    subscriber: Subscriber<'a, CriticalSectionRawMutex, Box<dyn Message>>,
-    phantom: PhantomData<M>,
+pub struct Receiver<'a, Message> {
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, Box<dyn external::Message>>,
+    phantom: PhantomData<Message>,
 }
 
-impl<M: Message> Receiver<'_, M> {
-    pub async fn next(&mut self) -> M {
+impl<Message: external::Message> Receiver<'_, Message> {
+    pub async fn next(&mut self) -> Message {
         loop {
             let message = self.subscriber.next_message().await;
             let message: Box<dyn Any> = message;
-            if let Ok(v) = message.downcast::<M>() {
+            if let Ok(v) = message.downcast::<Message>() {
                 return *v;
             }
         }

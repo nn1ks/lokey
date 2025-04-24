@@ -1,7 +1,7 @@
-use super::{CreateDriver, DeviceHandler, Messages, TransportConfig};
-use crate::mcu::Mcu;
+use super::{CreateDriver, DeviceHandler, TransportConfig};
 use crate::util::channel::Channel;
 use crate::util::{error, info};
+use crate::{external, mcu};
 use alloc::boxed::Box;
 use core::marker::PhantomData;
 use core::pin::Pin;
@@ -25,13 +25,14 @@ pub struct HidTransport<const REPORT_SIZE: usize, M: 'static, T, R> {
     phantom: PhantomData<R>,
 }
 
-impl<const REPORT_SIZE: usize, M, T, R> HidTransport<REPORT_SIZE, M, T, R>
+impl<const REPORT_SIZE: usize, Mcu, Messages, Report>
+    HidTransport<REPORT_SIZE, Mcu, Messages, Report>
 where
-    M: Mcu + CreateDriver,
-    T: Messages,
-    R: AsInputReport + SerializedDescriptor + 'static,
+    Mcu: mcu::Mcu + CreateDriver,
+    Messages: external::Messages,
+    Report: AsInputReport + SerializedDescriptor + 'static,
 {
-    pub fn new(config: TransportConfig, mcu: &'static M, _: Spawner) -> Self {
+    pub fn new(config: TransportConfig, mcu: &'static Mcu, _: Spawner) -> Self {
         let device_handler = DeviceHandler::new();
 
         Self {
@@ -44,7 +45,7 @@ where
         }
     }
 
-    pub async fn run<F: FnMut(T) -> Option<R>>(&self, mut handle_message: F) {
+    pub async fn run<F: FnMut(Messages) -> Option<Report>>(&self, mut handle_message: F) {
         let driver = self.mcu.create_driver();
 
         let mut config = embassy_usb::Config::from(self.config.clone());
@@ -72,7 +73,7 @@ where
         builder.handler(&mut *device_handler);
 
         let hid_config = embassy_usb::class::hid::Config {
-            report_descriptor: R::desc(),
+            report_descriptor: Report::desc(),
             request_handler: None,
             poll_ms: 60,
             max_packet_size: 64,
@@ -116,7 +117,7 @@ where
         join(wakeup, write_keyboard_report).await.0
     }
 
-    pub fn send(&self, message: T) {
+    pub fn send(&self, message: Messages) {
         self.channel.send(message);
     }
 
