@@ -13,7 +13,6 @@ keywords = ["keyboard", "firmware"]
 [features]
 defmt = [
   "dep:defmt",
-  "embassy-executor/defmt",
   "embassy-futures/defmt",
   "embassy-nrf?/defmt",
   "embassy-rp?/defmt",
@@ -41,7 +40,6 @@ ble = [
 ]
 
 nrf52840 = [
-  "embassy-executor/arch-cortex-m",
   "dep:embassy-nrf",
   "embassy-nrf/nrf52840",
   "dep:nrf-mpsl",
@@ -50,7 +48,6 @@ nrf52840 = [
   "nrf-sdc?/nrf52840",
 ]
 rp2040 = [
-  "embassy-executor/arch-cortex-m",
   "dep:embassy-rp",
   "embassy-rp/rp2040"
 ]
@@ -59,7 +56,6 @@ rp2040 = [
 bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }
 defmt = { version = "0.3.5", features = ["alloc"], optional = true }
 dyn-clone = { git = "https://github.com/nn1ks/dyn-clone", branch = "fix-arc-usage" }
-embassy-executor = { version = "0.7.0", features = ["executor-thread", "executor-interrupt", "nightly"] }
 embassy-futures = "0.1.1"
 embassy-nrf = { version = "0.3.1", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"], optional = true }
 embassy-rp = { version = "0.3.1", features = ["critical-section-impl", "time-driver"], optional = true }
@@ -92,6 +88,7 @@ usbd-hid = { version = "0.8.2", optional = true }
 
 [dev-dependencies]
 cortex-m-rt = "0.7.0"
+embassy-executor = { version = "0.7.0", features = ["arch-cortex-m"] }
 
 [package.metadata.docs.rs]
 features = ["defmt", "usb", "ble"]

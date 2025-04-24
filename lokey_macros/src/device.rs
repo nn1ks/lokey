@@ -93,8 +93,8 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         #[global_allocator]
         static HEAP: ::lokey::embedded_alloc::LlffHeap = ::lokey::embedded_alloc::LlffHeap::empty();
 
-        #[::lokey::embassy_executor::main]
-        async fn main(spawner: ::lokey::embassy_executor::Spawner) {
+        #[::embassy_executor::main]
+        async fn main(spawner: ::embassy_executor::Spawner) {
             fn __modify_mcu_config(
                 __config: &mut <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::Config
             ) {
@@ -194,19 +194,19 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 state,
             };
 
-            #[::lokey::embassy_executor::task]
+            #[::embassy_executor::task]
             async fn __run_mcu(mcu: &'static <#device_type_path as ::lokey::Device>::Mcu, context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>) {
                 ::lokey::mcu::McuInit::run(mcu, context).await;
             }
             spawner.must_spawn(__run_mcu(mcu, context));
 
-            #[::lokey::embassy_executor::task]
+            #[::embassy_executor::task]
             async fn __run_internal_channel(channel: &'static ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>) {
                 channel.run().await;
             }
             spawner.must_spawn(__run_internal_channel(internal_channel));
 
-            #[::lokey::embassy_executor::task]
+            #[::embassy_executor::task]
             async fn __run_external_channel(channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>) {
                 channel.run().await;
             }

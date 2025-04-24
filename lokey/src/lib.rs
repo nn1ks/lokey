@@ -84,8 +84,6 @@ pub mod util;
 use bitcode::{Decode, Encode};
 use core::future::Future;
 #[doc(hidden)]
-pub use embassy_executor;
-#[doc(hidden)]
 pub use embedded_alloc;
 pub use lokey_macros::{State, device};
 pub use state::{DynState, State, StateContainer};
