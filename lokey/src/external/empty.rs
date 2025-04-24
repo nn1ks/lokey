@@ -1,7 +1,6 @@
 use super::Messages0;
 use crate::{Address, external, internal, mcu};
 use core::marker::PhantomData;
-use embassy_executor::Spawner;
 
 pub struct TransportConfig;
 
@@ -18,7 +17,6 @@ impl<Mcu: mcu::Mcu> external::Transport for Transport<Mcu, Messages0> {
         _: Self::Config,
         _: &'static Self::Mcu,
         _: Address,
-        _: Spawner,
         _: &'static internal::Channel<T>,
     ) -> Self {
         Self {

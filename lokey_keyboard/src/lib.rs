@@ -23,11 +23,11 @@ use core::future::Future;
 use core::pin::Pin;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
-use embassy_executor::raw::TaskStorage;
+use embassy_futures::join::join;
 use embassy_futures::select::{Either, select, select_slice};
 pub use key::{HidReportByte, Key};
 pub use key_override::KeyOverride;
-use lokey::util::{debug, error, unwrap};
+use lokey::util::{debug, error};
 use lokey::{Component, DynContext, external, internal};
 /// Macro for building a [`Layout`].
 ///
@@ -139,49 +139,53 @@ impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
     }
 
     /// Initializes the component.
-    pub fn init<S: Scanner<Config = C>>(self, scanner: S, context: DynContext) {
-        scanner.run(self.scanner_config, context);
+    pub async fn run<S: Scanner<Config = C>>(self, scanner: S, context: DynContext) {
+        let scanner_future = scanner.run(self.scanner_config, context);
 
-        if let Some(layout) = self.layout {
-            let task_storage = Box::leak(Box::new(TaskStorage::new()));
-            let task = task_storage.spawn(|| handle_internal_message(&layout.actions, context));
-            unwrap!(context.spawner.spawn(task));
-
-            async fn handle_internal_message(
-                actions: &'static [&'static DynAction],
-                context: DynContext,
-            ) {
-                let mut receiver = context.internal_channel.receiver::<Message>();
-                let mut action_futures = Vec::<Pin<Box<dyn Future<Output = ()>>>>::new();
-                loop {
-                    let fut1 = async {
-                        let message = receiver.next().await;
-                        debug!("Received keys message: {}", message);
-                        match message {
-                            Message::Press { key_index } => match actions.get(key_index as usize) {
-                                Some(action) => Some(action.on_press(context)),
-                                None => {
-                                    error!("Layout has no action at key index {}", key_index);
-                                    None
-                                }
-                            },
-                            Message::Release { key_index } => match actions.get(key_index as usize)
-                            {
-                                Some(action) => Some(action.on_release(context)),
-                                None => {
-                                    error!("Layout has no action at key index {}", key_index);
-                                    None
-                                }
-                            },
+        match self.layout {
+            None => scanner_future.await,
+            Some(layout) => {
+                let layout_future = async {
+                    let mut receiver = context.internal_channel.receiver::<Message>();
+                    let mut action_futures = Vec::<Pin<Box<dyn Future<Output = ()>>>>::new();
+                    loop {
+                        let fut1 = async {
+                            let message = receiver.next().await;
+                            debug!("Received keys message: {}", message);
+                            match message {
+                                Message::Press { key_index } => match layout
+                                    .actions
+                                    .get(key_index as usize)
+                                {
+                                    Some(action) => Some(action.on_press(context)),
+                                    None => {
+                                        error!("Layout has no action at key index {}", key_index);
+                                        None
+                                    }
+                                },
+                                Message::Release { key_index } => match layout
+                                    .actions
+                                    .get(key_index as usize)
+                                {
+                                    Some(action) => Some(action.on_release(context)),
+                                    None => {
+                                        error!("Layout has no action at key index {}", key_index);
+                                        None
+                                    }
+                                },
+                            }
+                        };
+                        let fut2 = select_slice(&mut action_futures);
+                        match select(fut1, fut2).await {
+                            Either::First(Some(action_future)) => {
+                                action_futures.push(action_future)
+                            }
+                            Either::First(None) => {}
+                            Either::Second((_, i)) => drop(action_futures.remove(i)),
                         }
-                    };
-                    let fut2 = select_slice(&mut action_futures);
-                    match select(fut1, fut2).await {
-                        Either::First(Some(action_future)) => action_futures.push(action_future),
-                        Either::First(None) => {}
-                        Either::Second((_, i)) => drop(action_futures.remove(i)),
                     }
-                }
+                };
+                join(scanner_future, layout_future).await;
             }
         }
     }
@@ -197,7 +201,7 @@ pub trait Scanner {
     ///
     /// This function should send a [`Message`] to the internal channel for each key press and key
     /// release.
-    fn run(self, config: Self::Config, context: DynContext);
+    fn run(self, config: Self::Config, context: DynContext) -> impl Future<Output = ()>;
 }
 
 /// A message type for key press and key release events.

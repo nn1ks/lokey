@@ -18,7 +18,6 @@ use core::future::Future;
 use core::mem::transmute;
 use core::pin::Pin;
 use dyn_clone::DynClone;
-use embassy_executor::Spawner;
 pub use r#override::{MessageSender, Override};
 use seq_macro::seq;
 
@@ -77,7 +76,6 @@ pub trait Transport: Any {
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
-        spawner: Spawner,
         internal_channel: &'static internal::Channel<T>,
     ) -> impl Future<Output = Self>;
 

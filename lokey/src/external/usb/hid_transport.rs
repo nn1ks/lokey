@@ -6,7 +6,6 @@ use alloc::boxed::Box;
 use core::marker::PhantomData;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
-use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -32,7 +31,7 @@ where
     Messages: external::Messages,
     Report: AsInputReport + SerializedDescriptor + 'static,
 {
-    pub fn new(config: TransportConfig, mcu: &'static Mcu, _: Spawner) -> Self {
+    pub fn new(config: TransportConfig, mcu: &'static Mcu) -> Self {
         let device_handler = DeviceHandler::new();
 
         Self {

@@ -1,7 +1,10 @@
 #![no_main]
 #![no_std]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(future_join)]
 
+use core::future::join;
+use embassy_executor::Spawner;
 use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::blink::Blink;
 use lokey::layer::LayerId;
@@ -15,7 +18,18 @@ use lokey_keyboard::{Key, KeyOverride, Keys, MatrixConfig, layout};
 use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
-async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
+async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
+    context
+        .state
+        .layer_manager
+        .add_conditional_layer([LayerId(1), LayerId(2)], LayerId(4))
+        .await;
+
+    context
+        .external_channel
+        .add_override(KeyOverride::new().with([Key::LShift, Key::A], Key::E))
+        .await;
+
     let layout = layout!(
         // Layer 0
         [
@@ -57,30 +71,19 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
             NoOp,
         ],
     );
-    context
-        .state
-        .layer_manager
-        .add_conditional_layer([LayerId(1), LayerId(2)], LayerId(4))
-        .await;
-    context
-        .enable(Keys::<MatrixConfig, NUM_KEYS>::new().layout(layout))
-        .await;
 
-    context.enable(Blink::new()).await;
+    let keys_future = context.enable(Keys::<MatrixConfig, NUM_KEYS>::new().layout(layout));
 
-    context
-        .external_channel
-        .add_override(KeyOverride::new().with([Key::LShift, Key::A], Key::E))
-        .await;
+    let blink_future = context.enable(Blink::new());
 
-    context
-        .enable(
-            StatusLedArray::<4>::new(context.as_dyn())
-                .hook(BootHook)
-                .hook(BleAdvertisementHook)
-                .hook(BleProfileHook),
-        )
-        .await;
+    let status_led_array_future = context.enable(
+        StatusLedArray::<4>::new(context.as_dyn())
+            .hook(BootHook)
+            .hook(BleAdvertisementHook)
+            .hook(BleProfileHook),
+    );
+
+    join!(keys_future, blink_future, status_led_array_future).await;
 
     // context.spawner.spawn(task()).unwrap();
     // #[embassy_executor::task]

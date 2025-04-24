@@ -7,7 +7,6 @@ use crate::mcu::McuBle;
 use crate::util::unwrap;
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
-use embassy_executor::Spawner;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
@@ -88,7 +87,7 @@ impl McuBle for Nrf52840 {
 impl McuInit for Nrf52840 {
     type Config = Config;
 
-    async fn create(config: Self::Config, address: Address, _spawner: Spawner) -> Self {
+    async fn create(config: Self::Config, address: Address) -> Self {
         let mut nrf_config = embassy_nrf::config::Config::default();
         nrf_config.gpiote_interrupt_priority = Priority::P2;
         nrf_config.time_interrupt_priority = Priority::P2;
@@ -131,7 +130,7 @@ impl McuInit for Nrf52840 {
         let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
         let sdc = unwrap!(build_sdc(sdc_p, rng, mpsl, sdc_mem));
 
-        static RESOURCES: StaticCell<HostResources<2, 2, 72>> = StaticCell::new();
+        static RESOURCES: StaticCell<HostResources<2, 4, 72>> = StaticCell::new();
         let resources = RESOURCES.init(HostResources::new());
         let ble_stack = trouble_host::new(sdc, resources)
             .set_random_address(device_address_to_ble_address(&address))

@@ -1,5 +1,4 @@
 use super::ExternalMessage;
-use embassy_executor::Spawner;
 use lokey::external::ble::GenericTransport;
 use lokey::external::{self, Messages1};
 use lokey::mcu::{Mcu, McuBle, McuStorage};
@@ -48,7 +47,6 @@ impl<M: Mcu + McuBle + McuStorage> external::Transport
         config: Self::Config,
         mcu: &'static Self::Mcu,
         _address: Address,
-        spawner: Spawner,
         internal_channel: &'static internal::Channel<T>,
     ) -> Self {
         const ADV_SERVICE_UUIDS: &[[u8; 2]] = &[service::HUMAN_INTERFACE_DEVICE.to_le_bytes()];
@@ -65,7 +63,6 @@ impl<M: Mcu + McuBle + McuStorage> external::Transport
             inner: GenericTransport::new(
                 config,
                 mcu,
-                spawner,
                 internal_channel.as_dyn_ref(),
                 ADV_SERVICE_UUIDS,
             ),

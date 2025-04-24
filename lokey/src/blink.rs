@@ -1,8 +1,5 @@
 use crate::Component;
-use crate::util::{error, unwrap};
-use alloc::boxed::Box;
-use embassy_executor::Spawner;
-use embassy_executor::raw::TaskStorage;
+use crate::util::error;
 use embassy_time::{Duration, Timer};
 use embedded_hal::digital::OutputPin;
 
@@ -19,22 +16,16 @@ impl Blink {
         Self { duration }
     }
 
-    pub fn init<P: OutputPin + 'static>(self, led: P, spawner: Spawner) {
-        let task_storage = Box::leak(Box::new(TaskStorage::new()));
-        let task = task_storage.spawn(|| task(led, self.duration));
-        unwrap!(spawner.spawn(task));
-
-        async fn task<P: OutputPin>(mut led: P, duration: Duration) {
-            loop {
-                if led.set_high().is_err() {
-                    error!("Failed to set pin");
-                }
-                Timer::after(duration).await;
-                if led.set_low().is_err() {
-                    error!("Failed to set pin");
-                }
-                Timer::after(duration).await;
+    pub async fn run<P: OutputPin + 'static>(self, mut led: P) {
+        loop {
+            if led.set_high().is_err() {
+                error!("Failed to set pin");
             }
+            Timer::after(self.duration).await;
+            if led.set_low().is_err() {
+                error!("Failed to set pin");
+            }
+            Timer::after(self.duration).await;
         }
     }
 }

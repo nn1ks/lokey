@@ -1,10 +1,8 @@
 use super::{Debounce, Message, Scanner};
-use crate::{DynContext, internal};
-use alloc::boxed::Box;
-use embassy_executor::raw::TaskStorage;
+use crate::DynContext;
 use embassy_time::Timer;
 use futures_util::future::join_all;
-use lokey::util::{error, unwrap};
+use lokey::util::error;
 use switch_hal::{InputSwitch, WaitableInputSwitch};
 
 /// Configuration for the [`DirectPins`] scanner.
@@ -52,57 +50,44 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const NUM_IS: usize, const 
 
     type Config = DirectPinsConfig;
 
-    fn run(self, config: Self::Config, context: DynContext) {
-        let task_storage = Box::leak(Box::new(TaskStorage::new()));
-        let task = task_storage
-            .spawn(|| task(config, self.pins, self.transform, context.internal_channel));
-        unwrap!(context.spawner.spawn(task));
-
-        async fn task<I, const NUM_IS: usize, const NUM_KEYS: usize>(
-            config: DirectPinsConfig,
-            mut input_pins: [I; NUM_IS],
-            transform: [Option<usize>; NUM_KEYS],
-            internal_channel: internal::DynChannelRef<'static>,
-        ) where
-            I: WaitableInputSwitch + 'static,
-        {
-            let futures = input_pins.iter_mut().enumerate().map(|(i, pin)| {
-                let debounce_key_press = config.debounce_key_press.clone();
-                let debounce_key_release = config.debounce_key_release.clone();
-                async move {
-                    let mut active = false;
-                    loop {
-                        let wait_duration = if active {
-                            let Ok(wait_duration) =
-                                debounce_key_release.wait_for_inactive(pin).await
-                            else {
-                                error!("failed to get active status of pin");
-                                continue;
-                            };
-                            active = false;
-                            wait_duration
-                        } else {
-                            let Ok(wait_duration) = debounce_key_press.wait_for_active(pin).await
-                            else {
-                                error!("failed to get active status of pin");
-                                continue;
-                            };
-                            active = true;
-                            wait_duration
+    async fn run(mut self, config: Self::Config, context: DynContext) {
+        let futures = self.pins.iter_mut().enumerate().map(|(i, pin)| {
+            let debounce_key_press = config.debounce_key_press.clone();
+            let debounce_key_release = config.debounce_key_release.clone();
+            async move {
+                let mut active = false;
+                loop {
+                    let wait_duration = if active {
+                        let Ok(wait_duration) = debounce_key_release.wait_for_inactive(pin).await
+                        else {
+                            error!("failed to get active status of pin");
+                            continue;
                         };
-                        if let Some(key_index) = transform.into_iter().position(|v| v == Some(i)) {
-                            let key_index = u16::try_from(key_index).expect("too many keys");
-                            if active {
-                                internal_channel.send(Message::Press { key_index });
-                            } else {
-                                internal_channel.send(Message::Release { key_index });
-                            }
+                        active = false;
+                        wait_duration
+                    } else {
+                        let Ok(wait_duration) = debounce_key_press.wait_for_active(pin).await
+                        else {
+                            error!("failed to get active status of pin");
+                            continue;
+                        };
+                        active = true;
+                        wait_duration
+                    };
+                    if let Some(key_index) = self.transform.into_iter().position(|v| v == Some(i)) {
+                        let key_index = u16::try_from(key_index).expect("too many keys");
+                        if active {
+                            context.internal_channel.send(Message::Press { key_index });
+                        } else {
+                            context
+                                .internal_channel
+                                .send(Message::Release { key_index });
                         }
-                        Timer::after(wait_duration).await;
                     }
+                    Timer::after(wait_duration).await;
                 }
-            });
-            join_all(futures).await;
-        }
+            }
+        });
+        join_all(futures).await;
     }
 }

@@ -1,7 +1,6 @@
 use super::ExternalMessage;
 use alloc::boxed::Box;
 use core::pin::Pin;
-use embassy_executor::Spawner;
 use lokey::external::usb::{CreateDriver, HidTransport};
 use lokey::external::{self, Messages1, usb};
 use lokey::mcu::Mcu;
@@ -19,10 +18,9 @@ impl<M: Mcu + CreateDriver> external::Transport for UsbTransport<M, Messages1<Ex
         config: Self::Config,
         mcu: &'static Self::Mcu,
         _address: Address,
-        spawner: Spawner,
         _internal_channel: &'static internal::Channel<T>,
     ) -> Self {
-        Self(usb::HidTransport::new(config, mcu, spawner))
+        Self(usb::HidTransport::new(config, mcu))
     }
 
     async fn run(&self) {

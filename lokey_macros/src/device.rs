@@ -21,42 +21,46 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     let function: syn::ItemFn = syn::parse(item).unwrap_or_else(|e| abort!("{}", e.to_string()));
     let function_ident = &function.sig.ident;
 
+    let context_param = if function.sig.inputs.len() == 2 {
+        &function.sig.inputs[0]
+    } else {
+        abort!(function.sig.inputs.span(), "Expected 2 parameters");
+    };
+
     let invalid_device_type_error = "Parameter must be of type `Context`";
     let invalid_device_argument_error = "Expected device type as argument";
 
-    let (device_type_path, transports_type_path, state_type_path) =
-        match function.sig.inputs.first() {
-            Some(syn::FnArg::Typed(pattern)) => match &*pattern.ty {
-                syn::Type::Path(v) => {
-                    let last_segment = &v.path.segments.last().unwrap();
-                    match &last_segment.arguments {
-                        syn::PathArguments::AngleBracketed(v) => {
-                            if v.args.len() != 3 {
-                                abort!(v.args.span(), "Expected 3 type arguments");
-                            }
-                            let mut iter = v.args.iter();
-                            let a = match iter.next().unwrap() {
-                                syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                                _ => abort!(v.span(), invalid_device_argument_error),
-                            };
-                            let b = match iter.next().unwrap() {
-                                syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                                _ => abort!(v.span(), invalid_device_argument_error),
-                            };
-                            let c = match iter.next().unwrap() {
-                                syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                                _ => abort!(v.span(), invalid_device_argument_error),
-                            };
-                            (a, b, c)
+    let (device_type_path, transports_type_path, state_type_path) = match &context_param {
+        syn::FnArg::Typed(pattern) => match &*pattern.ty {
+            syn::Type::Path(v) => {
+                let last_segment = &v.path.segments.last().unwrap();
+                match &last_segment.arguments {
+                    syn::PathArguments::AngleBracketed(v) => {
+                        if v.args.len() != 3 {
+                            abort!(v.args.span(), "Expected 3 type arguments");
                         }
-                        _ => abort!(v.span(), invalid_device_argument_error),
+                        let mut iter = v.args.iter();
+                        let a = match iter.next().unwrap() {
+                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                            _ => abort!(v.span(), invalid_device_argument_error),
+                        };
+                        let b = match iter.next().unwrap() {
+                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                            _ => abort!(v.span(), invalid_device_argument_error),
+                        };
+                        let c = match iter.next().unwrap() {
+                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
+                            _ => abort!(v.span(), invalid_device_argument_error),
+                        };
+                        (a, b, c)
                     }
+                    _ => abort!(v.span(), invalid_device_argument_error),
                 }
-                _ => abort!(pattern.ty.span(), invalid_device_type_error),
-            },
-            Some(arg @ syn::FnArg::Receiver(_)) => abort!(arg.span(), invalid_device_type_error),
-            None => abort!(function.sig.inputs.span(), invalid_device_type_error),
-        };
+            }
+            _ => abort!(pattern.ty.span(), invalid_device_type_error),
+        },
+        syn::FnArg::Receiver(_) => abort!(context_param.span(), invalid_device_type_error),
+    };
 
     let heap_size = match args.heap_size {
         Some(v) => v.to_token_stream(),
@@ -135,12 +139,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             let mcu = {
                 static MCU: ::lokey::static_cell::StaticCell<<#device_type_path as ::lokey::Device>::Mcu> = ::lokey::static_cell::StaticCell::new();
                 MCU.init(
-                    <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(
-                        mcu_config,
-                        address,
-                        spawner
-                    )
-                    .await
+                    <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(mcu_config, address).await
                 )
             };
 
@@ -157,7 +156,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                             internal_transport_config,
                             mcu,
                             address,
-                            spawner,
                         )
                         .await
                     )
@@ -176,7 +174,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                             external_transport_config,
                             mcu,
                             address,
-                            spawner,
                             internal_channel,
                         )
                         .await
@@ -190,7 +187,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             let context = ::lokey::Context {
-                spawner,
                 address,
                 mcu,
                 external_channel,
@@ -218,7 +214,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             #function
 
-            #function_ident(context).await
+            #function_ident(context, spawner).await
         }
     }
     .into()

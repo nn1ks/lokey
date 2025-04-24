@@ -1,7 +1,10 @@
 #![no_main]
 #![no_std]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(future_join)]
 
+use core::future::join;
+use embassy_executor::Spawner;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
@@ -56,63 +59,66 @@ impl Device for KeyboardLeft {
 }
 
 impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
-    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T, S>) {
+    async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
         let pin = unsafe { embassy_rp::peripherals::PIN_16::steal() };
         let led = Output::new(pin, Level::Low);
-        component.init(led, context.spawner);
+        component.run(led).await;
     }
 }
 
 const NUM_KEYS: usize = 1;
 
 impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> for KeyboardLeft {
-    async fn enable<T: Transports<Self::Mcu>>(
-        component: Keys<DirectPinsConfig, NUM_KEYS>,
-        context: Context<Self, T, S>,
-    ) {
+    async fn enable<T>(component: Keys<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
         let input_pins =
             unsafe { [Input::new(PIN_0::steal().degrade(), Pull::Up).into_active_low_switch()] };
         let scanner = DirectPins::new::<NUM_KEYS>(input_pins).continuous::<0>();
 
-        component.init(scanner, context.as_dyn())
+        component.run(scanner, context.as_dyn()).await
     }
 }
 
 #[lokey::device]
-async fn main(context: Context<KeyboardLeft, Central, DefaultState>) {
+async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
     let layout = layout!(
         // Layer 0
         [KeyCode::new(Key::A)],
         // Layer 1
         [Transparent]
     );
-    context
-        .enable(
-            Keys::<DirectPinsConfig, NUM_KEYS>::new()
-                .layout(layout)
-                .scanner_config(DirectPinsConfig {
-                    debounce_key_press: Debounce::Defer {
-                        duration: Duration::from_millis(30),
-                    },
-                    debounce_key_release: Debounce::Defer {
-                        duration: Duration::from_millis(30),
-                    },
-                }),
-        )
-        .await;
+    let keys_future = context.enable(
+        Keys::<DirectPinsConfig, NUM_KEYS>::new()
+            .layout(layout)
+            .scanner_config(DirectPinsConfig {
+                debounce_key_press: Debounce::Defer {
+                    duration: Duration::from_millis(30),
+                },
+                debounce_key_release: Debounce::Defer {
+                    duration: Duration::from_millis(30),
+                },
+            }),
+    );
 
-    context.enable(Blink::new()).await;
+    let blink_future = context.enable(Blink::new());
 
-    context.spawner.spawn(task()).unwrap();
-    #[embassy_executor::task]
-    async fn task() {
-        loop {
-            defmt::info!(
-                "Heap usage: ({}/{})",
-                HEAP.used(),
-                HEAP.free() + HEAP.used()
-            );
-            embassy_time::Timer::after_secs(2).await;
-        }
-    }
+    join!(keys_future, blink_future).await;
+
+    // spawner.spawn(task()).unwrap();
+    // #[embassy_executor::task]
+    // async fn task() {
+    //     loop {
+    //         defmt::info!(
+    //             "Heap usage: ({}/{})",
+    //             HEAP.used(),
+    //             HEAP.free() + HEAP.used()
+    //         );
+    //         embassy_time::Timer::after_secs(2).await;
+    //     }
+    // }
 }

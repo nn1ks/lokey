@@ -7,7 +7,6 @@ pub mod storage;
 
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::any::Any;
-use embassy_executor::Spawner;
 use embedded_storage_async::nor_flash::MultiwriteNorFlash;
 #[cfg(feature = "nrf52840")]
 pub use nrf52840::Nrf52840;
@@ -24,11 +23,7 @@ pub trait McuInit: Mcu {
     /// Creates the MCU.
     ///
     /// This function must be called only once for a MCU type.
-    fn create(
-        config: Self::Config,
-        address: Address,
-        spawner: Spawner,
-    ) -> impl Future<Output = Self>
+    fn create(config: Self::Config, address: Address) -> impl Future<Output = Self>
     where
         Self: Sized;
 
@@ -72,7 +67,7 @@ mod dummy {
     impl McuInit for DummyMcu {
         type Config = ();
 
-        async fn create(_config: Self::Config, _address: Address, _spawner: Spawner) -> Self {
+        async fn create(_config: Self::Config, _address: Address) -> Self {
             Self
         }
 

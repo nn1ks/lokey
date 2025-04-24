@@ -12,7 +12,6 @@ use core::any::Any;
 use core::future::Future;
 use core::mem::transmute;
 use core::pin::Pin;
-use embassy_executor::Spawner;
 
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::InternalTransport;
 
@@ -36,7 +35,6 @@ pub trait Transport: Any {
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
-        spawner: Spawner,
     ) -> impl Future<Output = Self>;
 
     fn run(&self) -> impl Future<Output = ()>;

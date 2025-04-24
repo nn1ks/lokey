@@ -84,7 +84,6 @@ use bitcode::{Decode, Encode};
 use core::future::Future;
 #[doc(hidden)]
 pub use embassy_executor;
-use embassy_executor::Spawner;
 #[doc(hidden)]
 pub use embedded_alloc;
 pub use lokey_macros::{State, device};
@@ -93,7 +92,6 @@ pub use state::{DynState, State, StateContainer};
 pub use static_cell;
 
 pub struct Context<D: Device, T: Transports<D::Mcu>, S: StateContainer> {
-    pub spawner: Spawner,
     pub address: Address,
     pub mcu: &'static D::Mcu,
     pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
@@ -105,7 +103,6 @@ impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Context<D, T, S> {
     pub fn as_dyn(&self) -> DynContext {
         let mcu = self.mcu;
         DynContext {
-            spawner: self.spawner,
             address: self.address,
             mcu,
             internal_channel: self.internal_channel.as_dyn_ref(),
@@ -134,7 +131,6 @@ impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Copy for Context<D, T,
 /// A dynamic dispatch version of [`Context`].
 #[derive(Clone, Copy)]
 pub struct DynContext {
-    pub spawner: Spawner,
     pub address: Address,
     pub mcu: &'static dyn mcu::Mcu,
     pub internal_channel: internal::DynChannelRef<'static>,
@@ -165,8 +161,7 @@ pub trait Component {}
 /// Trait for adding support of a component to a device.
 pub trait ComponentSupport<C: Component, S: StateContainer>: Device {
     /// Enables the specified component for this device.
-    fn enable<T: Transports<Self::Mcu>>(
-        component: C,
-        context: Context<Self, T, S>,
-    ) -> impl Future<Output = ()>;
+    fn enable<T>(component: C, context: Context<Self, T, S>) -> impl Future<Output = ()>
+    where
+        T: Transports<Self::Mcu>;
 }

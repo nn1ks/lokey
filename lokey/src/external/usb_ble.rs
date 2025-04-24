@@ -5,7 +5,6 @@ use alloc::boxed::Box;
 use core::cell::Cell;
 use core::future::Future;
 use core::pin::Pin;
-use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::Mutex;
@@ -77,25 +76,12 @@ where
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
-        spawner: Spawner,
         internal_channel: &'static internal::Channel<U>,
     ) -> Self {
-        let usb_transport = Usb::create(
-            config.to_usb_config(),
-            mcu,
-            address,
-            spawner,
-            internal_channel,
-        )
-        .await;
-        let ble_transport = Ble::create(
-            config.to_ble_config(),
-            mcu,
-            address,
-            spawner,
-            internal_channel,
-        )
-        .await;
+        let usb_transport =
+            Usb::create(config.to_usb_config(), mcu, address, internal_channel).await;
+        let ble_transport =
+            Ble::create(config.to_ble_config(), mcu, address, internal_channel).await;
 
         let active = Mutex::new(Cell::new(TransportSelection::Ble));
         let activation_request = Signal::new();

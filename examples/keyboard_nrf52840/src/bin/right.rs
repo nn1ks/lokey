@@ -1,8 +1,10 @@
 #![no_main]
 #![no_std]
 #![feature(impl_trait_in_assoc_type)]
-#![feature(type_alias_impl_trait)]
+#![feature(future_join)]
 
+use core::future::join;
+use embassy_executor::Spawner;
 use keyboard_nrf52840::{DefaultState, KeyboardRight, NUM_KEYS, Peripheral};
 use lokey::Context;
 use lokey::blink::Blink;
@@ -10,12 +12,12 @@ use lokey_keyboard::{DirectPinsConfig, Keys};
 use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
-async fn main(context: Context<KeyboardRight, Peripheral, DefaultState>) {
-    context
-        .enable(Keys::<DirectPinsConfig, NUM_KEYS>::new())
-        .await;
+async fn main(context: Context<KeyboardRight, Peripheral, DefaultState>, _spawner: Spawner) {
+    let keys_future = context.enable(Keys::<DirectPinsConfig, NUM_KEYS>::new());
 
-    context.enable(Blink::new()).await;
+    let blink_future = context.enable(Blink::new());
+
+    join!(keys_future, blink_future).await;
 
     // context.spawner.spawn(task()).unwrap();
     // #[embassy_executor::task]

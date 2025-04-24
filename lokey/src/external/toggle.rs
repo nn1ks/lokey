@@ -3,7 +3,6 @@ use crate::{Address, external, internal};
 use alloc::boxed::Box;
 use core::pin::Pin;
 use core::sync::atomic::Ordering;
-use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
@@ -105,10 +104,9 @@ impl<T: external::Transport<Messages = M>, M: external::Messages> external::Tran
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
-        spawner: Spawner,
         internal_channel: &'static internal::Channel<U>,
     ) -> Self {
-        let transport = T::create(config.transport, mcu, address, spawner, internal_channel).await;
+        let transport = T::create(config.transport, mcu, address, internal_channel).await;
         ACTIVE.store(config.active, Ordering::Release);
         transport.set_active(config.active);
 

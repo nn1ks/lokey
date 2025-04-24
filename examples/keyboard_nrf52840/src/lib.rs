@@ -108,18 +108,21 @@ impl Device for KeyboardLeft {
 }
 
 impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
-    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T, S>) {
+    async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
         let pin = unsafe { embassy_nrf::peripherals::P0_17::steal() };
         let led = Output::new(pin, Level::Low, OutputDrive::Standard);
-        component.init(led, context.spawner);
+        component.run(led).await;
     }
 }
 
 impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for KeyboardLeft {
-    async fn enable<T: Transports<Self::Mcu>>(
-        component: Keys<MatrixConfig, NUM_KEYS>,
-        context: Context<Self, T, S>,
-    ) {
+    async fn enable<T>(component: Keys<MatrixConfig, NUM_KEYS>, context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
         let matrix = unsafe {
             Matrix::new::<NUM_KEYS>(
                 [
@@ -167,15 +170,15 @@ impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for Ke
             .map_next::<2, 5>()
             .map_next::<1, 5>()
             .map_next::<0, 5>();
-        component.init(matrix, context.as_dyn());
+        component.run(matrix, context.as_dyn()).await;
     }
 }
 
 impl<S: StateContainer> ComponentSupport<StatusLedArray<4>, S> for KeyboardLeft {
-    async fn enable<T: Transports<Self::Mcu>>(
-        component: StatusLedArray<4>,
-        _context: Context<Self, T, S>,
-    ) {
+    async fn enable<T>(component: StatusLedArray<4>, _context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
         let pwm1 = unsafe { embassy_nrf::peripherals::PWM1::steal() };
         let ch0 = unsafe { embassy_nrf::peripherals::P1_11::steal().degrade() };
         let ch1 = unsafe { embassy_nrf::peripherals::P0_05::steal().degrade() };
@@ -190,7 +193,7 @@ impl<S: StateContainer> ComponentSupport<StatusLedArray<4>, S> for KeyboardLeft 
             let b: Box<dyn PwmChannel> = Box::new(channel);
             b
         });
-        component.init(channels);
+        component.run(channels).await;
     }
 }
 
@@ -207,23 +210,26 @@ impl Device for KeyboardRight {
 }
 
 impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardRight {
-    async fn enable<T: Transports<Self::Mcu>>(component: Blink, context: Context<Self, T, S>) {
+    async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
         let pin = unsafe { embassy_nrf::peripherals::P0_17::steal() };
         let led = Output::new(pin, Level::Low, OutputDrive::Standard);
-        component.init(led, context.spawner);
+        component.run(led).await;
     }
 }
 
 impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
-    async fn enable<T: Transports<Self::Mcu>>(
-        component: Keys<DirectPinsConfig, NUM_KEYS>,
-        context: Context<Self, T, S>,
-    ) {
+    async fn enable<T>(component: Keys<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
         let input_pins =
             unsafe { [Input::new(P1_11::steal().degrade(), Pull::Up).into_active_low_switch()] };
         let scanner = DirectPins::new::<NUM_KEYS>(input_pins).continuous::<18>();
 
-        component.init(scanner, context.as_dyn())
+        component.run(scanner, context.as_dyn()).await
     }
 }
 

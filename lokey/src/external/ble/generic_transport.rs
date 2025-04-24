@@ -6,7 +6,6 @@ use crate::{Address, external, internal};
 use alloc::vec::Vec;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
-use embassy_executor::Spawner;
 use embassy_futures::join::join5;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, RawMutex};
@@ -45,7 +44,6 @@ where
     pub fn new(
         config: TransportConfig,
         mcu: &'static Mcu,
-        _spawner: Spawner,
         internal_channel: internal::DynChannelRef<'static>,
         adv_service_uuids: &'static [[u8; 2]],
     ) -> Self {

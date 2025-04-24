@@ -8,7 +8,6 @@ use core::future::Future;
 use core::mem::transmute;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, Ordering};
-use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_futures::select::{select, select3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -94,12 +93,7 @@ impl<Mcu: mcu::Mcu + McuBle> internal::Transport for Transport<Mcu> {
     type Config = TransportConfig;
     type Mcu = Mcu;
 
-    async fn create(
-        config: Self::Config,
-        mcu: &'static Self::Mcu,
-        _address: Address,
-        _spawner: Spawner,
-    ) -> Self {
+    async fn create(config: Self::Config, mcu: &'static Self::Mcu, _address: Address) -> Self {
         Self { config, mcu }
     }
 

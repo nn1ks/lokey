@@ -1,13 +1,15 @@
 use crate::mcu::pwm::PwmChannel;
-use crate::util::{unwrap, warn};
+use crate::util::warn;
 use crate::{Address, Component, DynContext, internal};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use bitcode::{Decode, Encode};
+use core::pin::Pin;
 use core::sync::atomic::Ordering;
-use embassy_executor::raw::TaskStorage;
+use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
+use futures_util::future::join_all;
 use portable_atomic::AtomicU32;
 
 static ACTION_ID: AtomicU32 = AtomicU32::new(0);
@@ -343,6 +345,7 @@ impl<'a, const N: usize> ActionHandler<'a, N> {
 pub struct StatusLedArray<const N: usize> {
     context: DynContext,
     gamma_correction: fn(f32) -> f32,
+    hook_run_futures: Vec<Pin<Box<dyn Future<Output = ()>>>>,
 }
 
 impl<const N: usize> Component for StatusLedArray<N> {}
@@ -352,6 +355,7 @@ impl<const N: usize> StatusLedArray<N> {
         Self {
             context,
             gamma_correction: default_gamma_correction,
+            hook_run_futures: Vec::new(),
         }
     }
 
@@ -360,27 +364,23 @@ impl<const N: usize> StatusLedArray<N> {
         self
     }
 
-    pub fn hook<H: Hook>(self, hook: H) -> Self {
-        hook.init(&self, self.context);
+    pub fn hook<H: Hook>(mut self, hook: H) -> Self {
+        self.hook_run_futures
+            .push(Box::pin(hook.run::<N>(self.context)));
         self
     }
 
-    pub fn init(self, pwm_channels: [Box<dyn PwmChannel>; N]) {
-        async fn task<const N: usize>(
-            mut pwm_channels: [Box<dyn PwmChannel>; N],
-            gamma_correction: fn(f32) -> f32,
-            internal_channel: internal::DynChannelRef<'static>,
-            device_address: Address,
-        ) {
-            let mut receiver = internal_channel.receiver::<Message>();
-            let mut actions = Vec::<(ActionId, Action, Option<Instant>)>::new();
-            deactivate_pwm_channels(&mut pwm_channels);
+    pub async fn run(self, mut pwm_channels: [Box<dyn PwmChannel>; N]) {
+        let mut receiver = self.context.internal_channel.receiver::<Message>();
+        let mut actions = Vec::<(ActionId, Action, Option<Instant>)>::new();
+        deactivate_pwm_channels(&mut pwm_channels);
+        let handle_messages = async {
             loop {
                 let recv = async {
                     loop {
                         let message = receiver.next().await;
                         if let Some(device_addresses) = message.filter_devices {
-                            if !device_addresses.contains(&device_address) {
+                            if !device_addresses.contains(&self.context.address) {
                                 continue;
                             }
                         }
@@ -388,7 +388,7 @@ impl<const N: usize> StatusLedArray<N> {
                     }
                 };
                 let handle = async {
-                    ActionHandler::new(&mut actions, &mut pwm_channels, gamma_correction)
+                    ActionHandler::new(&mut actions, &mut pwm_channels, self.gamma_correction)
                         .run()
                         .await;
                 };
@@ -397,44 +397,29 @@ impl<const N: usize> StatusLedArray<N> {
                     actions.push((action_id, action, None));
                 }
             }
-        }
+        };
 
-        let task_storage = Box::leak(Box::new(TaskStorage::new()));
-        let task = task_storage.spawn(|| {
-            task(
-                pwm_channels,
-                self.gamma_correction,
-                self.context.internal_channel,
-                self.context.address,
-            )
-        });
-        unwrap!(self.context.spawner.spawn(task));
+        join(handle_messages, join_all(self.hook_run_futures)).await;
     }
 }
 
 pub trait Hook {
-    fn init<const N: usize>(self, status_led_array: &StatusLedArray<N>, context: DynContext);
+    fn run<const N: usize>(self, context: DynContext) -> impl Future<Output = ()> + 'static;
 }
 
 pub struct BootHook;
 
 impl Hook for BootHook {
-    fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
-        #[embassy_executor::task]
-        async fn task(device_address: Address, internal_channel: internal::DynChannelRef<'static>) {
-            Timer::after_millis(50).await;
-            let action_id = ActionId::new(device_address);
-            let action = Action::SlideBackwards {
-                duration_ms: 800,
-                count: Some(1),
-            };
-            internal_channel.send(Message::new(action_id, action));
-        }
-        unwrap!(
-            context
-                .spawner
-                .spawn(task(context.address, context.internal_channel))
-        );
+    async fn run<const N: usize>(self, context: DynContext) {
+        Timer::after_millis(50).await;
+        let action_id = ActionId::new(context.address);
+        let action = Action::SlideBackwards {
+            duration_ms: 800,
+            count: Some(1),
+        };
+        context
+            .internal_channel
+            .send(Message::new(action_id, action));
     }
 }
 
@@ -450,76 +435,60 @@ mod ble {
     pub struct BleAdvertisementHook;
 
     impl Hook for BleAdvertisementHook {
-        fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
-            #[embassy_executor::task]
-            async fn task(
-                device_address: Address,
-                internal_channel: internal::DynChannelRef<'static>,
-            ) {
-                let mut receiver = internal_channel.receiver::<external::ble::Event>();
-                let mut current_action_id = None;
-                loop {
-                    let message = receiver.next().await;
-                    match message {
-                        external::ble::Event::StartedAdvertising { scannable: true } => {
-                            let action_id = ActionId::new(device_address);
-                            let action = Action::SlideForwards {
-                                duration_ms: 800,
-                                count: None,
-                            };
-                            internal_channel.send(Message::new(action_id.clone(), action));
-                            current_action_id = Some(action_id);
-                        }
-                        external::ble::Event::StoppedAdvertising { scannable: true } => {
-                            if let Some(action_id) = current_action_id.take() {
-                                let new_action_id = ActionId::new(device_address);
-                                let action = Action::Stop { action_id };
-                                internal_channel.send(Message::new(new_action_id, action));
-                            }
-                        }
-                        _ => {}
+        async fn run<const N: usize>(self, context: DynContext) {
+            let mut receiver = context.internal_channel.receiver::<external::ble::Event>();
+            let mut current_action_id = None;
+            loop {
+                let message = receiver.next().await;
+                match message {
+                    external::ble::Event::StartedAdvertising { scannable: true } => {
+                        let action_id = ActionId::new(context.address);
+                        let action = Action::SlideForwards {
+                            duration_ms: 800,
+                            count: None,
+                        };
+                        context
+                            .internal_channel
+                            .send(Message::new(action_id.clone(), action));
+                        current_action_id = Some(action_id);
                     }
+                    external::ble::Event::StoppedAdvertising { scannable: true } => {
+                        if let Some(action_id) = current_action_id.take() {
+                            let new_action_id = ActionId::new(context.address);
+                            let action = Action::Stop { action_id };
+                            context
+                                .internal_channel
+                                .send(Message::new(new_action_id, action));
+                        }
+                    }
+                    _ => {}
                 }
             }
-            unwrap!(
-                context
-                    .spawner
-                    .spawn(task(context.address, context.internal_channel))
-            );
         }
     }
 
     pub struct BleProfileHook;
 
     impl Hook for BleProfileHook {
-        fn init<const N: usize>(self, _: &StatusLedArray<N>, context: DynContext) {
-            #[embassy_executor::task]
-            async fn task(
-                device_address: Address,
-                internal_channel: internal::DynChannelRef<'static>,
-            ) {
-                let mut receiver = internal_channel.receiver::<external::ble::Event>();
-                loop {
-                    let message = receiver.next().await;
-                    if let external::ble::Event::SwitchedProfile {
-                        profile_index,
-                        changed: _,
-                    } = message
-                    {
-                        let action_id = ActionId::new(device_address);
-                        let action = Action::Individual {
-                            indices: vec![profile_index as usize],
-                            timeout_ms: Some(1000),
-                        };
-                        internal_channel.send(Message::new(action_id, action));
-                    }
+        async fn run<const N: usize>(self, context: DynContext) {
+            let mut receiver = context.internal_channel.receiver::<external::ble::Event>();
+            loop {
+                let message = receiver.next().await;
+                if let external::ble::Event::SwitchedProfile {
+                    profile_index,
+                    changed: _,
+                } = message
+                {
+                    let action_id = ActionId::new(context.address);
+                    let action = Action::Individual {
+                        indices: vec![profile_index as usize],
+                        timeout_ms: Some(1000),
+                    };
+                    context
+                        .internal_channel
+                        .send(Message::new(action_id, action));
                 }
             }
-            unwrap!(
-                context
-                    .spawner
-                    .spawn(task(context.address, context.internal_channel))
-            );
         }
     }
 }
