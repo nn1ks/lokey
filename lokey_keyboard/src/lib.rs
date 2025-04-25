@@ -46,11 +46,11 @@ use lokey::{Component, DynContext, external, internal};
 /// #![feature(impl_trait_in_assoc_type)]
 /// # }
 ///
-/// use lokey::layer::LayerId;
+/// # fn with_macro() {
+/// use lokey_common::layer::LayerId;
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
 /// use lokey_keyboard::{Key, layout};
 ///
-/// # fn function() {
 /// let layout = layout!(
 ///     // Layer 0
 ///     [
@@ -65,12 +65,15 @@ use lokey::{Component, DynContext, external, internal};
 ///         Transparent, // Has the same action as the previous layer (i.e. Layer::new(LayerId(1)))
 ///     ],
 /// );
+/// # }
 ///
 ///
+/// # fn without_macro() {
 /// // The layout built with the macro is equivalent to this layout:
 ///
-/// use lokey::layer::LayerId;
-/// use lokey_keyboard::{action::PerLayer, DynAction, Layout};
+/// use lokey_common::layer::LayerId;
+/// use lokey_keyboard::{DynAction, Key, Layout};
+/// use lokey_keyboard::action::{HoldTap, KeyCode, Layer, PerLayer};
 /// use static_cell::StaticCell;
 ///
 /// let layout = {

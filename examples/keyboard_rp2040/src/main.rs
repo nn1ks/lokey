@@ -8,13 +8,13 @@ use embassy_executor::Spawner;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
-use lokey::blink::Blink;
 use lokey::external::{self, Messages1};
-use lokey::layer::LayerManager;
 use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
+use lokey_common::blink::Blink;
+use lokey_common::layer::LayerManager;
 use lokey_keyboard::action::KeyCode;
 use lokey_keyboard::{Debounce, DirectPins, DirectPinsConfig, Key, Keys, layout};
 use switch_hal::IntoSwitch;

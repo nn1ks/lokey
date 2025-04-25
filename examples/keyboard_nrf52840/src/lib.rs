@@ -7,17 +7,17 @@ use embassy_nrf::peripherals::{
 use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
-use lokey::blink::Blink;
 use lokey::external::{Messages0, Messages1};
-use lokey::layer::LayerManager;
 use lokey::mcu::nrf52840::pwm::Pwm;
 use lokey::mcu::pwm::{Pwm as _, PwmChannel};
 use lokey::mcu::{Nrf52840, nrf52840};
-use lokey::status_led_array::{HookBundle, StatusLedArray};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
     internal,
 };
+use lokey_common::blink::Blink;
+use lokey_common::layer::LayerManager;
+use lokey_common::status_led_array::{HookBundle, StatusLedArray};
 use lokey_keyboard::{DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
 use switch_hal::IntoSwitch;
 use {defmt_rtt as _, panic_probe as _};

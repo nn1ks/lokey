@@ -14,6 +14,7 @@ keywords = ["keyboard", "firmware"]
 defmt = [
   "dep:defmt",
   "lokey/defmt",
+  "lokey_common/defmt",
   "embassy-executor/defmt",
   "embassy-futures/defmt",
 ]
@@ -28,6 +29,7 @@ embassy-sync = "0.6.2"
 embassy-time = "0.4.0"
 futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
 lokey = { path = "../lokey" }
+lokey_common = { path = "../lokey_common", features = ["layer"] }
 lokey_keyboard_macros = { path = "../lokey_keyboard_macros" }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }

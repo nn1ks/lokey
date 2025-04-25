@@ -1,12 +1,12 @@
-use crate::mcu::pwm::PwmChannel;
-use crate::util::warn;
-use crate::{Address, Component, DynContext, internal};
 use alloc::vec::Vec;
 use bitcode::{Decode, Encode};
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
+use lokey::mcu::pwm::PwmChannel;
+use lokey::util::warn;
+use lokey::{Address, Component, DynContext, internal};
 use portable_atomic::AtomicU32;
 use seq_macro::seq;
 
@@ -450,8 +450,8 @@ pub use ble::{BleAdvertisementHook, BleProfileHook};
 #[cfg(feature = "ble")]
 mod ble {
     use super::*;
-    use crate::external;
     use alloc::vec;
+    use lokey::external;
 
     pub struct BleAdvertisementHook;
 

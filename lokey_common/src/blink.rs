@@ -1,7 +1,7 @@
-use crate::Component;
-use crate::util::error;
 use embassy_time::{Duration, Timer};
 use embedded_hal::digital::OutputPin;
+use lokey::Component;
+use lokey::util::error;
 
 pub struct Blink {
     pub duration: Duration,

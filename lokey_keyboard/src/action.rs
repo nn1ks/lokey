@@ -9,9 +9,9 @@ use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use lokey::external::toggle;
-use lokey::layer::{LayerId, LayerManager, LayerManagerEntry};
 use lokey::util::warn;
 use lokey::{Address, DynContext};
+use lokey_common::layer::{LayerId, LayerManager, LayerManagerEntry};
 use portable_atomic::AtomicBool;
 
 pub trait Action: Send + Sync + 'static {

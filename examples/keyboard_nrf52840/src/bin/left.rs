@@ -6,10 +6,12 @@
 use core::future::join;
 use embassy_executor::Spawner;
 use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
-use lokey::blink::Blink;
-use lokey::layer::LayerId;
-use lokey::status_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray};
 use lokey::{Context, Device};
+use lokey_common::blink::Blink;
+use lokey_common::layer::LayerId;
+use lokey_common::status_led_array::{
+    BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray,
+};
 use lokey_keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
     ToggleExternalTransport,

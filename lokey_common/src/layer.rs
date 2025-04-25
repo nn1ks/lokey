@@ -1,9 +1,9 @@
-use crate::util::info;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
+use lokey::util::info;
 
 /// The ID of a layer.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

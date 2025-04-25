@@ -1,5 +1,5 @@
 [workspace]
-members = ["lokey", "lokey_keyboard", "lokey_keyboard_macros", "lokey_macros"]
+members = ["lokey", "lokey_common", "lokey_keyboard", "lokey_keyboard_macros", "lokey_macros"]
 exclude = ["examples/keyboard_nrf52840", "examples/keyboard_rp2040"]
 resolver = "2"
 

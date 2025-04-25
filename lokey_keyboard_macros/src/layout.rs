@@ -66,7 +66,7 @@ pub fn layout(item: TokenStream) -> TokenStream {
                         }
                         static ACTION: ::lokey::static_cell::StaticCell<<() as ConstructAction>::Type> = ::lokey::static_cell::StaticCell::new();
                         let action = ::lokey_keyboard::DynAction::from_ref(ACTION.init(<() as ConstructAction>::construct()));
-                        (::lokey::layer::LayerId(#layer_index), action)
+                        (::lokey_common::layer::LayerId(#layer_index), action)
                     }}
                 })
                 .collect::<Vec<_>>();
@@ -100,7 +100,7 @@ pub fn static_layout(item: TokenStream) -> TokenStream {
                     let layer_index = u8::try_from(layer_index).unwrap();
                     quote! {{
                         static DYN_ACTION: &'static ::lokey_keyboard::DynAction = ::lokey_keyboard::DynAction::from_ref(&#action);
-                        (::lokey::layer::LayerId(#layer_index), DYN_ACTION)
+                        (::lokey_common::layer::LayerId(#layer_index), DYN_ACTION)
                     }}
                 })
                 .collect::<Vec<_>>();

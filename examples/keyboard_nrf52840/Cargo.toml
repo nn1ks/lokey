@@ -12,6 +12,7 @@ embassy-nrf = { version = "0.3.1", features = ["nrf52840"] }
 embassy-sync = "0.6.2"
 embassy-time = "0.4.0"
 lokey = { path = "../../lokey", features = ["nrf52840", "usb", "ble", "defmt"] }
+lokey_common = { path = "../../lokey_common", features = ["layer", "blink", "status-led-array", "ble", "defmt"] }
 lokey_keyboard = { path = "../../lokey_keyboard", features = ["usb", "ble", "defmt"] }
 panic-probe = { version = "0.3.1", features = ["print-defmt"] }
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }

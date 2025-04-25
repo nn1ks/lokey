@@ -1,0 +1,35 @@
+[package]
+name = "lokey_common"
+version = "0.0.0"
+edition = "2024"
+authors = ["Niklas Sauter <niklas@n1ks.net>"]
+repository = "https://github.com/nn1ks/lokey"
+license = "Apache-2.0 OR MIT"
+description = "Common components for the lokey framework"
+readme = "../README.md"
+categories = ["embedded", "no-std"]
+keywords = ["firmware"]
+
+[features]
+defmt = [
+    "dep:defmt",
+    "embassy-futures/defmt",
+    "embassy-time/defmt",
+    "lokey/defmt",
+]
+layer = []
+blink = []
+status-led-array = []
+ble = ["lokey/ble"]
+
+[dependencies]
+bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }
+defmt = { version = "0.3.5", features = ["alloc"], optional = true }
+embassy-futures = "0.1.1"
+embassy-sync = "0.6.2"
+embassy-time = "0.4.0"
+embedded-hal = "1.0.0"
+futures-util = { version = "0.3.30", default-features = false, features = ["async-await-macro"] }
+lokey = { path = "../lokey" }
+portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
+seq-macro = "0.3.6"

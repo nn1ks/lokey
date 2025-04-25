@@ -66,7 +66,7 @@ embedded-alloc = "0.6.0"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embedded-storage-async = "0.4.1"
-futures-util = { version = "0.3.30", default-features = false, features = ["alloc", "async-await-macro"] }
+futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
 generic-array = "1.0.0"
 lokey_macros = { path = "../lokey_macros", version = "0.0.1" }
 nrf-mpsl = { git = "https://github.com/nn1ks/nrf-sdc", features = ["critical-section-impl"], optional = true }

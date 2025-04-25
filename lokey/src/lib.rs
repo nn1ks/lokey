@@ -1,5 +1,13 @@
 //! Lokey is an extensible keyboard firmware.
 //!
+//! # Features
+//!
+//! - `defmt`: Enables logging via [defmt](https://docs.rs/defmt/latest/defmt)
+//! - `usb`: Enables the external USB transport
+//! - `ble`: Enables the internal and external Bluetooth Low Energy (BLE) transports
+//! - `nrf52840`: Enables support for the nRF52840 microcontroller
+//! - `rp2040`: Enables support for the RP2040 microcontroller
+//!
 //! # Example
 //!
 //! ```no_run
@@ -12,7 +20,6 @@
 //!     external
 //! };
 //! use lokey::external::Messages0;
-//! use lokey::layer::LayerManager;
 //!
 //! struct Keyboard;
 //!
@@ -28,12 +35,12 @@
 //!
 //! impl lokey::Component for ExampleComponent {}
 //!
-//! // Adds support for the Keys component
+//! // Adds support for the component
 //! impl<S: StateContainer> ComponentSupport<ExampleComponent, S> for Keyboard {
-//!     async fn enable<T: Transports<DummyMcu>>(
-//!         component: ExampleComponent,
-//!         context: Context<Self, T, S>,
-//!     ) {
+//!     async fn enable<T>(component: ExampleComponent, context: Context<Self, T, S>)
+//!     where
+//!         T: Transports<DummyMcu>,
+//!     {
 //!         # unimplemented!()
 //!         // ...
 //!     }
@@ -56,7 +63,7 @@
 //!
 //! #[derive(Default, State)]
 //! struct DefaultState {
-//!     layer_manager: LayerManager,
+//!     // ...
 //! }
 //!
 //! #[lokey::device]
@@ -72,13 +79,10 @@
 
 extern crate alloc;
 
-pub mod blink;
 pub mod external;
 pub mod internal;
-pub mod layer;
 pub mod mcu;
 mod state;
-pub mod status_led_array;
 pub mod util;
 
 use bitcode::{Decode, Encode};
