@@ -1,8 +1,5 @@
 #![no_std]
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use embassy_nrf::gpio::{Input, Level, Output, OutputDrive, Pin, Pull};
 use embassy_nrf::peripherals::{
     P0_02, P0_03, P0_09, P0_10, P0_28, P1_11, P1_12, P1_13, P1_14, P1_15,
@@ -16,7 +13,7 @@ use lokey::layer::LayerManager;
 use lokey::mcu::nrf52840::pwm::Pwm;
 use lokey::mcu::pwm::{Pwm as _, PwmChannel};
 use lokey::mcu::{Nrf52840, nrf52840};
-use lokey::status_led_array::StatusLedArray;
+use lokey::status_led_array::{HookBundle, StatusLedArray};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
     internal,
@@ -174,8 +171,8 @@ impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for Ke
     }
 }
 
-impl<S: StateContainer> ComponentSupport<StatusLedArray<4>, S> for KeyboardLeft {
-    async fn enable<T>(component: StatusLedArray<4>, _context: Context<Self, T, S>)
+impl<S: StateContainer, H: HookBundle> ComponentSupport<StatusLedArray<4, H>, S> for KeyboardLeft {
+    async fn enable<T>(component: StatusLedArray<4, H>, _context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
     {
@@ -189,10 +186,10 @@ impl<S: StateContainer> ComponentSupport<StatusLedArray<4>, S> for KeyboardLeft 
         // frequency = 16MHz / 1 * 1_000 = 16kHz
         let max_duty = 1_000;
         let pwm = Pwm::<_, 4>::new(simple_pwm, max_duty);
-        let channels = pwm.split().map(|channel| {
-            let b: Box<dyn PwmChannel> = Box::new(channel);
-            b
-        });
+        let mut channels = pwm.split();
+        let channels = channels
+            .each_mut()
+            .map(|channel| channel as &mut dyn PwmChannel);
         component.run(channels).await;
     }
 }

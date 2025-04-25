@@ -1,16 +1,14 @@
 use crate::mcu::pwm::PwmChannel;
 use crate::util::warn;
 use crate::{Address, Component, DynContext, internal};
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use bitcode::{Decode, Encode};
-use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
-use futures_util::future::join_all;
 use portable_atomic::AtomicU32;
+use seq_macro::seq;
 
 static ACTION_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -121,23 +119,23 @@ fn set_brightness(
     pwm_channel.set_duty(duty);
 }
 
-fn deactivate_pwm_channels(pwm_channels: &mut [Box<dyn PwmChannel>]) {
+fn deactivate_pwm_channels(pwm_channels: &mut [&mut dyn PwmChannel]) {
     for pwm_channel in pwm_channels.iter_mut() {
         pwm_channel.set_duty(pwm_channel.max_duty());
         pwm_channel.disable();
     }
 }
 
-struct ActionHandler<'a, const N: usize> {
+struct ActionHandler<'a, 'b, const N: usize> {
     actions: &'a mut Vec<(ActionId, Action, Option<Instant>)>,
-    pwm_channels: &'a mut [Box<dyn PwmChannel>; N],
+    pwm_channels: &'a mut [&'b mut dyn PwmChannel; N],
     gamma_correction: fn(f32) -> f32,
 }
 
-impl<'a, const N: usize> ActionHandler<'a, N> {
+impl<'a, 'b, const N: usize> ActionHandler<'a, 'b, N> {
     fn new(
         actions: &'a mut Vec<(ActionId, Action, Option<Instant>)>,
-        pwm_channels: &'a mut [Box<dyn PwmChannel>; N],
+        pwm_channels: &'a mut [&'b mut dyn PwmChannel; N],
         gamma_correction: fn(f32) -> f32,
     ) -> Self {
         Self {
@@ -242,7 +240,7 @@ impl<'a, const N: usize> ActionHandler<'a, N> {
                     (value - max * i as u16) as f32 / max as f32
                 };
                 pwm_channel.enable();
-                set_brightness(pwm_channel.as_mut(), brightness, self.gamma_correction);
+                set_brightness(*pwm_channel, brightness, self.gamma_correction);
             }
         }
         match remaining {
@@ -277,12 +275,12 @@ impl<'a, const N: usize> ActionHandler<'a, N> {
             if reverse {
                 for (i, pwm_channel) in self.pwm_channels.iter_mut().rev().enumerate() {
                     let brightness = calculate_brightness(update_num, i);
-                    set_brightness(pwm_channel.as_mut(), brightness, self.gamma_correction);
+                    set_brightness(*pwm_channel, brightness, self.gamma_correction);
                 }
             } else {
                 for (i, pwm_channel) in self.pwm_channels.iter_mut().enumerate() {
                     let brightness = calculate_brightness(update_num, i);
-                    set_brightness(pwm_channel.as_mut(), brightness, self.gamma_correction);
+                    set_brightness(*pwm_channel, brightness, self.gamma_correction);
                 }
             }
             let elapsed = Instant::now().duration_since(started);
@@ -342,20 +340,20 @@ impl<'a, const N: usize> ActionHandler<'a, N> {
     }
 }
 
-pub struct StatusLedArray<const N: usize> {
+pub struct StatusLedArray<const NUM_LEDS: usize, Hooks> {
     context: DynContext,
     gamma_correction: fn(f32) -> f32,
-    hook_run_futures: Vec<Pin<Box<dyn Future<Output = ()>>>>,
+    hook_bundle: Hooks,
 }
 
-impl<const N: usize> Component for StatusLedArray<N> {}
+impl<const NUM_LEDS: usize, Hooks: HookBundle> Component for StatusLedArray<NUM_LEDS, Hooks> {}
 
-impl<const N: usize> StatusLedArray<N> {
-    pub const fn new(context: DynContext) -> Self {
+impl<const NUM_LEDS: usize, Hooks: HookBundle> StatusLedArray<NUM_LEDS, Hooks> {
+    pub const fn new(context: DynContext, hook_bundle: Hooks) -> Self {
         Self {
             context,
             gamma_correction: default_gamma_correction,
-            hook_run_futures: Vec::new(),
+            hook_bundle,
         }
     }
 
@@ -364,13 +362,7 @@ impl<const N: usize> StatusLedArray<N> {
         self
     }
 
-    pub fn hook<H: Hook>(mut self, hook: H) -> Self {
-        self.hook_run_futures
-            .push(Box::pin(hook.run::<N>(self.context)));
-        self
-    }
-
-    pub async fn run(self, mut pwm_channels: [Box<dyn PwmChannel>; N]) {
+    pub async fn run(self, mut pwm_channels: [&mut dyn PwmChannel; NUM_LEDS]) {
         let mut receiver = self.context.internal_channel.receiver::<Message>();
         let mut actions = Vec::<(ActionId, Action, Option<Instant>)>::new();
         deactivate_pwm_channels(&mut pwm_channels);
@@ -399,18 +391,47 @@ impl<const N: usize> StatusLedArray<N> {
             }
         };
 
-        join(handle_messages, join_all(self.hook_run_futures)).await;
+        let run_hooks = self.hook_bundle.run_all::<NUM_LEDS>(self.context);
+
+        join(handle_messages, run_hooks).await;
     }
 }
 
+pub trait HookBundle {
+    fn run_all<const NUM_LEDS: usize>(self, context: DynContext) -> impl Future<Output = ()>;
+}
+
+macro_rules! impl_hook_bundle {
+    ($num:literal) => {
+        seq!(N in 0..=$num {
+            #(impl_hook_bundle!(@ N);)*
+        });
+    };
+    (@ $num:literal) => {
+        seq!(N in 0..$num {
+            impl<#(T~N,)*> HookBundle for (#(T~N,)*)
+            where
+                #(T~N: Hook,)*
+            {
+                #[allow(unused_variables)]
+                async fn run_all<const NUM_LEDS: usize>(self, context: DynContext) {
+                    futures_util::join!(#(self.N.run::<NUM_LEDS>(context),)*);
+                }
+            }
+        });
+    }
+}
+
+impl_hook_bundle!(16);
+
 pub trait Hook {
-    fn run<const N: usize>(self, context: DynContext) -> impl Future<Output = ()> + 'static;
+    fn run<const NUM_LEDS: usize>(self, context: DynContext) -> impl Future<Output = ()>;
 }
 
 pub struct BootHook;
 
 impl Hook for BootHook {
-    async fn run<const N: usize>(self, context: DynContext) {
+    async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
         Timer::after_millis(50).await;
         let action_id = ActionId::new(context.address);
         let action = Action::SlideBackwards {
@@ -435,7 +456,7 @@ mod ble {
     pub struct BleAdvertisementHook;
 
     impl Hook for BleAdvertisementHook {
-        async fn run<const N: usize>(self, context: DynContext) {
+        async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
             let mut receiver = context.internal_channel.receiver::<external::ble::Event>();
             let mut current_action_id = None;
             loop {
@@ -470,7 +491,7 @@ mod ble {
     pub struct BleProfileHook;
 
     impl Hook for BleProfileHook {
-        async fn run<const N: usize>(self, context: DynContext) {
+        async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
             let mut receiver = context.internal_channel.receiver::<external::ble::Event>();
             loop {
                 let message = receiver.next().await;

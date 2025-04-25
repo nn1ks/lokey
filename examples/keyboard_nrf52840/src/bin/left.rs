@@ -76,12 +76,9 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
 
     let blink_future = context.enable(Blink::new());
 
-    let status_led_array_future = context.enable(
-        StatusLedArray::<4>::new(context.as_dyn())
-            .hook(BootHook)
-            .hook(BleAdvertisementHook)
-            .hook(BleProfileHook),
-    );
+    let hooks = (BootHook, BleAdvertisementHook, BleProfileHook);
+    let status_led_array_future =
+        context.enable(StatusLedArray::<4, _>::new(context.as_dyn(), hooks));
 
     join!(keys_future, blink_future, status_led_array_future).await;
 
