@@ -1,5 +1,8 @@
 [toolchain]
-channel = "nightly"
+# TODO: Use latest nightly version (by setting this value to "nightly") once cargo is updated to work with the new cross compilation behaviour of doctests
+#       See https://github.com/rust-lang/rust/pull/137096
+#       The `cargo test --doc ...` commands in the CI and README will have to be updated to remove the `-Zdoctest-xcompile` flag
+channel = "nightly-2025-04-24"
 targets = ["thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
 profile = "complete"
 components = ["llvm-tools-preview"]
