@@ -12,17 +12,16 @@ env:
   DEFMT_LOG: trace
 
 jobs:
-  build:
+  lokey:
     runs-on: ubuntu-latest
     if: always()
     strategy:
       fail-fast: false
       matrix:
         mcu: [no_mcu, nrf52840, rp2040]
-        features: ["", "defmt", "usb", "defmt usb", "ble", "defmt ble", "usb ble", "defmt usb ble"]
         include:
           - mcu: no_mcu
-            target: thumbv7em-none-eabihf
+            target: x86_64-unknown-linux-gnu
             mcu_features: ""
           - mcu: nrf52840
             target: thumbv7em-none-eabihf
@@ -30,26 +29,113 @@ jobs:
           - mcu: rp2040
             target: thumbv6m-none-eabi
             mcu_features: "rp2040"
-        exclude:
-          # If the "nrf52840" feature is enabled, the "ble" feature must also be enabled so we exclude all feature sets that don't have "ble" here
-          - mcu: nrf52840
-            features: ""
-          - mcu: nrf52840
-            features: "defmt"
-          - mcu: nrf52840
-            features: "usb"
-          - mcu: nrf52840
-            features: "defmt usb"
+    env:
+      FEATURE_COMBINATIONS: ";defmt;usb;defmt usb;ble;defmt ble;usb ble;defmt usb ble"
     steps:
-    - uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-    - name: Build
-      run: cargo build --verbose --target ${{ matrix.target }} --no-default-features --features "${{ matrix.features }} ${{ matrix.mcu_features }}"
-    - name: Run clippy
-      run: cargo clippy --verbose --target ${{ matrix.target }} --no-default-features --features "${{ matrix.features }} ${{ matrix.mcu_features }}" -- -D warnings
-    - name: Run tests
-      if: matrix.mcu != 'no_mcu'
-      run: cargo test --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features '${{ matrix.features }} ${{ matrix.mcu_features }}'
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo build -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo clippy -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        if: matrix.mcu != 'no_mcu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo test -p lokey --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+  lokey_common:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";defmt;layer blink status-led-array;defmt layer blink status-led-array ble;"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey_common --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey_common --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+  lokey_keyboard:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";defmt;usb;defmt usb;ble;defmt ble;usb ble;defmt usb ble"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey_keyboard --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey_keyboard --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo test -p lokey_keyboard --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
   examples:
     runs-on: ubuntu-latest
     if: always()
@@ -62,6 +148,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: examples/${{ matrix.example }}
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
       - name: Check formatting
         run: cargo fmt --verbose --check
         working-directory: examples/${{ matrix.example }}
@@ -75,6 +165,10 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-    - uses: actions/checkout@v4
-    - name: Check formatting
-      run: cargo fmt --verbose --check
+      - uses: actions/checkout@v4
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Check formatting
+        run: cargo fmt --verbose --check
