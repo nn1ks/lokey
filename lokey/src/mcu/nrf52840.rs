@@ -3,21 +3,24 @@ pub mod pwm;
 mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
-use crate::mcu::McuBle;
 use crate::util::unwrap;
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
-use embassy_nrf::rng::Rng;
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
-use nrf_sdc::SoftdeviceController;
-use rand_chacha::ChaCha12Rng;
-use rand_chacha::rand_core::SeedableRng;
 use static_cell::StaticCell;
-use trouble_host::prelude::{AddrKind, BdAddr};
-use trouble_host::{HostResources, Stack};
+#[cfg(feature = "ble")]
+use {
+    crate::mcu::McuBle,
+    embassy_nrf::rng::Rng,
+    nrf_sdc::SoftdeviceController,
+    rand_chacha::ChaCha12Rng,
+    rand_chacha::rand_core::SeedableRng,
+    trouble_host::prelude::{AddrKind, BdAddr},
+    trouble_host::{HostResources, Stack},
+};
 
 pub struct Config {
     pub storage_flash_range: Range<u32>,
@@ -43,6 +46,7 @@ bind_interrupts!(struct Irqs {
     USBD => embassy_nrf::usb::InterruptHandler<embassy_nrf::peripherals::USBD>;
 });
 
+#[cfg(feature = "ble")]
 fn build_sdc<'d, const N: usize>(
     p: nrf_sdc::Peripherals<'d>,
     rng: &'d mut Rng<RNG>,
@@ -61,6 +65,7 @@ fn build_sdc<'d, const N: usize>(
         .build(p, rng, mpsl, mem)
 }
 
+#[cfg(feature = "ble")]
 fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
     trouble_host::Address {
         kind: AddrKind::RANDOM,
@@ -71,15 +76,17 @@ fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
 pub struct Nrf52840 {
     storage: Storage<Flash<'static>>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
+    #[cfg(feature = "ble")]
     ble_stack: Stack<'static, SoftdeviceController<'static>>,
 }
 
 impl Mcu for Nrf52840 {}
 
+#[cfg(feature = "ble")]
 impl McuBle for Nrf52840 {
     type Controller = SoftdeviceController<'static>;
 
-    fn ble_stack(&self) -> &trouble_host::Stack<'static, Self::Controller> {
+    fn ble_stack(&self) -> &Stack<'static, Self::Controller> {
         &self.ble_stack
     }
 }
@@ -88,6 +95,9 @@ impl McuInit for Nrf52840 {
     type Config = Config;
 
     async fn create(config: Self::Config, address: Address) -> Self {
+        #[cfg(not(feature = "ble"))]
+        let _ = address;
+
         let mut nrf_config = embassy_nrf::config::Config::default();
         nrf_config.gpiote_interrupt_priority = Priority::P2;
         nrf_config.time_interrupt_priority = Priority::P2;
@@ -105,40 +115,43 @@ impl McuInit for Nrf52840 {
         };
         static SESSION_MEM: StaticCell<SessionMem<1>> = StaticCell::new();
         static MPSL: StaticCell<MultiprotocolServiceLayer> = StaticCell::new();
-        let mpsl = MPSL.init(unwrap!(
-            nrf_mpsl::MultiprotocolServiceLayer::with_timeslots(
-                mpsl_p,
-                Irqs,
-                lfclk_cfg,
-                SESSION_MEM.init(SessionMem::new())
-            )
-        ));
+        let mpsl = MPSL.init(unwrap!(MultiprotocolServiceLayer::with_timeslots(
+            mpsl_p,
+            Irqs,
+            lfclk_cfg,
+            SESSION_MEM.init(SessionMem::new())
+        )));
 
         let flash = Flash::take(mpsl, p.NVMC);
         let storage = Storage::new(flash, config.storage_flash_range);
 
-        let sdc_p = nrf_sdc::Peripherals::new(
-            p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
-            p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
-        );
+        #[cfg(feature = "ble")]
+        let ble_stack = {
+            let sdc_p = nrf_sdc::Peripherals::new(
+                p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
+                p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
+            );
 
-        static RNG_CELL: StaticCell<Rng<'static, RNG>> = StaticCell::new();
-        let mut rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
-        let mut rng2 = ChaCha12Rng::from_rng(&mut rng).unwrap();
+            static RNG_CELL: StaticCell<Rng<'static, RNG>> = StaticCell::new();
+            let mut rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
 
-        static SDC_MEM: StaticCell<nrf_sdc::Mem<3848>> = StaticCell::new();
-        let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
-        let sdc = unwrap!(build_sdc(sdc_p, rng, mpsl, sdc_mem));
+            let mut rng2 = ChaCha12Rng::from_rng(&mut rng).unwrap();
 
-        static RESOURCES: StaticCell<HostResources<2, 4, 72>> = StaticCell::new();
-        let resources = RESOURCES.init(HostResources::new());
-        let ble_stack = trouble_host::new(sdc, resources)
-            .set_random_address(device_address_to_ble_address(&address))
-            .set_random_generator_seed(&mut rng2);
+            static SDC_MEM: StaticCell<nrf_sdc::Mem<3848>> = StaticCell::new();
+            let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
+            let sdc = unwrap!(build_sdc(sdc_p, rng, mpsl, sdc_mem));
+
+            static RESOURCES: StaticCell<HostResources<2, 4, 72>> = StaticCell::new();
+            let resources = RESOURCES.init(HostResources::new());
+            trouble_host::new(sdc, resources)
+                .set_random_address(device_address_to_ble_address(&address))
+                .set_random_generator_seed(&mut rng2)
+        };
 
         Self {
             storage,
             mpsl,
+            #[cfg(feature = "ble")]
             ble_stack,
         }
     }
