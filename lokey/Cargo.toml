@@ -83,7 +83,7 @@ usbd-hid = { version = "0.8.2", optional = true }
 
 [dev-dependencies]
 cortex-m-rt = "0.7.0"
-embassy-executor = { version = "0.7.0", features = ["arch-cortex-m"] }
+embassy-executor = { version = "0.7.0", features = ["arch-cortex-m", "executor-thread"] }
 
 [package.metadata.docs.rs]
 features = ["defmt", "usb", "ble"]
