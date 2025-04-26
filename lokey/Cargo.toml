@@ -56,7 +56,7 @@ defmt = { version = "0.3.5", features = ["alloc"], optional = true }
 dyn-clone = { git = "https://github.com/nn1ks/dyn-clone", branch = "fix-arc-usage" }
 embassy-futures = "0.1.1"
 embassy-nrf = { version = "0.3.1", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"], optional = true }
-embassy-rp = { version = "0.3.1", features = ["critical-section-impl", "time-driver"], optional = true }
+embassy-rp = { version = "0.4.0", features = ["critical-section-impl", "time-driver"], optional = true }
 embassy-sync = "0.6.2"
 # TODO: Remove once a new version of embassy-sync is released (with RwLock)
 embassy-sync-new = { git = "https://github.com/embassy-rs/embassy", package = "embassy-sync" }
