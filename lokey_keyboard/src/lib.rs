@@ -130,7 +130,9 @@ use lokey::{Component, DynContext, external, internal};
 /// };
 /// # }
 /// ```
+#[cfg(feature = "macros")]
 pub use lokey_keyboard_macros::layout;
+#[cfg(feature = "macros")]
 pub use lokey_keyboard_macros::static_layout;
 pub use matrix::{Matrix, MatrixConfig};
 #[cfg(feature = "external-usb")]

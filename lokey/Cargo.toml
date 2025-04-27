@@ -11,6 +11,13 @@ categories = ["embedded", "no-std"]
 keywords = ["keyboard", "firmware"]
 
 [features]
+default = ["macros"]
+
+## Enables macros.
+macros = [
+  "dep:lokey_macros",
+]
+
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
@@ -90,7 +97,7 @@ embedded-hal-async = "1.0.0"
 embedded-storage-async = "0.4.1"
 futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
 generic-array = "1.0.0"
-lokey_macros = { path = "../lokey_macros", version = "0.0.1" }
+lokey_macros = { path = "../lokey_macros", version = "0.0.1", optional = true }
 nrf-mpsl = { git = "https://github.com/nn1ks/nrf-sdc", features = ["critical-section-impl"], optional = true }
 nrf-sdc = { git = "https://github.com/nn1ks/nrf-sdc", features = ["central", "peripheral"], optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }

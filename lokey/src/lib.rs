@@ -4,71 +4,78 @@
 //!
 #![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
 //!
-//! # Example
-//!
-//! ```no_run
-#![doc = include_str!("../../doctest_setup")]
-//! # use core::unimplemented;
-//! # use lokey::mcu::DummyMcu;
-//! use embassy_executor::Spawner;
-//! use lokey::{
-//!     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
-//!     external
-//! };
-//! use lokey::external::Messages0;
-//!
-//! struct Keyboard;
-//!
-//! impl Device for Keyboard {
-//!     const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
-//!     type Mcu = DummyMcu;
-//!     fn mcu_config() {
-//!        // ...
-//!     }
-//! }
-//!
-//! struct ExampleComponent;
-//!
-//! impl lokey::Component for ExampleComponent {}
-//!
-//! // Adds support for the component
-//! impl<S: StateContainer> ComponentSupport<ExampleComponent, S> for Keyboard {
-//!     async fn enable<T>(component: ExampleComponent, context: Context<Self, T, S>)
-//!     where
-//!         T: Transports<DummyMcu>,
-//!     {
-//!         # unimplemented!()
-//!         // ...
-//!     }
-//! }
-//!
-//! struct Central;
-//!
-//! impl Transports<DummyMcu> for Central {
-//!     type ExternalTransport = external::empty::Transport<DummyMcu, Messages0>;
-//!     type InternalTransport = internal::empty::Transport<DummyMcu>;
-//!     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
-//!         # unimplemented!()
-//!         // ...
-//!     }
-//!     fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
-//!         # unimplemented!()
-//!         // ...
-//!     }
-//! }
-//!
-//! #[derive(Default, State)]
-//! struct DefaultState {
-//!     // ...
-//! }
-//!
-//! #[lokey::device]
-//! async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawner) {
-//!     // The component can then be enabled with the Context type
-//!     context.enable(ExampleComponent).await;
-//! }
-//! ```
+#![cfg_attr(
+    feature = "macros",
+    doc = "
+# Example
 
+```no_run"
+)]
+#![cfg_attr(feature = "macros", doc = core::include_str!("../../doctest_setup"))]
+#![cfg_attr(
+    feature = "macros",
+    doc = "
+# use core::unimplemented;
+# use lokey::mcu::DummyMcu;
+use embassy_executor::Spawner;
+use lokey::{
+    Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
+    external
+};
+use lokey::external::Messages0;
+
+struct Keyboard;
+
+impl Device for Keyboard {
+    const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
+    type Mcu = DummyMcu;
+    fn mcu_config() {
+       // ...
+    }
+}
+
+struct ExampleComponent;
+
+impl lokey::Component for ExampleComponent {}
+
+// Adds support for the component
+impl<S: StateContainer> ComponentSupport<ExampleComponent, S> for Keyboard {
+    async fn enable<T>(component: ExampleComponent, context: Context<Self, T, S>)
+    where
+        T: Transports<DummyMcu>,
+    {
+        # unimplemented!()
+        // ...
+    }
+}
+
+struct Central;
+
+impl Transports<DummyMcu> for Central {
+    type ExternalTransport = external::empty::Transport<DummyMcu, Messages0>;
+    type InternalTransport = internal::empty::Transport<DummyMcu>;
+    fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
+        # unimplemented!()
+        // ...
+    }
+    fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
+        # unimplemented!()
+        // ...
+    }
+}
+
+#[derive(Default, State)]
+struct DefaultState {
+    // ...
+}
+
+#[lokey::device]
+async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawner) {
+    // The component can then be enabled with the Context type
+    context.enable(ExampleComponent).await;
+}
+```"
+)]
 #![no_std]
 #![feature(doc_auto_cfg)]
 #![feature(impl_trait_in_assoc_type)]
@@ -85,6 +92,7 @@ use bitcode::{Decode, Encode};
 use core::future::Future;
 #[doc(hidden)]
 pub use embedded_alloc;
+#[cfg(feature = "macros")]
 pub use lokey_macros::{State, device};
 pub use state::{DynState, State, StateContainer};
 #[doc(hidden)]
