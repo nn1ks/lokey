@@ -1,3 +1,4 @@
+#[cfg(feature = "external-usb-hid")]
 mod hid_transport;
 
 use crate::mcu::Mcu;
@@ -5,6 +6,7 @@ use crate::util::{debug, info};
 use core::sync::atomic::Ordering;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
+#[cfg(feature = "external-usb-hid")]
 pub use hid_transport::HidTransport;
 use portable_atomic::AtomicBool;
 use portable_atomic_util::Arc;

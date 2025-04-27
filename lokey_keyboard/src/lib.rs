@@ -1,23 +1,28 @@
+//! # Feature flags
+//!
+#![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
+//!
+
 #![no_std]
 #![feature(doc_auto_cfg)]
 
 extern crate alloc;
 
 pub mod action;
-#[cfg(feature = "ble")]
+#[cfg(feature = "external-ble")]
 mod ble_transport;
 mod debounce;
 mod direct_pins;
 mod key;
 mod key_override;
 mod matrix;
-#[cfg(feature = "usb")]
+#[cfg(feature = "external-usb")]
 mod usb_transport;
 
 pub use action::{Action, DynAction};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-#[cfg(feature = "ble")]
+#[cfg(feature = "external-ble")]
 pub use ble_transport::BleTransport;
 use core::future::Future;
 use core::pin::Pin;
@@ -128,7 +133,7 @@ use lokey::{Component, DynContext, external, internal};
 pub use lokey_keyboard_macros::layout;
 pub use lokey_keyboard_macros::static_layout;
 pub use matrix::{Matrix, MatrixConfig};
-#[cfg(feature = "usb")]
+#[cfg(feature = "external-usb")]
 pub use usb_transport::UsbTransport;
 
 /// The layout of the keys.
@@ -298,7 +303,7 @@ pub enum ExternalMessage {
 impl external::Message for ExternalMessage {}
 
 impl ExternalMessage {
-    #[cfg(any(feature = "usb", feature = "ble"))]
+    #[cfg(any(feature = "external-usb", feature = "external-ble"))]
     pub fn update_keyboard_report(
         &self,
         report: &mut usbd_hid::descriptor::KeyboardReport,

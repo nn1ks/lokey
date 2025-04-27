@@ -444,10 +444,10 @@ impl Hook for BootHook {
     }
 }
 
-#[cfg(feature = "ble")]
+#[cfg(feature = "external-ble")]
 pub use ble::{BleAdvertisementHook, BleProfileHook};
 
-#[cfg(feature = "ble")]
+#[cfg(feature = "external-ble")]
 mod ble {
     use super::*;
     use alloc::vec;

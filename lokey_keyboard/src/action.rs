@@ -353,13 +353,13 @@ impl Action for DeactivateExternalTransport {
     async fn on_release(&'static self, _: DynContext) {}
 }
 
-#[cfg(feature = "ble")]
+#[cfg(feature = "external-ble")]
 pub use ble::{
     BleClear, BleClearActive, BleClearAll, BleDisconnectActive, BleNextProfile, BlePreviousProfile,
     BleSelectProfile,
 };
 
-#[cfg(feature = "ble")]
+#[cfg(feature = "external-ble")]
 mod ble {
     use super::*;
     use crate::external::ble::Message;
@@ -441,10 +441,10 @@ mod ble {
     }
 }
 
-#[cfg(all(feature = "usb", feature = "ble"))]
+#[cfg(all(feature = "external-usb", feature = "external-ble"))]
 pub use usb_ble::{SwitchToBle, SwitchToUsb};
 
-#[cfg(all(feature = "usb", feature = "ble"))]
+#[cfg(all(feature = "external-usb", feature = "external-ble"))]
 mod usb_ble {
     use super::*;
     use crate::external::usb_ble::{Message, TransportSelection};

@@ -1,4 +1,4 @@
-#[cfg(feature = "ble")]
+#[cfg(feature = "internal-ble")]
 pub mod ble;
 mod channel;
 pub mod empty;

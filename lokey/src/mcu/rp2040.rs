@@ -1,4 +1,4 @@
-#[cfg(feature = "usb")]
+#[cfg(feature = "external-usb")]
 pub mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};

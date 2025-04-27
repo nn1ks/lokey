@@ -1,5 +1,5 @@
 pub mod pwm;
-#[cfg(feature = "usb")]
+#[cfg(feature = "external-usb")]
 mod usb;
 
 use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
@@ -11,7 +11,7 @@ use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
-#[cfg(feature = "ble")]
+#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
 use {
     crate::mcu::McuBle,
     embassy_nrf::rng::Rng,
@@ -46,7 +46,7 @@ bind_interrupts!(struct Irqs {
     USBD => embassy_nrf::usb::InterruptHandler<embassy_nrf::peripherals::USBD>;
 });
 
-#[cfg(feature = "ble")]
+#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
 fn build_sdc<'d, const N: usize>(
     p: nrf_sdc::Peripherals<'d>,
     rng: &'d mut Rng<RNG>,
@@ -65,7 +65,7 @@ fn build_sdc<'d, const N: usize>(
         .build(p, rng, mpsl, mem)
 }
 
-#[cfg(feature = "ble")]
+#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
 fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
     trouble_host::Address {
         kind: AddrKind::RANDOM,
@@ -76,13 +76,13 @@ fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
 pub struct Nrf52840 {
     storage: Storage<Flash<'static>>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
-    #[cfg(feature = "ble")]
+    #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
     ble_stack: Stack<'static, SoftdeviceController<'static>>,
 }
 
 impl Mcu for Nrf52840 {}
 
-#[cfg(feature = "ble")]
+#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
 impl McuBle for Nrf52840 {
     type Controller = SoftdeviceController<'static>;
 
@@ -95,7 +95,7 @@ impl McuInit for Nrf52840 {
     type Config = Config;
 
     async fn create(config: Self::Config, address: Address) -> Self {
-        #[cfg(not(feature = "ble"))]
+        #[cfg(not(any(feature = "external-ble", feature = "internal-ble")))]
         let _ = address;
 
         let mut nrf_config = embassy_nrf::config::Config::default();
@@ -125,7 +125,7 @@ impl McuInit for Nrf52840 {
         let flash = Flash::take(mpsl, p.NVMC);
         let storage = Storage::new(flash, config.storage_flash_range);
 
-        #[cfg(feature = "ble")]
+        #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
         let ble_stack = {
             let sdc_p = nrf_sdc::Peripherals::new(
                 p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
@@ -151,7 +151,7 @@ impl McuInit for Nrf52840 {
         Self {
             storage,
             mpsl,
-            #[cfg(feature = "ble")]
+            #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
             ble_stack,
         }
     }

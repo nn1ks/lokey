@@ -30,7 +30,7 @@ jobs:
             target: thumbv6m-none-eabi
             mcu_features: "rp2040"
     env:
-      FEATURE_COMBINATIONS: ";defmt;usb;defmt usb;ble;defmt ble;usb ble;defmt usb ble"
+      FEATURE_COMBINATIONS: ";defmt;external-usb;external-usb;external-usb-hid;external-ble;internal-ble;external-usb external-usb-hid external-ble internal-ble;defmt external-usb external-usb-hid external-ble internal-ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
@@ -73,7 +73,7 @@ jobs:
       matrix:
         target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
     env:
-      FEATURE_COMBINATIONS: ";defmt;layer blink status-led-array;defmt layer blink status-led-array ble;"
+      FEATURE_COMBINATIONS: ";defmt;layer blink status-led-array;defmt layer blink status-led-array external-ble;"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
@@ -107,7 +107,7 @@ jobs:
       matrix:
         target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
     env:
-      FEATURE_COMBINATIONS: ";defmt;usb;defmt usb;ble;defmt ble;usb ble;defmt usb ble"
+      FEATURE_COMBINATIONS: ";defmt;external-usb;defmt external-usb;external-ble;defmt external-ble;external-usb external-ble;defmt external-usb external-ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2

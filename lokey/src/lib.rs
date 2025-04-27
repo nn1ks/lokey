@@ -1,12 +1,8 @@
 //! Lokey is an extensible keyboard firmware.
 //!
-//! # Features
+//! # Feature flags
 //!
-//! - `defmt`: Enables logging via [defmt](https://docs.rs/defmt/latest/defmt)
-//! - `usb`: Enables the external USB transport
-//! - `ble`: Enables the internal and external Bluetooth Low Energy (BLE) transports
-//! - `nrf52840`: Enables support for the nRF52840 microcontroller
-//! - `rp2040`: Enables support for the RP2040 microcontroller
+#![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
 //!
 //! # Example
 //!

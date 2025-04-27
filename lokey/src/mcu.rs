@@ -47,7 +47,7 @@ pub trait HeapSize {
     const DEFAULT_HEAP_SIZE: usize;
 }
 
-#[cfg(feature = "ble")]
+#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
 pub trait McuBle {
     type Controller: trouble_host::Controller;
     fn ble_stack(&self) -> &trouble_host::Stack<'static, Self::Controller>;

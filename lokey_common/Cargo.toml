@@ -11,20 +11,30 @@ categories = ["embedded", "no-std"]
 keywords = ["firmware"]
 
 [features]
+## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
     "dep:defmt",
     "embassy-futures/defmt",
     "embassy-time/defmt",
     "lokey/defmt",
 ]
+
+## Enables types for managing layers.
 layer = []
+
+## Enables the `Blink` component.
 blink = []
+
+## Enables the `StatusLedArray` component.
 status-led-array = []
-ble = ["lokey/ble"]
+
+## Enables `StatusLedArray` hooks for the external Bluetooth Low Energy (BLE) transport.
+external-ble = ["lokey/external-ble"]
 
 [dependencies]
 bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }
 defmt = { version = "0.3.5", features = ["alloc"], optional = true }
+document-features = "0.2.11"
 embassy-futures = "0.1.1"
 embassy-sync = "0.6.2"
 embassy-time = "0.4.0"
