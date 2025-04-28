@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -23,21 +22,15 @@ struct ActivatedConditionalLayer {
     then: u64,
 }
 
-#[derive(Default)]
-struct State {
-    layer_manager_map: Mutex<CriticalSectionRawMutex, BTreeMap<u64, LayerId>>,
-    conditional_layers: Mutex<CriticalSectionRawMutex, Vec<ConditionalLayer>>,
-    activated_conditional_layers: Mutex<CriticalSectionRawMutex, Vec<ActivatedConditionalLayer>>,
-}
-
 /// Type for managing the currently active layers.
 ///
 /// Internally a stack-like datastructure is used to keep track of the order in which the layers got
 /// activated. When pushing a new layer ID to the [`LayerManager`] it will become the active one and
 /// a [`LayerManagerEntry`] is returned that can be used to deactive the layer again.
-#[derive(Clone, Copy)]
 pub struct LayerManager {
-    state: &'static State,
+    layer_manager_map: Mutex<CriticalSectionRawMutex, BTreeMap<u64, LayerId>>,
+    conditional_layers: Mutex<CriticalSectionRawMutex, Vec<ConditionalLayer>>,
+    activated_conditional_layers: Mutex<CriticalSectionRawMutex, Vec<ActivatedConditionalLayer>>,
 }
 
 impl Default for LayerManager {
@@ -48,15 +41,17 @@ impl Default for LayerManager {
 
 impl LayerManager {
     /// Creates a new [`LayerManager`].
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
-            state: Box::leak(Box::new(State::default())),
+            layer_manager_map: Mutex::new(BTreeMap::new()),
+            conditional_layers: Mutex::new(Vec::new()),
+            activated_conditional_layers: Mutex::new(Vec::new()),
         }
     }
 
     /// Sets the active layer to the layer with the specified ID.
     pub async fn push(&self, layer: LayerId) -> LayerManagerEntry {
-        let mut map = self.state.layer_manager_map.lock().await;
+        let mut map = self.layer_manager_map.lock().await;
         let new_id = match map.last_key_value() {
             Some((last_id, _)) => last_id + 1,
             None => 0,
@@ -64,7 +59,7 @@ impl LayerManager {
         assert!(!map.contains_key(&new_id));
         map.insert(new_id, layer);
         let entry = LayerManagerEntry(new_id);
-        let conditional_layers = self.state.conditional_layers.lock().await;
+        let conditional_layers = self.conditional_layers.lock().await;
         let activated_conditional_layers =
             conditional_layers.iter().filter_map(|conditional_layer| {
                 let all_required_layers_are_active =
@@ -86,8 +81,7 @@ impl LayerManager {
                     then: new_id,
                 })
             });
-        self.state
-            .activated_conditional_layers
+        self.activated_conditional_layers
             .lock()
             .await
             .extend(activated_conditional_layers);
@@ -96,9 +90,9 @@ impl LayerManager {
 
     /// Deactivates the layer that was pushed to the stack with the specified [`LayerManagerEntry`].
     pub async fn remove(&self, entry: LayerManagerEntry) -> LayerId {
-        let mut map = self.state.layer_manager_map.lock().await;
+        let mut map = self.layer_manager_map.lock().await;
         let removed_layer_id = map.remove(&entry.0).unwrap();
-        let mut activated_conditional_layers = self.state.activated_conditional_layers.lock().await;
+        let mut activated_conditional_layers = self.activated_conditional_layers.lock().await;
         for i in (0..activated_conditional_layers.len()).rev() {
             let activated_conditional_layer = &activated_conditional_layers[i];
             if activated_conditional_layer
@@ -115,7 +109,7 @@ impl LayerManager {
 
     /// Returns the ID of the currently active layer (i.e. the layer ID that was last pushed to the stack).
     pub async fn active(&self) -> LayerId {
-        match self.state.layer_manager_map.lock().await.last_key_value() {
+        match self.layer_manager_map.lock().await.last_key_value() {
             Some((_, layer)) => *layer,
             None => LayerId(0),
         }
@@ -126,13 +120,9 @@ impl LayerManager {
     /// Whenever all `required` layers are active, the the layer passed as the `then` argument will
     /// be activated.
     pub async fn add_conditional_layer(&self, required: impl Into<Vec<LayerId>>, then: LayerId) {
-        self.state
-            .conditional_layers
-            .lock()
-            .await
-            .push(ConditionalLayer {
-                required: required.into(),
-                then,
-            })
+        self.conditional_layers.lock().await.push(ConditionalLayer {
+            required: required.into(),
+            then,
+        })
     }
 }
