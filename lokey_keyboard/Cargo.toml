@@ -50,3 +50,6 @@ static_cell = "2.1.0"
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
 trouble-host = { git = "https://github.com/embassy-rs/trouble", rev = "3d77c0b", features = ["security"], optional = true }
 usbd-hid = { version = "0.8.2", optional = true }
+
+[package.metadata.docs.rs]
+features = ["macros", "defmt", "external-usb", "external-ble"]

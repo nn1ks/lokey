@@ -43,3 +43,6 @@ futures-util = { version = "0.3.30", default-features = false, features = ["asyn
 lokey = { path = "../lokey" }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 seq-macro = "0.3.6"
+
+[package.metadata.docs.rs]
+features = ["defmt", "layer", "blink", "status-led-array", "external-ble"]

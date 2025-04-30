@@ -115,4 +115,4 @@ cortex-m-rt = "0.7.0"
 embassy-executor = { version = "0.7.0", features = ["arch-cortex-m", "executor-thread"] }
 
 [package.metadata.docs.rs]
-features = ["defmt", "external-usb", "external-usb-hid", "external-ble", "internal-ble"]
+features = ["macros", "defmt", "external-usb", "external-usb-hid", "external-ble", "internal-ble"]
