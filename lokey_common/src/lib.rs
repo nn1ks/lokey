@@ -4,7 +4,7 @@
 //!
 
 #![no_std]
-#![feature(doc_auto_cfg)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 extern crate alloc;
 

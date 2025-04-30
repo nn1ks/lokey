@@ -76,9 +76,10 @@ async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawne
 }
 ```"
 )]
+//!
+
 #![no_std]
-#![feature(doc_auto_cfg)]
-#![feature(impl_trait_in_assoc_type)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 extern crate alloc;
 
