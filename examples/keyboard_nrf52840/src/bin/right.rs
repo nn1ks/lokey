@@ -9,7 +9,6 @@ use keyboard_nrf52840::{DefaultState, KeyboardRight, NUM_KEYS, Peripheral};
 use lokey::Context;
 use lokey_common::blink::Blink;
 use lokey_keyboard::{DirectPinsConfig, Keys};
-use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
 async fn main(context: Context<KeyboardRight, Peripheral, DefaultState>, _spawner: Spawner) {

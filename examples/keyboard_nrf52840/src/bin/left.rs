@@ -17,7 +17,6 @@ use lokey_keyboard::action::{
     ToggleExternalTransport,
 };
 use lokey_keyboard::{Key, KeyOverride, Keys, MatrixConfig, layout};
-use {defmt_rtt as _, panic_probe as _};
 
 #[lokey::device]
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {

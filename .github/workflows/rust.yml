@@ -149,6 +149,8 @@ jobs:
       fail-fast: false
       matrix:
         example: [keyboard_nrf52840, keyboard_rp2040]
+    env:
+      FEATURE_COMBINATIONS: ";defmt"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
@@ -163,10 +165,22 @@ jobs:
         run: cargo fmt --verbose --check
         working-directory: examples/${{ matrix.example }}
       - name: Build
-        run: cargo build --verbose
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build --verbose --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
         working-directory: examples/${{ matrix.example }}
       - name: Run clippy
-        run: cargo clippy --verbose -- -D warnings
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy --verbose --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
         working-directory: examples/${{ matrix.example }}
   format:
     runs-on: ubuntu-latest

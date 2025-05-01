@@ -4,6 +4,8 @@
 #![feature(future_join)]
 
 use core::future::join;
+#[cfg(feature = "defmt")]
+use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::PIN_0;
@@ -17,8 +19,8 @@ use lokey_common::blink::Blink;
 use lokey_common::layer::LayerManager;
 use lokey_keyboard::action::KeyCode;
 use lokey_keyboard::{Debounce, DirectPins, DirectPinsConfig, Key, Keys, layout};
+use panic_probe as _;
 use switch_hal::IntoSwitch;
-use {defmt_rtt as _, panic_probe as _};
 
 #[derive(Default, State)]
 struct DefaultState {

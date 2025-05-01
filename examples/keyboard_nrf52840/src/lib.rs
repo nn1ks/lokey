@@ -1,5 +1,7 @@
 #![no_std]
 
+#[cfg(feature = "defmt")]
+use defmt_rtt as _;
 use embassy_nrf::gpio::{Input, Level, Output, OutputDrive, Pin, Pull};
 use embassy_nrf::peripherals::{
     P0_02, P0_03, P0_09, P0_10, P0_28, P1_11, P1_12, P1_13, P1_14, P1_15,
@@ -19,8 +21,8 @@ use lokey_common::blink::Blink;
 use lokey_common::layer::LayerManager;
 use lokey_common::status_led_array::{HookBundle, StatusLedArray};
 use lokey_keyboard::{DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
+use panic_probe as _;
 use switch_hal::IntoSwitch;
-use {defmt_rtt as _, panic_probe as _};
 
 pub const NUM_KEYS: usize = 36;
 
