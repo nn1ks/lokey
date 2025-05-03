@@ -26,19 +26,21 @@ use trouble_host::{BleHostError, BondInformation, LongTermKey};
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 
-pub struct GenericTransport<M: 'static, T> {
-    channel: Channel<CriticalSectionRawMutex, T>,
+pub struct GenericTransport<Mcu: 'static, TxMessages, RxMessages> {
+    tx_channel: Channel<CriticalSectionRawMutex, TxMessages>,
+    rx_channel: Channel<CriticalSectionRawMutex, RxMessages>,
     name: &'static str,
     num_profiles: u8,
     adv_service_uuids: &'static [[u8; 2]],
-    mcu: &'static M,
+    mcu: &'static Mcu,
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<Mcu, Messages> GenericTransport<Mcu, Messages>
+impl<Mcu, TxMessages, RxMessages> GenericTransport<Mcu, TxMessages, RxMessages>
 where
     Mcu: mcu::Mcu + McuBle + McuStorage,
-    Messages: external::Messages,
+    TxMessages: external::TxMessages,
+    RxMessages: external::RxMessages,
 {
     pub fn new(
         config: TransportConfig,
@@ -47,7 +49,8 @@ where
         adv_service_uuids: &'static [[u8; 2]],
     ) -> Self {
         Self {
-            channel: Channel::new(),
+            tx_channel: Channel::new(),
+            rx_channel: Channel::new(),
             name: config.name,
             num_profiles: config.num_profiles,
             adv_service_uuids,
@@ -56,12 +59,21 @@ where
         }
     }
 
-    pub async fn run<F, M, const ATT_MAX: usize, const CCCD_MAX: usize, const CONN_MAX: usize>(
+    pub async fn run<
+        F1,
+        F2,
+        M,
+        const ATT_MAX: usize,
+        const CCCD_MAX: usize,
+        const CONN_MAX: usize,
+    >(
         &self,
         server: &'static AttributeServer<'static, M, ATT_MAX, CCCD_MAX, CONN_MAX>,
-        mut handle_message: F,
+        mut handle_message: F1,
+        handle_report: F2,
     ) where
-        F: AsyncFnMut(Messages, &GattConnection<'_, '_>) + 'static,
+        F1: AsyncFnMut(TxMessages, &GattConnection<'_, '_>) + 'static,
+        F2: AsyncFnMut() -> RxMessages,
         M: RawMutex,
     {
         let Some(num_profiles) = NonZeroU8::new(self.num_profiles) else {
@@ -308,7 +320,7 @@ where
 
         let handle_messages = async {
             loop {
-                let message = self.channel.receive().await;
+                let message = self.tx_channel.receive().await;
                 match &*connection.read().await {
                     Some(connection) => {
                         handle_message(message, connection).await;
@@ -317,6 +329,9 @@ where
                 }
             }
         };
+
+        // TODO: support receiving messages from the host
+        let _ = handle_report;
 
         let handle_internal_messages = async {
             let mut receiver = self.internal_channel.receiver::<Message>();
@@ -473,8 +488,12 @@ where
         .await;
     }
 
-    pub fn send(&self, message: Messages) {
-        self.channel.send(message);
+    pub fn send(&self, message: TxMessages) {
+        self.tx_channel.send(message);
+    }
+
+    pub async fn receive(&self) -> RxMessages {
+        self.rx_channel.receive().await
     }
 
     pub fn set_active(&self, value: bool) -> bool {

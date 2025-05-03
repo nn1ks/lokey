@@ -28,7 +28,7 @@ defmt = [
 ]
 
 ## Enables the external USB transport for key messages.
-external-usb = ["dep:usbd-hid", "lokey/external-usb", "lokey/external-usb-hid"]
+external-usb = ["dep:usbd-hid", "dep:ssmarshal", "lokey/external-usb", "lokey/external-usb-hid"]
 
 ## Enables the external Bluetooth Low Energy (BLE) transport for key messages.
 external-ble = ["dep:trouble-host", "dep:usbd-hid", "dep:ssmarshal", "lokey/external-ble"]
@@ -41,6 +41,7 @@ embassy-futures = "0.1.1"
 embassy-sync = "0.6.2"
 embassy-time = "0.4.0"
 futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
+arrayvec = { version = "0.7.6", default-features = false }
 lokey = { path = "../lokey" }
 lokey_common = { path = "../lokey_common", features = ["layer"] }
 lokey_keyboard_macros = { path = "../lokey_keyboard_macros", optional = true }

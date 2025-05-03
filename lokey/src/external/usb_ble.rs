@@ -61,16 +61,28 @@ pub struct Transport<Usb, Ble> {
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<Usb, Ble, Mcu, Messages> external::Transport for Transport<Usb, Ble>
+impl<Usb, Ble, Mcu, TxMessages, RxMessages> external::Transport for Transport<Usb, Ble>
 where
-    Usb: external::Transport<Config = usb::TransportConfig, Mcu = Mcu, Messages = Messages>,
-    Ble: external::Transport<Config = ble::TransportConfig, Mcu = Mcu, Messages = Messages>,
+    Usb: external::Transport<
+            Config = usb::TransportConfig,
+            Mcu = Mcu,
+            TxMessages = TxMessages,
+            RxMessages = RxMessages,
+        >,
+    Ble: external::Transport<
+            Config = ble::TransportConfig,
+            Mcu = Mcu,
+            TxMessages = TxMessages,
+            RxMessages = RxMessages,
+        >,
     Mcu: mcu::Mcu,
-    Messages: external::Messages,
+    TxMessages: external::TxMessages,
+    RxMessages: external::RxMessages,
 {
     type Config = TransportConfig;
     type Mcu = Mcu;
-    type Messages = Messages;
+    type TxMessages = TxMessages;
+    type RxMessages = RxMessages;
 
     async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -135,10 +147,17 @@ where
         join(handle_activation_request, handle_internal_messages).await;
     }
 
-    fn send(&self, message: Messages) {
+    fn send(&self, message: Self::TxMessages) {
         self.active.lock(|selection| match selection.get() {
             TransportSelection::Usb => self.usb_transport.send(message),
             TransportSelection::Ble => self.ble_transport.send(message),
+        })
+    }
+
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages> + '_>> {
+        self.active.lock(|selection| match selection.get() {
+            TransportSelection::Usb => Box::pin(self.usb_transport.receive()),
+            TransportSelection::Ble => Box::pin(self.ble_transport.receive()),
         })
     }
 

@@ -7,7 +7,7 @@ use core::sync::atomic::Ordering;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 #[cfg(feature = "external-usb-hid")]
-pub use hid_transport::HidTransport;
+pub use hid_transport::{HidReadWriteTransport, HidWriteTransport};
 use portable_atomic::AtomicBool;
 use portable_atomic_util::Arc;
 

@@ -23,15 +23,17 @@ use seq_macro::seq;
 
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::ExternalTransport;
 
-pub trait Messages: Sized + 'static {
+pub trait TxMessages: Sized + 'static {
     fn downcast(message: Box<dyn Message>) -> Option<Self>;
     fn upcast(self) -> Box<dyn Message>;
 }
 
-macro_rules! define_messages_enums {
+pub trait RxMessages: Clone + 'static {}
+
+macro_rules! define_tx_messages_enums {
     ($num:literal) => {
         seq!(N in 0..=$num {
-            #(define_messages_enums!(@ Messages~N, N);)*
+            #(define_tx_messages_enums!(@ TxMessages~N, N);)*
         });
     };
     (@ $ident:ident, $num:literal) => {
@@ -40,7 +42,7 @@ macro_rules! define_messages_enums {
                 #(Message~N(M~N),)*
             }
 
-            impl<#(M~N: Message,)*> Messages for $ident<#(M~N,)*> {
+            impl<#(M~N: Message,)*> TxMessages for $ident<#(M~N,)*> {
                 fn downcast(message: Box<dyn Message>) -> Option<Self> {
                     #![allow(unused_variables)]
                     let message: Box<dyn Any> = message;
@@ -61,7 +63,27 @@ macro_rules! define_messages_enums {
     };
 }
 
-define_messages_enums!(8);
+define_tx_messages_enums!(8);
+
+macro_rules! define_rx_messages_enums {
+    ($num:literal) => {
+        seq!(N in 0..=$num {
+            #(define_rx_messages_enums!(@ RxMessages~N, N);)*
+        });
+    };
+    (@ $ident:ident, $num:literal) => {
+        seq!(N in 1..=$num {
+            #[derive(Clone)]
+            pub enum $ident<#(M~N,)*> {
+                #(Message~N(M~N),)*
+            }
+
+            impl<#(M~N: Clone + 'static,)*> RxMessages for $ident<#(M~N,)*> {}
+        });
+    };
+}
+
+define_rx_messages_enums!(8);
 
 pub trait Message: Any + DynClone + Send + Sync {}
 
@@ -70,7 +92,8 @@ dyn_clone::clone_trait_object!(Message);
 pub trait Transport: Any {
     type Config;
     type Mcu: Mcu;
-    type Messages: Messages;
+    type TxMessages: TxMessages;
+    type RxMessages: RxMessages;
 
     fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -81,10 +104,10 @@ pub trait Transport: Any {
 
     fn run(&self) -> impl Future<Output = ()>;
 
-    fn send(&self, message: Self::Messages);
+    fn send(&self, message: Self::TxMessages);
 
     fn try_send(&self, message: Box<dyn Message>) -> bool {
-        match Self::Messages::downcast(message) {
+        match Self::TxMessages::downcast(message) {
             Some(message) => {
                 self.send(message);
                 true
@@ -92,6 +115,8 @@ pub trait Transport: Any {
             None => false,
         }
     }
+
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages> + '_>>;
 
     /// Activates or deactivates the transport.
     ///

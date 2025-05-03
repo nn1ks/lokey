@@ -1,7 +1,9 @@
 use super::ExternalMessage;
+use alloc::boxed::Box;
+use core::pin::Pin;
 use lokey::external::ble::GenericTransport;
-use lokey::external::{self, Messages1};
-use lokey::mcu::{Mcu, McuBle, McuStorage};
+use lokey::external::{self, RxMessages0, TxMessages1};
+use lokey::mcu::{self, McuBle, McuStorage};
 use lokey::util::{error, unwrap};
 use lokey::{Address, internal};
 use static_cell::StaticCell;
@@ -31,17 +33,18 @@ pub struct HidService {
     pub output_keyboard: [u8; 1],
 }
 
-pub struct BleTransport<M: 'static, T> {
-    inner: GenericTransport<M, T>,
+pub struct BleTransport<Mcu: 'static, TxMessages, RxMessages> {
+    inner: GenericTransport<Mcu, TxMessages, RxMessages>,
     hid_server: &'static HidServer<'static>,
 }
 
-impl<M: Mcu + McuBle + McuStorage> external::Transport
-    for BleTransport<M, Messages1<ExternalMessage>>
+impl<Mcu: mcu::Mcu + McuBle + McuStorage> external::Transport
+    for BleTransport<Mcu, TxMessages1<ExternalMessage>, RxMessages0>
 {
     type Config = external::ble::TransportConfig;
-    type Mcu = M;
-    type Messages = Messages1<ExternalMessage>;
+    type Mcu = Mcu;
+    type TxMessages = TxMessages1<ExternalMessage>;
+    type RxMessages = RxMessages0;
 
     async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -74,8 +77,8 @@ impl<M: Mcu + McuBle + McuStorage> external::Transport
         static KEYBOARD_REPORT: StaticCell<KeyboardReport> = StaticCell::new();
         let keyboard_report = KEYBOARD_REPORT.init(KeyboardReport::default());
         let handle_message =
-            async |message: Messages1<ExternalMessage>, connection: &GattConnection<'_, '_>| {
-                let Messages1::Message1(message) = message;
+            async |message: TxMessages1<ExternalMessage>, connection: &GattConnection<'_, '_>| {
+                let TxMessages1::Message1(message) = message;
                 message.update_keyboard_report(keyboard_report);
                 let mut buf = [0; 8];
                 ssmarshal::serialize(&mut buf, keyboard_report).unwrap();
@@ -89,11 +92,17 @@ impl<M: Mcu + McuBle + McuStorage> external::Transport
                     error!("Failed to set input report: {}", e);
                 }
             };
-        self.inner.run(self.hid_server, handle_message).await;
+        self.inner
+            .run(self.hid_server, handle_message, async || todo!())
+            .await;
     }
 
-    fn send(&self, message: Self::Messages) {
+    fn send(&self, message: Self::TxMessages) {
         self.inner.send(message);
+    }
+
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages> + '_>> {
+        Box::pin(core::future::pending())
     }
 
     fn set_active(&self, value: bool) -> bool {

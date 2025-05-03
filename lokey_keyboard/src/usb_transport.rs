@@ -1,18 +1,26 @@
 use super::ExternalMessage;
 use alloc::boxed::Box;
+use arrayvec::ArrayVec;
 use core::pin::Pin;
-use lokey::external::usb::{CreateDriver, HidTransport};
-use lokey::external::{self, Messages1, usb};
-use lokey::mcu::Mcu;
-use lokey::{Address, internal};
-use usbd_hid::descriptor::KeyboardReport;
+use lokey::external::usb::{CreateDriver, HidWriteTransport};
+use lokey::external::{self, RxMessages0, TxMessages1};
+use lokey::util::error;
+use lokey::{Address, internal, mcu};
+use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 
-pub struct UsbTransport<M: 'static, T>(HidTransport<9, M, T, KeyboardReport>);
+const KEYBOARD_REPORT_SIZE: usize = 9;
 
-impl<M: Mcu + CreateDriver> external::Transport for UsbTransport<M, Messages1<ExternalMessage>> {
+pub struct UsbTransport<Mcu: 'static, TxMessages>(
+    HidWriteTransport<KEYBOARD_REPORT_SIZE, Mcu, TxMessages>,
+);
+
+impl<Mcu: mcu::Mcu + CreateDriver> external::Transport
+    for UsbTransport<Mcu, TxMessages1<ExternalMessage>>
+{
     type Config = external::usb::TransportConfig;
-    type Mcu = M;
-    type Messages = Messages1<ExternalMessage>;
+    type Mcu = Mcu;
+    type TxMessages = TxMessages1<ExternalMessage>;
+    type RxMessages = RxMessages0;
 
     async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -20,7 +28,7 @@ impl<M: Mcu + CreateDriver> external::Transport for UsbTransport<M, Messages1<Ex
         _address: Address,
         _internal_channel: &'static internal::Channel<T>,
     ) -> Self {
-        Self(usb::HidTransport::new(config, mcu))
+        Self(HidWriteTransport::new(config, mcu))
     }
 
     async fn run(&self) {
@@ -31,16 +39,36 @@ impl<M: Mcu + CreateDriver> external::Transport for UsbTransport<M, Messages1<Ex
             leds: 0,
             keycodes: [0; 6],
         };
-        let handle_message = move |message: Messages1<ExternalMessage>| {
-            let Messages1::Message1(message) = message;
+        let handle_message = move |message: TxMessages1<ExternalMessage>| {
+            let TxMessages1::Message1(message) = message;
             let report_changed = message.update_keyboard_report(&mut report);
-            report_changed.then_some(report)
+            report_changed
+                .then(|| {
+                    let mut buf = ArrayVec::from([0; KEYBOARD_REPORT_SIZE]);
+                    match ssmarshal::serialize(&mut buf, &report) {
+                        Ok(len) => {
+                            buf.truncate(len);
+                            Some(buf)
+                        }
+                        Err(e) => {
+                            #[cfg(feature = "defmt")]
+                            let e = defmt::Debug2Format(&e);
+                            error!("Failed to serialize keyboard report: {}", e);
+                            None
+                        }
+                    }
+                })
+                .flatten()
         };
-        self.0.run(handle_message).await
+        self.0.run(KeyboardReport::desc(), handle_message).await
     }
 
-    fn send(&self, message: Self::Messages) {
+    fn send(&self, message: Self::TxMessages) {
         self.0.send(message)
+    }
+
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages> + '_>> {
+        Box::pin(core::future::pending())
     }
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {

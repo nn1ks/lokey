@@ -1,4 +1,4 @@
-use super::{DynTransport, Message, MessageSender, Messages, Override};
+use super::{DynTransport, Message, MessageSender, Override, TxMessages};
 use crate::external;
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use alloc::boxed::Box;
@@ -9,19 +9,29 @@ use core::marker::PhantomData;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
-pub struct Channel<Transport> {
+pub struct Channel<Transport>
+where
+    Transport: external::Transport,
+    Transport::RxMessages: Clone,
+{
     transport: Transport,
     overrides: Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
-    inner_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
+    tx_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
+    rx_channel: PubSubChannel<CriticalSectionRawMutex, Transport::RxMessages>,
 }
 
-impl<Transport: external::Transport> Channel<Transport> {
+impl<Transport> Channel<Transport>
+where
+    Transport: external::Transport,
+    Transport::RxMessages: Clone,
+{
     /// Creates a new external channel.
     pub fn new(transport: Transport) -> Self {
         Self {
             transport,
             overrides: Mutex::new(RefCell::new(Vec::new())),
-            inner_channel: PubSubChannel::new(),
+            tx_channel: PubSubChannel::new(),
+            rx_channel: PubSubChannel::new(),
         }
     }
 
@@ -37,7 +47,7 @@ impl<Transport: external::Transport> Channel<Transport> {
         DynChannelRef {
             transport: DynTransport::from_ref(&self.transport),
             overrides: &self.overrides,
-            inner_channel: &self.inner_channel,
+            tx_channel: &self.tx_channel,
         }
     }
 
@@ -46,7 +56,7 @@ impl<Transport: external::Transport> Channel<Transport> {
             .lock(|v| v.borrow_mut().push(Box::new(message_override)));
     }
 
-    pub fn send(&self, message: Transport::Messages) {
+    pub fn send(&self, message: Transport::TxMessages) {
         self.try_send_dyn(message.upcast());
     }
 
@@ -58,11 +68,16 @@ impl<Transport: external::Transport> Channel<Transport> {
         self.as_dyn_ref().try_send_dyn(message)
     }
 
+    // TODO: refactor
     pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
         Receiver {
-            subscriber: self.inner_channel.subscriber(),
+            subscriber: self.tx_channel.subscriber(),
             phantom: PhantomData,
         }
+    }
+
+    pub fn rx_receiver(&self) -> Subscriber<'_, CriticalSectionRawMutex, Transport::RxMessages> {
+        self.rx_channel.subscriber()
     }
 }
 
@@ -70,7 +85,7 @@ impl<Transport: external::Transport> Channel<Transport> {
 pub struct DynChannelRef<'a> {
     transport: &'a DynTransport,
     overrides: &'a Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
-    inner_channel: &'a PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
+    tx_channel: &'a PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
 }
 
 impl DynChannelRef<'_> {
@@ -91,10 +106,10 @@ impl DynChannelRef<'_> {
                 message: Box<dyn Message>,
                 overrides: &mut Vec<Box<dyn Override>>,
                 transport: &DynTransport,
-                inner_channel: &PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
+                tx_channel: &PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
             ) {
                 if index == overrides.len() {
-                    inner_channel.publish(message.clone());
+                    tx_channel.publish(message.clone());
                     transport.try_send(message);
                 } else {
                     let mut sender = MessageSender {
@@ -102,23 +117,17 @@ impl DynChannelRef<'_> {
                     };
                     overrides[index].override_message(message, &mut sender);
                     for message in sender.messages {
-                        send_messages(index + 1, message, overrides, transport, inner_channel);
+                        send_messages(index + 1, message, overrides, transport, tx_channel);
                     }
                 }
             }
-            send_messages(
-                0,
-                message,
-                &mut overrides,
-                self.transport,
-                self.inner_channel,
-            );
+            send_messages(0, message, &mut overrides, self.transport, self.tx_channel);
         });
     }
 
     pub fn receiver<U: Message>(&self) -> Receiver<'_, U> {
         Receiver {
-            subscriber: self.inner_channel.subscriber(),
+            subscriber: self.tx_channel.subscriber(),
             phantom: PhantomData,
         }
     }

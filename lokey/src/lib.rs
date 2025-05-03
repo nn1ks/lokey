@@ -22,7 +22,6 @@ use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
     external
 };
-use lokey::external::Messages0;
 
 struct Keyboard;
 
@@ -52,7 +51,7 @@ impl<S: StateContainer> ComponentSupport<ExampleComponent, S> for Keyboard {
 struct Central;
 
 impl Transports<DummyMcu> for Central {
-    type ExternalTransport = external::empty::Transport<DummyMcu, Messages0>;
+    type ExternalTransport = external::empty::Transport<DummyMcu>;
     type InternalTransport = internal::empty::Transport<DummyMcu>;
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         # unimplemented!()

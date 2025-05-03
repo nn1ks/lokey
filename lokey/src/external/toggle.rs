@@ -93,12 +93,16 @@ pub struct Transport<T> {
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<T: external::Transport<Messages = M>, M: external::Messages> external::Transport
-    for Transport<T>
+impl<T, TxMessages, RxMessages> external::Transport for Transport<T>
+where
+    T: external::Transport<TxMessages = TxMessages, RxMessages = RxMessages>,
+    TxMessages: external::TxMessages,
+    RxMessages: external::RxMessages,
 {
     type Config = TransportConfig<T::Config>;
     type Mcu = T::Mcu;
-    type Messages = M;
+    type TxMessages = TxMessages;
+    type RxMessages = RxMessages;
 
     async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -157,10 +161,14 @@ impl<T: external::Transport<Messages = M>, M: external::Messages> external::Tran
         }
     }
 
-    fn send(&self, message: M) {
+    fn send(&self, message: Self::TxMessages) {
         if ACTIVE.load(Ordering::Acquire) {
             self.transport.send(message);
         }
+    }
+
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages> + '_>> {
+        Box::pin(async { self.transport.receive().await })
     }
 
     fn set_active(&self, value: bool) -> bool {
