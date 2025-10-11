@@ -3,3 +3,5 @@
 /examples/*/target
 /Cargo.lock
 /examples/*/Cargo.lock
+/docs/node_modules
+/docs/.vitepress/cache
