@@ -5,6 +5,7 @@
 
 <div align="center">
 
+[![Website](https://img.shields.io/badge/website-8456cf)](https://lokey.rs)
 [![Crate](https://img.shields.io/crates/v/lokey?logo=rust)](https://crates.io/crates/lokey)
 [![Docs](https://img.shields.io/static/v1?label=docs&message=latest&color=yellow&logo=docs.rs)](https://docs.rs/lokey)
 [![License](https://img.shields.io/crates/l/lokey)](https://github.com/nn1ks/lokey#license)
@@ -17,10 +18,7 @@ Lokey is a firmware framework for input devices written in Rust.
 
 ---
 
-#### Supported microcontrollers
-
-- nRF52840
-- RP2040
+Refer to the website for more information: https://lokey.rs
 
 ## Test
 
