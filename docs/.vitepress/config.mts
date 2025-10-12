@@ -6,6 +6,13 @@ export default defineConfig({
   title: 'Lokey',
   description: 'A firmware framework for input devices',
 
+  head: [
+    ['link', { rel: "apple-touch-icon", sizes: "180x180", href: "/favicon/apple-touch-icon.png" }],
+    ['link', { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon/favicon-32x32.png" }],
+    ['link', { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon/favicon-16x16.png" }],
+    ['link', { rel: "manifest", href: "/favicon/site.webmanifest" }],
+  ],
+
   cleanUrls: true,
   rewrites(id) {
     return id.replace(/^pages\/(.+)/, '$1')
@@ -22,7 +29,7 @@ export default defineConfig({
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
 
-    // logo: '/logo.png',
+    logo: '/logo.png',
 
     search: {
       provider: 'local',
