@@ -25,11 +25,15 @@ Refer to the website for more information: https://lokey.rs
 Run these commands to check the doc tests:
 
 ```
-cargo test --doc -Zdoctest-xcompile --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
+cargo test --doc -p lokey --features "nrf52840 defmt external-usb external-ble internal-ble" --target thumbv7em-none-eabihf
 ```
 
 ```
-cargo test --doc -Zdoctest-xcompile --features "defmt usb rp2040" --target thumbv6m-none-eabi
+cargo test --doc -p lokey --features "rp2040 defmt external-usb external-ble internal-ble" --target thumbv6m-none-eabi
+```
+
+```
+cargo test --doc -p lokey_keyboard --features "defmt external-usb external-ble" --target thumbv7em-none-eabihf
 ```
 
 ## License
