@@ -1,4 +1,3 @@
-#[cfg(feature = "external-usb-hid")]
 mod hid_transport;
 mod message_service;
 

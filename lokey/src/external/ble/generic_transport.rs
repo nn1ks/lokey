@@ -77,10 +77,13 @@ where
 
         let mut table = AttributeTable::<'static, NoopRawMutex, ATT_MAX>::new();
 
-        GapConfig::Peripheral(PeripheralConfig {
+        let gap_config = GapConfig::Peripheral(PeripheralConfig {
             name: self.name,
-            appearance: &self.appearance,
+            appearance: Box::leak(Box::new(self.appearance)),
         });
+        if let Err(e) = gap_config.build(&mut table) {
+            error!("Failed to set GAP config for BLE transport: {}", e);
+        }
 
         let mut message_service_registry = MessageServiceRegistry::new();
         TxMessage::MessageService::init(&mut message_service_registry, &mut table);
@@ -326,12 +329,11 @@ where
                             Ok(event) => {
                                 debug!("Received GATT event");
                                 let result = if connection.raw().encrypted() {
-                                    if let GattEvent::Write(write_event) = &event {
-                                        if let Some(message) =
+                                    if let GattEvent::Write(write_event) = &event
+                                        && let Some(message) =
                                             rx_message_service.receive(write_event).await
-                                        {
-                                            self.rx_channel.send(message);
-                                        }
+                                    {
+                                        self.rx_channel.send(message);
                                     }
                                     event.accept()
                                 } else {

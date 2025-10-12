@@ -153,19 +153,19 @@ impl<
                         } else {
                             &config.debounce_key_release
                         };
-                        if let Debounce::Eager { duration } = debounce {
-                            if is_active != states[i][j] {
-                                if let Some(timeout_index) =
-                                    timeouts.iter().position(|(v, _)| *v == key_index)
-                                {
-                                    let (_, instant) = timeouts[timeout_index];
-                                    if Instant::now().duration_since(instant) <= *duration {
-                                        continue;
-                                    }
-                                    timeouts.remove(timeout_index);
+                        if let Debounce::Eager { duration } = debounce
+                            && is_active != states[i][j]
+                        {
+                            if let Some(timeout_index) =
+                                timeouts.iter().position(|(v, _)| *v == key_index)
+                            {
+                                let (_, instant) = timeouts[timeout_index];
+                                if Instant::now().duration_since(instant) <= *duration {
+                                    continue;
                                 }
-                                timeouts.push((key_index, Instant::now()));
+                                timeouts.remove(timeout_index);
                             }
+                            timeouts.push((key_index, Instant::now()));
                         }
                         if let Some(defer_index) =
                             defers.iter().position(|(v, _, _)| *v == key_index)

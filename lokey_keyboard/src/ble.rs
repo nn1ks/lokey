@@ -61,13 +61,9 @@ impl InitMessageService for ExternalMessageService {
 }
 
 impl TxMessageService<ExternalMessage> for ExternalMessageService {
-    async fn send<'a>(
-        &self,
-        message: ExternalMessage,
-        connection: &'a GattConnection<'static, 'static>,
-    ) {
+    async fn send(&self, message: ExternalMessage, connection: &GattConnection<'static, 'static>) {
         let mut keyboard_report = self.keyboard_report.lock().await;
-        message.update_keyboard_report(&mut *keyboard_report);
+        message.update_keyboard_report(&mut keyboard_report);
         let mut buf = [0; 8];
         ssmarshal::serialize(&mut buf, &*keyboard_report).unwrap();
         if let Err(e) = self

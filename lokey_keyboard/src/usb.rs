@@ -44,7 +44,7 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d,
         let hid_writer = HidWriter::<_, KEYBOARD_REPORT_SIZE>::new(builder, state, hid_config);
         let message_service = Self {
             inner: Mutex::new(Data {
-                hid_writer: hid_writer,
+                hid_writer,
                 keyboard_report: KeyboardReport {
                     modifier: 0,
                     reserved: 0,
@@ -81,12 +81,12 @@ impl<'d, D: Driver<'d>> TxMessageService<ExternalMessage> for ExternalMessageSer
             })
             .flatten();
 
-        if let Some((buf, len)) = report_data {
-            if let Err(e) = hid_writer.write(&buf[..len]).await {
-                #[cfg(feature = "defmt")]
-                let e = defmt::Debug2Format(&e);
-                error!("Failed to write HID report: {}", e);
-            }
+        if let Some((buf, len)) = report_data
+            && let Err(e) = hid_writer.write(&buf[..len]).await
+        {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to write HID report: {}", e);
         }
     }
 }

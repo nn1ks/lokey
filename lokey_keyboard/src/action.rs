@@ -116,10 +116,10 @@ impl Action for Layer {
     }
 
     async fn on_release(&'static self, context: DynContext) {
-        if let Some(entry) = self.layer_manager_entry.lock().await.take() {
-            if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
-                layer_manager.remove(entry).await;
-            }
+        if let Some(entry) = self.layer_manager_entry.lock().await.take()
+            && let Some(layer_manager) = context.state.try_get::<LayerManager>()
+        {
+            layer_manager.remove(entry).await;
         }
     }
 }
