@@ -10,7 +10,7 @@ use embassy_executor::Spawner;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
-use lokey::external::{self, TxMessages1};
+use lokey::external::{self, NoMessage, usb};
 use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
@@ -30,8 +30,7 @@ struct DefaultState {
 struct Central;
 
 impl Transports<Rp2040> for Central {
-    type ExternalTransport =
-        lokey_keyboard::UsbTransport<Rp2040, TxMessages1<lokey_keyboard::ExternalMessage>>;
+    type ExternalTransport = usb::Transport<Rp2040, lokey_keyboard::ExternalMessage, NoMessage>;
     type InternalTransport = internal::empty::Transport<Rp2040>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {

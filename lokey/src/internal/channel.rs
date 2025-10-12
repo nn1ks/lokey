@@ -52,7 +52,7 @@ impl<Transport: internal::Transport> Channel<Transport> {
         self.inner_channel.publish(bytes);
     }
 
-    pub fn receiver<M: Message>(&self) -> Receiver<M> {
+    pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
         Receiver {
             subscriber: self.inner_channel.subscriber(),
             _phantom: PhantomData,
@@ -73,7 +73,7 @@ impl DynChannelRef<'_> {
         self.inner_channel.publish(bytes);
     }
 
-    pub fn receiver<M: Message>(&self) -> Receiver<M> {
+    pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
         Receiver {
             subscriber: self.inner_channel.subscriber(),
             _phantom: PhantomData,

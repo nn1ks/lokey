@@ -1,13 +1,16 @@
 #[cfg(feature = "external-usb-hid")]
 mod hid_transport;
+mod message_service;
 
+use crate::external::{self, NoMessage};
 use crate::mcu::Mcu;
 use crate::util::{debug, info};
 use core::sync::atomic::Ordering;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-#[cfg(feature = "external-usb-hid")]
-pub use hid_transport::{HidReadWriteTransport, HidWriteTransport};
+use embassy_usb::driver::Driver;
+pub use hid_transport::Transport;
+pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 use portable_atomic::AtomicBool;
 use portable_atomic_util::Arc;
 
@@ -46,7 +49,8 @@ impl From<TransportConfig> for embassy_usb::Config<'static> {
 }
 
 pub trait CreateDriver: Mcu {
-    fn create_driver<'a>(&'static self) -> impl embassy_usb::driver::Driver<'a>;
+    type Driver<'d>: Driver<'d>;
+    fn create_driver<'d>(&'static self) -> Self::Driver<'d>;
 }
 
 pub struct DeviceHandler {
@@ -132,4 +136,20 @@ impl embassy_usb::Handler for DeviceHandler {
             }
         }
     }
+}
+
+pub trait TxMessage: external::Message + Sized {
+    type MessageService<'d, D: Driver<'d>>: TxMessageService<Self> + InitMessageService<'d, D>;
+}
+
+pub trait RxMessage: external::Message + Sized {
+    type MessageService<'d, D: Driver<'d>>: RxMessageService<Self> + InitMessageService<'d, D>;
+}
+
+impl TxMessage for NoMessage {
+    type MessageService<'d, D: Driver<'d>> = ();
+}
+
+impl RxMessage for NoMessage {
+    type MessageService<'d, D: Driver<'d>> = ();
 }

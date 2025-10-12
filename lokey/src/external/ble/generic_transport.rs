@@ -1,14 +1,18 @@
 use super::{Event, Message, TransportConfig};
+use crate::external::MessageServiceRegistry;
+use crate::external::ble::{self, InitMessageService, RxMessageService, TxMessageService};
 use crate::mcu::{self, McuBle, McuStorage, storage};
 use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap, warn};
 use crate::{Address, external, internal};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::num::NonZeroU8;
+use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
 use embassy_futures::select::{Either, select};
-use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, RawMutex};
+use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use embassy_sync_new::rwlock::RwLock;
@@ -16,66 +20,84 @@ use embassy_time::Timer;
 use generic_array::GenericArray;
 use portable_atomic::{AtomicBool, AtomicU8};
 use trouble_host::att::AttErrorCode;
-use trouble_host::gatt::{GattConnection, GattConnectionEvent};
+use trouble_host::gap::{GapConfig, PeripheralConfig};
+use trouble_host::gatt::{GattConnection, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
-    AdStructure, Advertisement, AdvertisementParameters, AttributeServer, BR_EDR_NOT_SUPPORTED,
-    BdAddr, LE_GENERAL_DISCOVERABLE,
+    AdStructure, Advertisement, AdvertisementParameters, AttributeServer, AttributeTable,
+    BR_EDR_NOT_SUPPORTED, BdAddr, BluetoothUuid16, LE_GENERAL_DISCOVERABLE,
 };
 use trouble_host::{BleHostError, BondInformation, LongTermKey};
 
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 
-pub struct GenericTransport<Mcu: 'static, TxMessages, RxMessages> {
+pub struct Transport<Mcu: 'static, TxMessages, RxMessages, const CONN_MAX: usize = 1> {
     tx_channel: Channel<CriticalSectionRawMutex, TxMessages>,
     rx_channel: Channel<CriticalSectionRawMutex, RxMessages>,
     name: &'static str,
     num_profiles: u8,
-    adv_service_uuids: &'static [[u8; 2]],
+    appearance: BluetoothUuid16,
     mcu: &'static Mcu,
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<Mcu, TxMessages, RxMessages> GenericTransport<Mcu, TxMessages, RxMessages>
+impl<Mcu, TxMessage, RxMessage, const CONN_MAX: usize> external::Transport
+    for Transport<Mcu, TxMessage, RxMessage, CONN_MAX>
 where
     Mcu: mcu::Mcu + McuBle + McuStorage,
-    TxMessages: external::TxMessages,
-    RxMessages: external::RxMessages,
+    TxMessage: ble::TxMessage,
+    RxMessage: ble::RxMessage,
 {
-    pub fn new(
-        config: TransportConfig,
-        mcu: &'static Mcu,
-        internal_channel: internal::DynChannelRef<'static>,
-        adv_service_uuids: &'static [[u8; 2]],
+    type Config = TransportConfig;
+    type Mcu = Mcu;
+    type TxMessage = TxMessage;
+    type RxMessage = RxMessage;
+
+    async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
+        config: Self::Config,
+        mcu: &'static Self::Mcu,
+        _: Address,
+        internal_channel: &'static internal::Channel<T>,
     ) -> Self {
         Self {
             tx_channel: Channel::new(),
             rx_channel: Channel::new(),
             name: config.name,
             num_profiles: config.num_profiles,
-            adv_service_uuids,
+            appearance: config.appearance,
             mcu,
-            internal_channel,
+            internal_channel: internal_channel.as_dyn_ref(),
         }
     }
 
-    pub async fn run<
-        F1,
-        F2,
-        M,
-        const ATT_MAX: usize,
-        const CCCD_MAX: usize,
-        const CONN_MAX: usize,
-    >(
-        &self,
-        server: &'static AttributeServer<'static, M, ATT_MAX, CCCD_MAX, CONN_MAX>,
-        mut handle_message: F1,
-        handle_report: F2,
-    ) where
-        F1: AsyncFnMut(TxMessages, &GattConnection<'_, '_>) + 'static,
-        F2: AsyncFnMut() -> RxMessages,
-        M: RawMutex,
-    {
+    async fn run(&self) {
+        // TODO: use TxMessage::ATTRIBUTE_COUNT and TxMessage::CCCD_MAX
+        const ATT_MAX: usize = 50;
+        const CCCD_MAX: usize = 50;
+
+        let mut table = AttributeTable::<'static, NoopRawMutex, ATT_MAX>::new();
+
+        GapConfig::Peripheral(PeripheralConfig {
+            name: self.name,
+            appearance: &self.appearance,
+        });
+
+        let mut message_service_registry = MessageServiceRegistry::new();
+        TxMessage::MessageService::init(&mut message_service_registry, &mut table);
+        RxMessage::MessageService::init(&mut message_service_registry, &mut table);
+        let tx_message_service =
+            unwrap!(message_service_registry.get::<TxMessage::MessageService>());
+        let rx_message_service =
+            unwrap!(message_service_registry.get::<RxMessage::MessageService>());
+
+        let server = Box::leak(Box::new(AttributeServer::<
+            'static,
+            NoopRawMutex,
+            ATT_MAX,
+            CCCD_MAX,
+            CONN_MAX,
+        >::new(table)));
+
         let Some(num_profiles) = NonZeroU8::new(self.num_profiles) else {
             return;
         };
@@ -98,11 +120,22 @@ where
         let mut adv_data = [0; 31];
         // const APPEARANCE_ADV_TYPE: u8 = 0x19;
         // const KEYBOARD_APPEARANCE: &[u8] = &[0xC1, 0x03];
+
+        let mut adv_service_uuids_16 = Vec::new();
+        TxMessage::adv_service_uuids_16(&mut adv_service_uuids_16);
+        RxMessage::adv_service_uuids_16(&mut adv_service_uuids_16);
+        adv_service_uuids_16.dedup();
+        let mut adv_service_uuids_128 = Vec::new();
+        TxMessage::adv_service_uuids_128(&mut adv_service_uuids_128);
+        RxMessage::adv_service_uuids_128(&mut adv_service_uuids_128);
+        adv_service_uuids_128.dedup();
+
         unwrap!(AdStructure::encode_slice(
             &[
                 AdStructure::CompleteLocalName(self.name.as_bytes()),
                 AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-                AdStructure::ServiceUuids16(self.adv_service_uuids),
+                AdStructure::ServiceUuids16(&adv_service_uuids_16),
+                AdStructure::ServiceUuids128(&adv_service_uuids_128),
                 // AdStructure::Unknown {
                 //     ty: APPEARANCE_ADV_TYPE,
                 //     data: KEYBOARD_APPEARANCE,
@@ -293,6 +326,13 @@ where
                             Ok(event) => {
                                 debug!("Received GATT event");
                                 let result = if connection.raw().encrypted() {
+                                    if let GattEvent::Write(write_event) = &event {
+                                        if let Some(message) =
+                                            rx_message_service.receive(write_event).await
+                                        {
+                                            self.rx_channel.send(message);
+                                        }
+                                    }
                                     event.accept()
                                 } else {
                                     warn!("Rejecting event because connection is not encrypted");
@@ -323,15 +363,12 @@ where
                 let message = self.tx_channel.receive().await;
                 match &*connection.read().await {
                     Some(connection) => {
-                        handle_message(message, connection).await;
+                        tx_message_service.send(message, connection).await;
                     }
                     None => info!("Ignoring external message because BLE is disconnected"),
                 }
             }
         };
-
-        // TODO: support receiving messages from the host
-        let _ = handle_report;
 
         let handle_internal_messages = async {
             let mut receiver = self.internal_channel.receiver::<Message>();
@@ -488,15 +525,15 @@ where
         .await;
     }
 
-    pub fn send(&self, message: TxMessages) {
+    fn send(&self, message: Self::TxMessage) {
         self.tx_channel.send(message);
     }
 
-    pub async fn receive(&self) -> RxMessages {
-        self.rx_channel.receive().await
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
+        Box::pin(async { self.rx_channel.receive().await })
     }
 
-    pub fn set_active(&self, value: bool) -> bool {
+    fn set_active(&self, value: bool) -> bool {
         info!(
             "Setting active status of external BLE transport to {}",
             value
@@ -506,7 +543,7 @@ where
         true
     }
 
-    pub fn is_active(&self) -> bool {
+    fn is_active(&self) -> bool {
         IS_ACTIVE.load(Ordering::Acquire)
     }
 }

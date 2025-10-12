@@ -1,5 +1,7 @@
-use super::{DynTransport, Message, MessageSender, Override, TxMessages};
-use crate::external;
+use crate::external::{
+    self, DynTransport, Message, MessageSender, Override, TryFromMessage, UnsupportedMessageType,
+};
+use crate::util::error;
 use crate::util::pubsub::{PubSubChannel, Subscriber};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -12,18 +14,16 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 pub struct Channel<Transport>
 where
     Transport: external::Transport,
-    Transport::RxMessages: Clone,
 {
     transport: Transport,
     overrides: Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
     tx_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
-    rx_channel: PubSubChannel<CriticalSectionRawMutex, Transport::RxMessages>,
+    rx_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
 }
 
 impl<Transport> Channel<Transport>
 where
     Transport: external::Transport,
-    Transport::RxMessages: Clone,
 {
     /// Creates a new external channel.
     pub fn new(transport: Transport) -> Self {
@@ -56,11 +56,17 @@ where
             .lock(|v| v.borrow_mut().push(Box::new(message_override)));
     }
 
-    pub fn send(&self, message: Transport::TxMessages) {
-        self.try_send_dyn(message.upcast());
+    pub fn send<M>(&self, message: M)
+    where
+        M: Into<Transport::TxMessage>,
+    {
+        self.try_send_dyn(Box::new(message.into()));
     }
 
-    pub fn try_send<M: Message>(&self, message: M) {
+    pub fn try_send<M>(&self, message: M)
+    where
+        M: Message,
+    {
         self.as_dyn_ref().try_send(message)
     }
 
@@ -68,16 +74,52 @@ where
         self.as_dyn_ref().try_send_dyn(message)
     }
 
-    // TODO: refactor
-    pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
+    pub fn any_send_listener(&self) -> Subscriber<'_, CriticalSectionRawMutex, Box<dyn Message>> {
+        self.tx_channel.subscriber()
+    }
+
+    pub fn send_listener<M>(&self) -> Receiver<'_, M>
+    where
+        M: Into<Transport::TxMessage>,
+    {
         Receiver {
             subscriber: self.tx_channel.subscriber(),
             phantom: PhantomData,
         }
     }
 
-    pub fn rx_receiver(&self) -> Subscriber<'_, CriticalSectionRawMutex, Transport::RxMessages> {
+    pub fn try_send_listener<M>(&self) -> Receiver<'_, M>
+    where
+        M: Message,
+    {
+        Receiver {
+            subscriber: self.tx_channel.subscriber(),
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn any_receiver(&self) -> Subscriber<'_, CriticalSectionRawMutex, Box<dyn Message>> {
         self.rx_channel.subscriber()
+    }
+
+    pub fn receiver<M>(&self) -> Receiver<'_, M>
+    where
+        M: TryFromMessage<Transport::RxMessage>,
+    {
+        Receiver {
+            subscriber: self.rx_channel.subscriber(),
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn try_receiver<M>(&self) -> Receiver<'_, M>
+    where
+        M: Message,
+    {
+        Receiver {
+            subscriber: self.rx_channel.subscriber(),
+            phantom: PhantomData,
+        }
     }
 }
 
@@ -94,7 +136,10 @@ impl DynChannelRef<'_> {
             .lock(|v| v.borrow_mut().push(Box::new(message_override)));
     }
 
-    pub fn try_send<U: Message>(&self, message: U) {
+    pub fn try_send<M>(&self, message: M)
+    where
+        M: Message,
+    {
         self.try_send_dyn(Box::new(message));
     }
 
@@ -110,7 +155,9 @@ impl DynChannelRef<'_> {
             ) {
                 if index == overrides.len() {
                     tx_channel.publish(message.clone());
-                    transport.try_send(message);
+                    if let Err(UnsupportedMessageType) = transport.try_send_dyn(message) {
+                        error!("Failed to send unsupported message type");
+                    }
                 } else {
                     let mut sender = MessageSender {
                         messages: Vec::new(),
@@ -125,7 +172,10 @@ impl DynChannelRef<'_> {
         });
     }
 
-    pub fn receiver<U: Message>(&self) -> Receiver<'_, U> {
+    pub fn try_send_listener<M>(&self) -> Receiver<'_, M>
+    where
+        M: Message,
+    {
         Receiver {
             subscriber: self.tx_channel.subscriber(),
             phantom: PhantomData,

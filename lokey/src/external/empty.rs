@@ -1,4 +1,4 @@
-use super::{RxMessages0, TxMessages0};
+use crate::external::NoMessage;
 use crate::{Address, external, internal, mcu};
 use alloc::boxed::Box;
 use core::marker::PhantomData;
@@ -13,8 +13,8 @@ pub struct Transport<Mcu> {
 impl<Mcu: mcu::Mcu> external::Transport for Transport<Mcu> {
     type Config = TransportConfig;
     type Mcu = Mcu;
-    type TxMessages = TxMessages0;
-    type RxMessages = RxMessages0;
+    type TxMessage = NoMessage;
+    type RxMessage = NoMessage;
 
     async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         _: Self::Config,
@@ -29,9 +29,9 @@ impl<Mcu: mcu::Mcu> external::Transport for Transport<Mcu> {
 
     async fn run(&self) {}
 
-    fn send(&self, _: TxMessages0) {}
+    fn send(&self, _: Self::TxMessage) {}
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages>>> {
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
         Box::pin(core::future::pending())
     }
 }

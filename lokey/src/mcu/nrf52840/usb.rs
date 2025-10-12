@@ -5,7 +5,9 @@ use embassy_nrf::peripherals::USBD;
 use embassy_nrf::usb::vbus_detect::HardwareVbusDetect;
 
 impl usb::CreateDriver for Nrf52840 {
-    fn create_driver<'a>(&'static self) -> impl embassy_usb::driver::Driver<'a> {
+    type Driver<'d> = impl embassy_usb::driver::Driver<'d>;
+
+    fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
         embassy_nrf::interrupt::USBD.set_priority(Priority::P2);
         embassy_nrf::interrupt::CLOCK_POWER.set_priority(Priority::P2);
 

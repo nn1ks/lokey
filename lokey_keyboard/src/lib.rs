@@ -10,26 +10,25 @@ extern crate alloc;
 
 pub mod action;
 #[cfg(feature = "external-ble")]
-mod ble_transport;
+pub mod ble;
 mod debounce;
 mod direct_pins;
 mod key;
 mod key_override;
 mod matrix;
 #[cfg(feature = "external-usb")]
-mod usb_transport;
+pub mod usb;
 
 pub use action::{Action, DynAction};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-#[cfg(feature = "external-ble")]
-pub use ble_transport::BleTransport;
 use core::future::Future;
 use core::pin::Pin;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_futures::join::join;
-use embassy_futures::select::{Either, select, select_slice};
+use embassy_futures::select::{Either, select};
+use futures_util::future::select_all;
 pub use key::{HidReportByte, Key};
 pub use key_override::KeyOverride;
 use lokey::util::{debug, error};
@@ -135,8 +134,6 @@ pub use lokey_keyboard_macros::layout;
 #[cfg(feature = "macros")]
 pub use lokey_keyboard_macros::static_layout;
 pub use matrix::{Matrix, MatrixConfig};
-#[cfg(feature = "external-usb")]
-pub use usb_transport::UsbTransport;
 
 /// The layout of the keys.
 pub struct Layout<const NUM_KEYS: usize> {
@@ -221,13 +218,16 @@ impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
                                 },
                             }
                         };
-                        let fut2 = select_slice(&mut action_futures);
+                        let fut2 = select_all(action_futures.drain(..));
                         match select(fut1, fut2).await {
                             Either::First(Some(action_future)) => {
                                 action_futures.push(action_future)
                             }
                             Either::First(None) => {}
-                            Either::Second((_, i)) => drop(action_futures.remove(i)),
+                            Either::Second((_, i, remaining_action_futures)) => {
+                                drop(action_futures.remove(i));
+                                action_futures = remaining_action_futures;
+                            }
                         }
                     }
                 };

@@ -10,6 +10,7 @@ use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
+use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -61,28 +62,28 @@ pub struct Transport<Usb, Ble> {
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<Usb, Ble, Mcu, TxMessages, RxMessages> external::Transport for Transport<Usb, Ble>
+impl<Usb, Ble, Mcu, TxMessage, RxMessage> external::Transport for Transport<Usb, Ble>
 where
     Usb: external::Transport<
             Config = usb::TransportConfig,
             Mcu = Mcu,
-            TxMessages = TxMessages,
-            RxMessages = RxMessages,
+            TxMessage = TxMessage,
+            RxMessage = RxMessage,
         >,
     Ble: external::Transport<
             Config = ble::TransportConfig,
             Mcu = Mcu,
-            TxMessages = TxMessages,
-            RxMessages = RxMessages,
+            TxMessage = TxMessage,
+            RxMessage = RxMessage,
         >,
     Mcu: mcu::Mcu,
-    TxMessages: external::TxMessages,
-    RxMessages: external::RxMessages,
+    TxMessage: external::Message,
+    RxMessage: external::Message,
 {
     type Config = TransportConfig;
     type Mcu = Mcu;
-    type TxMessages = TxMessages;
-    type RxMessages = RxMessages;
+    type TxMessage = TxMessage;
+    type RxMessage = RxMessage;
 
     async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -147,14 +148,14 @@ where
         join(handle_activation_request, handle_internal_messages).await;
     }
 
-    fn send(&self, message: Self::TxMessages) {
+    fn send(&self, message: Self::TxMessage) {
         self.active.lock(|selection| match selection.get() {
             TransportSelection::Usb => self.usb_transport.send(message),
             TransportSelection::Ble => self.ble_transport.send(message),
         })
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages> + '_>> {
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
         self.active.lock(|selection| match selection.get() {
             TransportSelection::Usb => Box::pin(self.usb_transport.receive()),
             TransportSelection::Ble => Box::pin(self.ble_transport.receive()),
@@ -200,13 +201,14 @@ pub struct TransportConfig {
     pub serial_number: Option<&'static str>,
     pub self_powered: bool,
     pub num_ble_profiles: u8,
+    pub appearance: BluetoothUuid16,
     pub deactivate_unused_transport: bool,
 }
 
 impl Default for TransportConfig {
     fn default() -> Self {
         Self {
-            name: "Lokey Keyboard",
+            name: "Lokey Device",
             vendor_id: 0x1d51,
             product_id: 0x615f,
             product_version: 0,
@@ -216,6 +218,7 @@ impl Default for TransportConfig {
             serial_number: None,
             self_powered: false,
             num_ble_profiles: 4,
+            appearance: appearance::UNKNOWN,
             deactivate_unused_transport: true,
         }
     }
@@ -243,6 +246,7 @@ impl TransportConfig {
             model_number: self.model_number,
             serial_number: self.serial_number,
             num_profiles: self.num_ble_profiles,
+            appearance: self.appearance,
         }
     }
 }

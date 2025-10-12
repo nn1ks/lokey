@@ -1,8 +1,13 @@
 mod generic_transport;
+mod message_service;
 
+use crate::external::NoMessage;
 use crate::util::error;
-use crate::{Address, internal};
-pub use generic_transport::GenericTransport;
+use crate::{Address, external, internal};
+use alloc::vec::Vec;
+pub use generic_transport::Transport;
+pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
+use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 pub struct TransportConfig {
     pub name: &'static str,
@@ -13,12 +18,13 @@ pub struct TransportConfig {
     pub model_number: Option<&'static str>,
     pub serial_number: Option<&'static str>,
     pub num_profiles: u8,
+    pub appearance: BluetoothUuid16,
 }
 
 impl Default for TransportConfig {
     fn default() -> Self {
         Self {
-            name: "Lokey Keyboard",
+            name: "Lokey Device",
             vendor_id: 0x1d51,
             product_id: 0x615f,
             product_version: 0,
@@ -26,6 +32,7 @@ impl Default for TransportConfig {
             model_number: None,
             serial_number: None,
             num_profiles: 4,
+            appearance: appearance::UNKNOWN,
         }
     }
 }
@@ -141,4 +148,44 @@ impl internal::Message for Event {
             } => [4, *profile_index, *changed as u8, 0, 0, 0, 0],
         }
     }
+}
+
+pub trait TxMessage: external::Message + Sized {
+    type MessageService: TxMessageService<Self> + InitMessageService;
+
+    const ATTRIBUTE_COUNT: usize;
+    const CCCD_COUNT: usize;
+
+    fn adv_service_uuids_16(buf: &mut Vec<[u8; 2]>);
+    fn adv_service_uuids_128(buf: &mut Vec<[u8; 16]>);
+}
+
+pub trait RxMessage: external::Message + Sized {
+    type MessageService: RxMessageService<Self> + InitMessageService;
+
+    const ATTRIBUTE_COUNT: usize;
+    const CCCD_COUNT: usize;
+
+    fn adv_service_uuids_16(buf: &mut Vec<[u8; 2]>);
+    fn adv_service_uuids_128(buf: &mut Vec<[u8; 16]>);
+}
+
+impl TxMessage for NoMessage {
+    type MessageService = ();
+
+    const ATTRIBUTE_COUNT: usize = 0;
+    const CCCD_COUNT: usize = 0;
+
+    fn adv_service_uuids_16(_: &mut Vec<[u8; 2]>) {}
+    fn adv_service_uuids_128(_: &mut Vec<[u8; 16]>) {}
+}
+
+impl RxMessage for NoMessage {
+    type MessageService = ();
+
+    const ATTRIBUTE_COUNT: usize = 0;
+    const CCCD_COUNT: usize = 0;
+
+    fn adv_service_uuids_16(_: &mut Vec<[u8; 2]>) {}
+    fn adv_service_uuids_128(_: &mut Vec<[u8; 16]>) {}
 }

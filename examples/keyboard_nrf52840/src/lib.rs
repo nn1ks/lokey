@@ -9,7 +9,7 @@ use embassy_nrf::peripherals::{
 use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
-use lokey::external::TxMessages1;
+use lokey::external::{NoMessage, usb};
 use lokey::mcu::nrf52840::pwm::Pwm;
 use lokey::mcu::pwm::{Pwm as _, PwmChannel};
 use lokey::mcu::{Nrf52840, nrf52840};
@@ -34,8 +34,7 @@ pub struct DefaultState {
 pub struct Central;
 
 impl Transports<Nrf52840> for Central {
-    type ExternalTransport =
-        lokey_keyboard::UsbTransport<Nrf52840, TxMessages1<lokey_keyboard::ExternalMessage>>;
+    type ExternalTransport = usb::Transport<Nrf52840, lokey_keyboard::ExternalMessage, NoMessage>;
     // type ExternalTransportConfig =
     //     external::toggle::TransportConfig<external::ble::TransportConfig>;
     // type ExternalTransportConfig = external::usb_ble::TransportConfig;

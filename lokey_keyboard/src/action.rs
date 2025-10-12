@@ -228,7 +228,9 @@ impl<A: Action> Sticky<A> {
 impl<A: Action> Action for Sticky<A> {
     async fn on_press(&'static self, context: DynContext) {
         self.is_held.store(true, Ordering::SeqCst);
-        let mut receiver = context.external_channel.receiver::<ExternalMessage>();
+        let mut receiver = context
+            .external_channel
+            .try_send_listener::<ExternalMessage>();
         if !self.lazy {
             self.action.on_press(context).await;
         }

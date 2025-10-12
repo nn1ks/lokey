@@ -93,16 +93,16 @@ pub struct Transport<T> {
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<T, TxMessages, RxMessages> external::Transport for Transport<T>
+impl<T, TxMessage, RxMessage> external::Transport for Transport<T>
 where
-    T: external::Transport<TxMessages = TxMessages, RxMessages = RxMessages>,
-    TxMessages: external::TxMessages,
-    RxMessages: external::RxMessages,
+    T: external::Transport<TxMessage = TxMessage, RxMessage = RxMessage>,
+    TxMessage: external::Message,
+    RxMessage: external::Message,
 {
     type Config = TransportConfig<T::Config>;
     type Mcu = T::Mcu;
-    type TxMessages = TxMessages;
-    type RxMessages = RxMessages;
+    type TxMessage = TxMessage;
+    type RxMessage = RxMessage;
 
     async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -161,14 +161,14 @@ where
         }
     }
 
-    fn send(&self, message: Self::TxMessages) {
+    fn send(&self, message: Self::TxMessage) {
         if ACTIVE.load(Ordering::Acquire) {
             self.transport.send(message);
         }
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessages> + '_>> {
-        Box::pin(async { self.transport.receive().await })
+    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
+        Box::pin(self.transport.receive())
     }
 
     fn set_active(&self, value: bool) -> bool {
