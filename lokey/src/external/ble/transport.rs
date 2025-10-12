@@ -1,6 +1,8 @@
 use super::{Event, Message, TransportConfig};
 use crate::external::MessageServiceRegistry;
-use crate::external::ble::{self, InitMessageService, RxMessageService, TxMessageService};
+use crate::external::ble::{
+    self, InitMessageService, RxMessageService, ServiceUuid, TxMessageService,
+};
 use crate::mcu::{self, McuBle, McuStorage, storage};
 use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap, warn};
@@ -125,13 +127,16 @@ where
         // const KEYBOARD_APPEARANCE: &[u8] = &[0xC1, 0x03];
 
         let mut adv_service_uuids_16 = Vec::new();
-        TxMessage::adv_service_uuids_16(&mut adv_service_uuids_16);
-        RxMessage::adv_service_uuids_16(&mut adv_service_uuids_16);
-        adv_service_uuids_16.dedup();
         let mut adv_service_uuids_128 = Vec::new();
-        TxMessage::adv_service_uuids_128(&mut adv_service_uuids_128);
-        RxMessage::adv_service_uuids_128(&mut adv_service_uuids_128);
-        adv_service_uuids_128.dedup();
+        for service_uuid in TxMessage::service_uuids()
+            .into_iter()
+            .chain(RxMessage::service_uuids())
+        {
+            match service_uuid {
+                ServiceUuid::Uuid16(v) => adv_service_uuids_16.push(v),
+                ServiceUuid::Uuid128(v) => adv_service_uuids_128.push(v),
+            }
+        }
 
         unwrap!(AdStructure::encode_slice(
             &[

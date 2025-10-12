@@ -1,9 +1,9 @@
 use super::ExternalMessage;
-use alloc::vec::Vec;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::mutex::Mutex;
+use generic_array::GenericArray;
 use lokey::external::MessageServiceRegistry;
-use lokey::external::ble::{InitMessageService, TxMessage, TxMessageService};
+use lokey::external::ble::{InitMessageService, ServiceUuid, TxMessage, TxMessageService};
 use lokey::util::error;
 use trouble_host::prelude::*;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
@@ -14,11 +14,14 @@ impl TxMessage for ExternalMessage {
     const ATTRIBUTE_COUNT: usize = HidService::ATTRIBUTE_COUNT;
     const CCCD_COUNT: usize = HidService::CCCD_COUNT;
 
-    fn adv_service_uuids_16(buf: &mut Vec<[u8; 2]>) {
-        buf.push(service::HUMAN_INTERFACE_DEVICE.to_le_bytes());
-    }
+    type LEN_SERVICE_UUIDS = typenum::U1;
 
-    fn adv_service_uuids_128(_: &mut Vec<[u8; 16]>) {}
+    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
+        [ServiceUuid::Uuid16(
+            service::HUMAN_INTERFACE_DEVICE.to_le_bytes(),
+        )]
+        .into()
+    }
 }
 
 #[gatt_service(uuid = service::HUMAN_INTERFACE_DEVICE)]

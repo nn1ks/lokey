@@ -4,7 +4,7 @@ mod transport;
 use crate::external::NoMessage;
 use crate::util::error;
 use crate::{Address, external, internal};
-use alloc::vec::Vec;
+use generic_array::{ArrayLength, GenericArray};
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 pub use transport::Transport;
 use trouble_host::prelude::{BluetoothUuid16, appearance};
@@ -150,14 +150,22 @@ impl internal::Message for Event {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ServiceUuid {
+    Uuid16([u8; 2]),
+    Uuid128([u8; 16]),
+}
+
 pub trait TxMessage: external::Message + Sized {
     type MessageService: TxMessageService<Self> + InitMessageService;
 
     const ATTRIBUTE_COUNT: usize;
     const CCCD_COUNT: usize;
 
-    fn adv_service_uuids_16(buf: &mut Vec<[u8; 2]>);
-    fn adv_service_uuids_128(buf: &mut Vec<[u8; 16]>);
+    #[allow(non_camel_case_types)]
+    type LEN_SERVICE_UUIDS: ArrayLength;
+
+    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS>;
 }
 
 pub trait RxMessage: external::Message + Sized {
@@ -166,8 +174,10 @@ pub trait RxMessage: external::Message + Sized {
     const ATTRIBUTE_COUNT: usize;
     const CCCD_COUNT: usize;
 
-    fn adv_service_uuids_16(buf: &mut Vec<[u8; 2]>);
-    fn adv_service_uuids_128(buf: &mut Vec<[u8; 16]>);
+    #[allow(non_camel_case_types)]
+    type LEN_SERVICE_UUIDS: ArrayLength;
+
+    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS>;
 }
 
 impl TxMessage for NoMessage {
@@ -176,8 +186,11 @@ impl TxMessage for NoMessage {
     const ATTRIBUTE_COUNT: usize = 0;
     const CCCD_COUNT: usize = 0;
 
-    fn adv_service_uuids_16(_: &mut Vec<[u8; 2]>) {}
-    fn adv_service_uuids_128(_: &mut Vec<[u8; 16]>) {}
+    type LEN_SERVICE_UUIDS = typenum::U0;
+
+    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
+        [].into()
+    }
 }
 
 impl RxMessage for NoMessage {
@@ -186,6 +199,9 @@ impl RxMessage for NoMessage {
     const ATTRIBUTE_COUNT: usize = 0;
     const CCCD_COUNT: usize = 0;
 
-    fn adv_service_uuids_16(_: &mut Vec<[u8; 2]>) {}
-    fn adv_service_uuids_128(_: &mut Vec<[u8; 16]>) {}
+    type LEN_SERVICE_UUIDS = typenum::U0;
+
+    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
+        [].into()
+    }
 }
