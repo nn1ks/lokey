@@ -66,7 +66,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo test -p lokey --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo test -p lokey --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
   lokey_common:
@@ -143,7 +143,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo test -p lokey_keyboard --verbose --doc -Zdoctest-xcompile --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo test -p lokey_keyboard --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
   examples:
