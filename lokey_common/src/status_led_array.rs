@@ -371,10 +371,10 @@ impl<const NUM_LEDS: usize, Hooks: HookBundle> StatusLedArray<NUM_LEDS, Hooks> {
                 let recv = async {
                     loop {
                         let message = receiver.next().await;
-                        if let Some(device_addresses) = message.filter_devices {
-                            if !device_addresses.contains(&self.context.address) {
-                                continue;
-                            }
+                        if let Some(device_addresses) = message.filter_devices
+                            && !device_addresses.contains(&self.context.address)
+                        {
+                            continue;
                         }
                         break (message.action_id, message.action);
                     }
