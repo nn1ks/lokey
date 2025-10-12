@@ -1,12 +1,12 @@
-mod generic_transport;
 mod message_service;
+mod transport;
 
 use crate::external::NoMessage;
 use crate::util::error;
 use crate::{Address, external, internal};
 use alloc::vec::Vec;
-pub use generic_transport::Transport;
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
+pub use transport::Transport;
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 pub struct TransportConfig {

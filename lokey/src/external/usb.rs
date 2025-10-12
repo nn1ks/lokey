@@ -1,5 +1,5 @@
-mod hid_transport;
 mod message_service;
+mod transport;
 
 use crate::external::{self, NoMessage};
 use crate::mcu::Mcu;
@@ -8,10 +8,10 @@ use core::sync::atomic::Ordering;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_usb::driver::Driver;
-pub use hid_transport::Transport;
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 use portable_atomic::AtomicBool;
 use portable_atomic_util::Arc;
+pub use transport::Transport;
 
 #[derive(Clone)]
 pub struct TransportConfig {
