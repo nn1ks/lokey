@@ -113,8 +113,8 @@
       #ca4894 30%,
       #a071ff);
   --vp-home-hero-image-background-image: linear-gradient(-45deg,
-      #ca489466 50%,
-      #a071ff66 50%);
+      #ca489477 50%,
+      #a071ff77 50%);
 }
 
 :root:not(.dark) {
@@ -122,8 +122,8 @@
       #a01e6a 30%,
       #6723f0);
   --vp-home-hero-image-background-image: linear-gradient(-45deg,
-      #a01e6a66 50%,
-      #6723f066 50%);
+      #a01e6a88 50%,
+      #6723f088 50%);
 }
 
 /**
@@ -197,8 +197,7 @@
   font-display: swap;
 }
 
-.heading,
-.tagline {
+.heading {
   font-family: "Noto Serif Variable";
 }
 
