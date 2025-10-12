@@ -110,11 +110,11 @@
 
 :root.dark {
   --vp-home-hero-name-background: -webkit-linear-gradient(120deg,
-      #bd3986 30%,
-      #8045f5);
+      #ca4894 30%,
+      #a071ff);
   --vp-home-hero-image-background-image: linear-gradient(-45deg,
-      #bd398655 50%,
-      #8045f555 50%);
+      #ca489466 50%,
+      #a071ff66 50%);
 }
 
 :root:not(.dark) {
@@ -122,8 +122,8 @@
       #a01e6a 30%,
       #6723f0);
   --vp-home-hero-image-background-image: linear-gradient(-45deg,
-      #a01e6a55 50%,
-      #6723f055 50%);
+      #a01e6a66 50%,
+      #6723f066 50%);
 }
 
 /**
