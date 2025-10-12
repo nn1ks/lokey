@@ -28,7 +28,7 @@ defmt = [
 ]
 
 ## Enables the external USB transport for key messages.
-external-usb = ["dep:embassy-usb", "dep:usbd-hid", "dep:ssmarshal", "lokey/external-usb", "lokey/external-usb-hid"]
+external-usb = ["dep:embassy-usb", "dep:usbd-hid", "dep:ssmarshal", "lokey/external-usb"]
 
 ## Enables the external Bluetooth Low Energy (BLE) transport for key messages.
 external-ble = ["dep:trouble-host", "dep:usbd-hid", "dep:ssmarshal", "lokey/external-ble"]

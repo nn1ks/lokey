@@ -34,7 +34,7 @@ jobs:
             target: thumbv6m-none-eabi
             mcu_features: "rp2040"
     env:
-      FEATURE_COMBINATIONS: ";macros;defmt;external-usb;external-usb;external-usb-hid;external-ble;internal-ble;external-usb external-usb-hid external-ble internal-ble;macros defmt external-usb external-usb-hid external-ble internal-ble"
+      FEATURE_COMBINATIONS: ";macros;defmt;external-usb;external-usb;external-ble;internal-ble;external-usb external-ble internal-ble;macros defmt external-usb external-ble internal-ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2

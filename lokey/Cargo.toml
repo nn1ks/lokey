@@ -43,11 +43,6 @@ external-usb = [
   "dep:embassy-usb",
 ]
 
-## Enables a generic USB transport for human interface devices.
-external-usb-hid = [
-  "dep:usbd-hid",
-]
-
 ## Enables the external Bluetooth Low Energy (BLE) transport.
 external-ble = [
   "dep:trouble-host",
