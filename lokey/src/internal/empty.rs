@@ -1,9 +1,6 @@
 use crate::{Address, internal, mcu};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 use core::future::Future;
 use core::marker::PhantomData;
-use core::pin::Pin;
 
 pub struct TransportConfig;
 
@@ -23,9 +20,9 @@ impl<Mcu: mcu::Mcu> internal::Transport for Transport<Mcu> {
 
     async fn run(&self) {}
 
-    fn send(&self, _message_bytes: &[u8]) {}
+    fn send(&self, _: &[u8]) {}
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {
-        Box::pin(async { core::future::pending().await })
+    fn receive(&self, _: &mut [u8]) -> impl Future<Output = usize> {
+        core::future::pending()
     }
 }

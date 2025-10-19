@@ -29,6 +29,7 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use futures_util::future::select_all;
+use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
 pub use key_override::KeyOverride;
 use lokey::util::{debug, error};
@@ -260,29 +261,29 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 3];
+    type SIZE = typenum::U3;
 
     const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
     where
         Self: Sized,
     {
-        match bytes[0] {
-            0 => Some(Message::Press {
-                key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
+        match bytes.into_array::<3>() {
+            [0, bytes @ ..] => Some(Message::Press {
+                key_index: u16::from_be_bytes(bytes),
             }),
-            1 => Some(Message::Release {
-                key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
+            [1, bytes @ ..] => Some(Message::Release {
+                key_index: u16::from_be_bytes(bytes),
             }),
             v => {
-                error!("unknown tag byte: {}", v);
+                error!("Unknown tag byte: {}", v);
                 None
             }
         }
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
         match self {
             Message::Press { key_index } => {
                 let bytes = key_index.to_be_bytes();
@@ -293,6 +294,7 @@ impl internal::Message for Message {
                 [1, bytes[0], bytes[1]]
             }
         }
+        .into()
     }
 }
 

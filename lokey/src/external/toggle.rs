@@ -6,6 +6,7 @@ use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
+use generic_array::GenericArray;
 use portable_atomic::AtomicBool;
 
 static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
@@ -29,23 +30,23 @@ impl Message {
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 7];
+    type SIZE = typenum::U7;
 
     const TAG: [u8; 4] = [0x16, 0xb3, 0x17, 0x8e];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
     where
         Self: Sized,
     {
-        match bytes {
-            [0, address_bytes @ ..] => Some(Self::Activate(Address(*address_bytes))),
-            [1, address_bytes @ ..] => Some(Self::Deactivate(Address(*address_bytes))),
-            [2, address_bytes @ ..] => Some(Self::Toggle(Address(*address_bytes))),
+        match bytes.into_array::<7>() {
+            [0, address_bytes @ ..] => Some(Self::Activate(Address(address_bytes))),
+            [1, address_bytes @ ..] => Some(Self::Deactivate(Address(address_bytes))),
+            [2, address_bytes @ ..] => Some(Self::Toggle(Address(address_bytes))),
             _ => None,
         }
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
         let (first_byte, address) = match self {
             Self::Activate(address) => (0, address),
             Self::Deactivate(address) => (1, address),
@@ -56,7 +57,7 @@ impl internal::Message for Message {
         for (i, byte) in address.0.iter().enumerate() {
             value[i + 1] = *byte;
         }
-        value
+        value.into()
     }
 }
 

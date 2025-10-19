@@ -10,6 +10,7 @@ use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
+use generic_array::GenericArray;
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -24,11 +25,11 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 1];
+    type SIZE = typenum::U1;
 
     const TAG: [u8; 4] = [0x73, 0xe2, 0x8c, 0xcf];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -43,11 +44,11 @@ impl internal::Message for Message {
         Some(Self::SetActive(transport_selection))
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
         match self {
             Message::SetActive(v) => match v {
-                TransportSelection::Usb => [0],
-                TransportSelection::Ble => [1],
+                TransportSelection::Usb => [0].into(),
+                TransportSelection::Ble => [1].into(),
             },
         }
     }

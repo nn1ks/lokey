@@ -4,6 +4,25 @@
 //!
 #![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
 //!
+//! #### Internal message size
+//!
+//! <ul>
+//! <li>
+//!     <span class="stab portability"><code>max-internal-message-size-*</code></span>
+//!     — Sets the maximum size of internal messages in bytes where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>32</code>,
+//!     <code>64</code>,
+//!     <code>128</code>,
+//!     <code>256</code>,
+//!     <code>512</code>,
+//!     <code>1024</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! </ul>
+//!
+//!
 #![cfg_attr(
     feature = "macros",
     doc = "
