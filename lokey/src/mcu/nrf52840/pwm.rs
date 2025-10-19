@@ -5,20 +5,20 @@ use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use portable_atomic_util::Arc;
 
-pub struct Pwm<'d, T: pwm::Instance, const N: usize> {
-    pwm: pwm::SimplePwm<'d, T>,
+pub struct Pwm<'d, const N: usize> {
+    pwm: pwm::SimplePwm<'d>,
 }
 
-impl<'d, T: pwm::Instance, const N: usize> Pwm<'d, T, N> {
-    pub fn new(pwm: pwm::SimplePwm<'d, T>, max_duty: u16) -> Self {
+impl<'d, const N: usize> Pwm<'d, N> {
+    pub fn new(pwm: pwm::SimplePwm<'d>, max_duty: u16) -> Self {
         pwm.set_prescaler(Prescaler::Div1);
         pwm.set_max_duty(max_duty);
         Self { pwm }
     }
 }
 
-impl<'d, T: pwm::Instance, const N: usize> mcu::pwm::Pwm<N> for Pwm<'d, T, N> {
-    type Channel = PwmChannel<'d, T>;
+impl<'d, const N: usize> mcu::pwm::Pwm<N> for Pwm<'d, N> {
+    type Channel = PwmChannel<'d>;
 
     fn max_duty(&self) -> u16 {
         pwm::SimplePwm::max_duty(&self.pwm)
@@ -43,13 +43,13 @@ impl<'d, T: pwm::Instance, const N: usize> mcu::pwm::Pwm<N> for Pwm<'d, T, N> {
     }
 }
 
-pub struct PwmChannel<'d, T: pwm::Instance> {
-    pwm: Arc<Mutex<CriticalSectionRawMutex, RefCell<pwm::SimplePwm<'d, T>>>>,
+pub struct PwmChannel<'d> {
+    pwm: Arc<Mutex<CriticalSectionRawMutex, RefCell<pwm::SimplePwm<'d>>>>,
     channel_index: usize,
     max_duty: u16,
 }
 
-impl<'d, T: pwm::Instance> mcu::pwm::PwmChannel for PwmChannel<'d, T> {
+impl<'d> mcu::pwm::PwmChannel for PwmChannel<'d> {
     fn max_duty(&self) -> u16 {
         self.max_duty
     }

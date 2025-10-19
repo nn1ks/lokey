@@ -7,7 +7,7 @@ use core::future::join;
 #[cfg(feature = "defmt")]
 use defmt_rtt as _;
 use embassy_executor::Spawner;
-use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
+use embassy_rp::gpio::{AnyPin, Input, Level, Output, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::external::{self, NoMessage, usb};
@@ -77,8 +77,9 @@ impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> fo
     where
         T: Transports<Self::Mcu>,
     {
-        let input_pins =
-            unsafe { [Input::new(PIN_0::steal().degrade(), Pull::Up).into_active_low_switch()] };
+        let input_pins = unsafe {
+            [Input::new(PIN_0::steal().into::<AnyPin>(), Pull::Up).into_active_low_switch()]
+        };
         let scanner = DirectPins::new::<NUM_KEYS>(input_pins).continuous::<0>();
 
         component.run(scanner, context.as_dyn()).await

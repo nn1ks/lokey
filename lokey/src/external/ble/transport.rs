@@ -16,8 +16,8 @@ use embassy_futures::join::join5;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::mutex::Mutex;
+use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
-use embassy_sync_new::rwlock::RwLock;
 use embassy_time::Timer;
 use generic_array::GenericArray;
 use portable_atomic::{AtomicBool, AtomicU8};
@@ -26,9 +26,9 @@ use trouble_host::gap::{GapConfig, PeripheralConfig};
 use trouble_host::gatt::{GattConnection, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
     AdStructure, Advertisement, AdvertisementParameters, AttributeServer, AttributeTable,
-    BR_EDR_NOT_SUPPORTED, BdAddr, BluetoothUuid16, LE_GENERAL_DISCOVERABLE,
+    BR_EDR_NOT_SUPPORTED, BluetoothUuid16, DefaultPacketPool, LE_GENERAL_DISCOVERABLE,
 };
-use trouble_host::{BleHostError, BondInformation, LongTermKey};
+use trouble_host::{BleHostError, BondInformation};
 
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
@@ -98,6 +98,7 @@ where
         let server = Box::leak(Box::new(AttributeServer::<
             'static,
             NoopRawMutex,
+            DefaultPacketPool,
             ATT_MAX,
             CCCD_MAX,
             CONN_MAX,
@@ -172,8 +173,8 @@ where
         let bond_infos = Mutex::<CriticalSectionRawMutex, _>::new(bond_infos);
 
         let connection = RwLock::<
-            embassy_sync_new::blocking_mutex::raw::CriticalSectionRawMutex,
-            Option<GattConnection<'static, 'static>>,
+            CriticalSectionRawMutex,
+            Option<GattConnection<'static, 'static, DefaultPacketPool>>,
         >::new(None);
 
         let cancel_activation_wait = Signal::<CriticalSectionRawMutex, ()>::new();
@@ -295,69 +296,74 @@ where
                                 .send(Event::Disconnected { device_address });
                             break;
                         }
-                        GattConnectionEvent::Bonded { bond_info } => {
-                            debug!("Received Bonded event");
-                            let store_new_bond_info = match &bond_infos.lock().await
-                                [profile_index as usize]
+                        // TODO
+                        // GattConnectionEvent::Bonded { bond_info } => {
+                        //     debug!("Received Bonded event");
+                        //     let store_new_bond_info = match &bond_infos.lock().await
+                        //         [profile_index as usize]
+                        //     {
+                        //         Some(stored_bond_info) => {
+                        //             if stored_bond_info.ltk != bond_info.ltk {
+                        //                 warn!(
+                        //                     "LTK of new bond does not match LTK of stored bond, disconnecting..."
+                        //                 );
+                        //                 connection.raw().disconnect();
+                        //                 self.internal_channel
+                        //                     .send(Event::Disconnected { device_address });
+                        //                 break;
+                        //             } else {
+                        //                 // Store new bond info if the address changed
+                        //                 stored_bond_info.address != bond_info.address
+                        //             }
+                        //         }
+                        //         None => true,
+                        //     };
+                        //     if store_new_bond_info {
+                        //         // debug!("Writing bond info to flash");
+                        //         // if let Err(e) = mcu.storage().store(profile_index, &bond_info).await {
+                        //         //     #[cfg(feature = "defmt")]
+                        //         //     let e = defmt::Debug2Format(&e);
+                        //         //     error!("Failed to write bond info to flash: {}", e);
+                        //         // }
+                        //         debug!("Adding bond info to stack");
+                        //         if let Err(e) = ble_stack.add_bond_information(bond_info.clone()) {
+                        //             error!("Failed to add bond info to stack: {}", e);
+                        //         }
+                        //         bond_infos.lock().await[profile_index as usize] = Some(bond_info);
+                        //     }
+                        // }
+                        GattConnectionEvent::Gatt { event } => {
+                            debug!("Received GATT event");
+                            let result = if connection
+                                .raw()
+                                .security_level()
+                                .map(|v| v.encrypted())
+                                .unwrap_or(false)
                             {
-                                Some(stored_bond_info) => {
-                                    if stored_bond_info.ltk != bond_info.ltk {
-                                        warn!(
-                                            "LTK of new bond does not match LTK of stored bond, disconnecting..."
-                                        );
-                                        connection.raw().disconnect();
-                                        self.internal_channel
-                                            .send(Event::Disconnected { device_address });
-                                        break;
-                                    } else {
-                                        // Store new bond info if the address changed
-                                        stored_bond_info.address != bond_info.address
-                                    }
+                                if let GattEvent::Write(write_event) = &event
+                                    && let Some(message) =
+                                        rx_message_service.receive(write_event).await
+                                {
+                                    self.rx_channel.send(message);
                                 }
-                                None => true,
+                                event.accept()
+                            } else {
+                                warn!("Rejecting event because connection is not encrypted");
+                                event.reject(AttErrorCode::INSUFFICIENT_ENCRYPTION)
                             };
-                            if store_new_bond_info {
-                                // debug!("Writing bond info to flash");
-                                // if let Err(e) = mcu.storage().store(profile_index, &bond_info).await {
-                                //     #[cfg(feature = "defmt")]
-                                //     let e = defmt::Debug2Format(&e);
-                                //     error!("Failed to write bond info to flash: {}", e);
-                                // }
-                                debug!("Adding bond info to stack");
-                                if let Err(e) = ble_stack.add_bond_information(bond_info.clone()) {
-                                    error!("Failed to add bond info to stack: {}", e);
-                                }
-                                bond_infos.lock().await[profile_index as usize] = Some(bond_info);
+                            match result {
+                                Ok(reply) => reply.send().await,
+                                Err(error) => error!("Failed to handle event: {}", error),
                             }
                         }
-                        GattConnectionEvent::Gatt { event } => match event {
-                            Ok(event) => {
-                                debug!("Received GATT event");
-                                let result = if connection.raw().encrypted() {
-                                    if let GattEvent::Write(write_event) = &event
-                                        && let Some(message) =
-                                            rx_message_service.receive(write_event).await
-                                    {
-                                        self.rx_channel.send(message);
-                                    }
-                                    event.accept()
-                                } else {
-                                    warn!("Rejecting event because connection is not encrypted");
-                                    event.reject(AttErrorCode::INSUFFICIENT_ENCRYPTION)
-                                };
-                                match result {
-                                    Ok(reply) => reply.send().await,
-                                    Err(error) => error!("Failed to handle event: {}", error),
-                                }
-                            }
-                            Err(error) => error!("Error processing event: {}", error),
-                        },
                         GattConnectionEvent::ConnectionParamsUpdated { .. } => {
                             debug!("Received ConnectionParamsUpdated event");
                         }
                         GattConnectionEvent::PhyUpdated { .. } => {
                             debug!("Received PhyUpdated event");
                         }
+                        // TODO: remove
+                        _ => {}
                     }
                 }
                 self.internal_channel
@@ -567,16 +573,19 @@ impl storage::Entry for BondInformation {
     where
         Self: Sized,
     {
-        let bytes = bytes.into_array::<22>();
-        let ltk = LongTermKey::from_le_bytes(bytes[..16].try_into().unwrap());
-        let address = BdAddr::new(bytes[16..].try_into().unwrap());
-        Some(BondInformation::new(address, ltk))
+        let _ = bytes;
+        todo!()
+        // let bytes = bytes.into_array::<22>();
+        // let ltk = LongTermKey::from_le_bytes(bytes[..16].try_into().unwrap());
+        // let address = BdAddr::new(bytes[16..].try_into().unwrap());
+        // Some(BondInformation::new(address, ltk))
     }
 
     fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        let mut bytes = [0; 22];
-        bytes[..16].copy_from_slice(&self.ltk.to_le_bytes());
-        bytes[16..].copy_from_slice(&self.address.into_inner());
-        GenericArray::from_array(bytes)
+        todo!()
+        // let mut bytes = [0; 22];
+        // bytes[..16].copy_from_slice(&self.ltk.to_le_bytes());
+        // bytes[16..].copy_from_slice(&self.address.into_inner());
+        // GenericArray::from_array(bytes)
     }
 }

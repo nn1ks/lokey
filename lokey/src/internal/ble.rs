@@ -15,7 +15,7 @@ use embassy_time::Timer;
 use trouble_host::gatt::{GattClient, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
     AddrKind, Advertisement, AdvertisementParameters, AsGatt, BdAddr, Characteristic,
-    ConnectConfig, FromGatt, ScanConfig, Uuid,
+    ConnectConfig, DefaultPacketPool, FromGatt, ScanConfig, Uuid,
 };
 use trouble_host::types::gatt_traits::FromGattError;
 
@@ -139,6 +139,8 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
         connect_params: Default::default(),
     };
 
+    Timer::after_secs(5).await;
+
     let run = async {
         loop {
             if let Err(e) = host.runner.run().await {
@@ -163,16 +165,18 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
                     continue;
                 }
             };
-            let client = match GattClient::<_, 1, 72>::new(ble_stack, &connection).await {
-                Ok(v) => v,
-                Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    let e = defmt::Debug2Format(&e);
-                    error!("Failed to create GATT client: {}", e);
-                    Timer::after_secs(1).await;
-                    continue;
-                }
-            };
+            let client =
+                // TODO: Set MAX_SERVICES to the number of services
+                match GattClient::<_, DefaultPacketPool, 1>::new(ble_stack, &connection).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        #[cfg(feature = "defmt")]
+                        let e = defmt::Debug2Format(&e);
+                        error!("Failed to create GATT client: {}", e);
+                        Timer::after_secs(1).await;
+                        continue;
+                    }
+                };
             info!("BLE connected to peripheral");
             IS_CONNECTED.store(true, Ordering::Release);
 
@@ -343,31 +347,31 @@ async fn peripheral<M: Mcu + McuBle>(mcu: &'static M, central_address: Address) 
                             info!("BLE disconnected (reason: {})", reason);
                             break;
                         }
-                        GattConnectionEvent::Gatt { event } => match event {
-                            Ok(event) => {
-                                debug!("Received GATT event");
-                                match &event {
-                                    GattEvent::Read(read_event) => {
-                                        debug!("GATT read event: {}", read_event.handle())
-                                    }
-                                    GattEvent::Write(write_event) => {
-                                        debug!("GATT write event: {}", write_event.handle());
-                                        if write_event.handle()
-                                            == server.service.message_to_peripheral.handle
-                                        {
-                                            let message = Message(Vec::from(write_event.data()));
-                                            debug!("Received message from central: {}", message);
-                                            RECV_CHANNEL.send(message);
-                                        }
+                        GattConnectionEvent::Gatt { event } => {
+                            debug!("Received GATT event");
+                            match &event {
+                                GattEvent::Read(read_event) => {
+                                    debug!("GATT read event: {}", read_event.handle())
+                                }
+                                GattEvent::Write(write_event) => {
+                                    debug!("GATT write event: {}", write_event.handle());
+                                    if write_event.handle()
+                                        == server.service.message_to_peripheral.handle
+                                    {
+                                        let message = Message(Vec::from(write_event.data()));
+                                        debug!("Received message from central: {}", message);
+                                        RECV_CHANNEL.send(message);
                                     }
                                 }
-                                match event.accept() {
-                                    Ok(reply) => reply.send().await,
-                                    Err(error) => error!("Failed to handle event: {}", error),
+                                GattEvent::Other(_) => {
+                                    debug!("GATT other event")
                                 }
                             }
-                            Err(error) => error!("Error processing event: {}", error),
-                        },
+                            match event.accept() {
+                                Ok(reply) => reply.send().await,
+                                Err(error) => error!("Failed to handle event: {}", error),
+                            }
+                        }
                         _ => {}
                     }
                 }

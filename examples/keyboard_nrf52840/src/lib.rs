@@ -2,7 +2,7 @@
 
 #[cfg(feature = "defmt")]
 use defmt_rtt as _;
-use embassy_nrf::gpio::{Input, Level, Output, OutputDrive, Pin, Pull};
+use embassy_nrf::gpio::{AnyPin, Input, Level, Output, OutputDrive, Pull};
 use embassy_nrf::peripherals::{
     P0_02, P0_03, P0_09, P0_10, P0_28, P1_11, P1_12, P1_13, P1_14, P1_15,
 };
@@ -124,23 +124,50 @@ impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for Ke
         let matrix = unsafe {
             Matrix::new::<NUM_KEYS>(
                 [
-                    Input::new(P0_02::steal().degrade(), Pull::Down).into_active_high_switch(),
-                    Input::new(P0_03::steal().degrade(), Pull::Down).into_active_high_switch(),
-                    Input::new(P0_28::steal().degrade(), Pull::Down).into_active_high_switch(),
+                    Input::new(P0_02::steal().into::<AnyPin>(), Pull::Down)
+                        .into_active_high_switch(),
+                    Input::new(P0_03::steal().into::<AnyPin>(), Pull::Down)
+                        .into_active_high_switch(),
+                    Input::new(P0_28::steal().into::<AnyPin>(), Pull::Down)
+                        .into_active_high_switch(),
                 ],
                 [
-                    Output::new(P1_12::steal().degrade(), Level::Low, OutputDrive::Standard)
-                        .into_active_high_switch(),
-                    Output::new(P1_13::steal().degrade(), Level::Low, OutputDrive::Standard)
-                        .into_active_high_switch(),
-                    Output::new(P1_14::steal().degrade(), Level::Low, OutputDrive::Standard)
-                        .into_active_high_switch(),
-                    Output::new(P1_15::steal().degrade(), Level::Low, OutputDrive::Standard)
-                        .into_active_high_switch(),
-                    Output::new(P0_09::steal().degrade(), Level::Low, OutputDrive::Standard)
-                        .into_active_high_switch(),
-                    Output::new(P0_10::steal().degrade(), Level::Low, OutputDrive::Standard)
-                        .into_active_high_switch(),
+                    Output::new(
+                        P1_12::steal().into::<AnyPin>(),
+                        Level::Low,
+                        OutputDrive::Standard,
+                    )
+                    .into_active_high_switch(),
+                    Output::new(
+                        P1_13::steal().into::<AnyPin>(),
+                        Level::Low,
+                        OutputDrive::Standard,
+                    )
+                    .into_active_high_switch(),
+                    Output::new(
+                        P1_14::steal().into::<AnyPin>(),
+                        Level::Low,
+                        OutputDrive::Standard,
+                    )
+                    .into_active_high_switch(),
+                    Output::new(
+                        P1_15::steal().into::<AnyPin>(),
+                        Level::Low,
+                        OutputDrive::Standard,
+                    )
+                    .into_active_high_switch(),
+                    Output::new(
+                        P0_09::steal().into::<AnyPin>(),
+                        Level::Low,
+                        OutputDrive::Standard,
+                    )
+                    .into_active_high_switch(),
+                    Output::new(
+                        P0_10::steal().into::<AnyPin>(),
+                        Level::Low,
+                        OutputDrive::Standard,
+                    )
+                    .into_active_high_switch(),
                 ],
             )
         };
@@ -178,15 +205,15 @@ impl<S: StateContainer, H: HookBundle> ComponentSupport<StatusLedArray<4, H>, S>
         T: Transports<Self::Mcu>,
     {
         let pwm1 = unsafe { embassy_nrf::peripherals::PWM1::steal() };
-        let ch0 = unsafe { embassy_nrf::peripherals::P1_11::steal().degrade() };
-        let ch1 = unsafe { embassy_nrf::peripherals::P0_05::steal().degrade() };
-        let ch2 = unsafe { embassy_nrf::peripherals::P0_04::steal().degrade() };
-        let ch3 = unsafe { embassy_nrf::peripherals::P0_29::steal().degrade() };
+        let ch0 = unsafe { embassy_nrf::peripherals::P1_11::steal().into::<AnyPin>() };
+        let ch1 = unsafe { embassy_nrf::peripherals::P0_05::steal().into::<AnyPin>() };
+        let ch2 = unsafe { embassy_nrf::peripherals::P0_04::steal().into::<AnyPin>() };
+        let ch3 = unsafe { embassy_nrf::peripherals::P0_29::steal().into::<AnyPin>() };
         let simple_pwm = SimplePwm::new_4ch(pwm1, ch0, ch1, ch2, ch3);
         // frequency = base clock of NRF52840 / prescaler * max_duty
         // frequency = 16MHz / 1 * 1_000 = 16kHz
         let max_duty = 1_000;
-        let pwm = Pwm::<_, 4>::new(simple_pwm, max_duty);
+        let pwm = Pwm::<4>::new(simple_pwm, max_duty);
         let mut channels = pwm.split();
         let channels = channels
             .each_mut()
@@ -223,8 +250,9 @@ impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> fo
     where
         T: Transports<Self::Mcu>,
     {
-        let input_pins =
-            unsafe { [Input::new(P1_11::steal().degrade(), Pull::Up).into_active_low_switch()] };
+        let input_pins = unsafe {
+            [Input::new(P1_11::steal().into::<AnyPin>(), Pull::Up).into_active_low_switch()]
+        };
         let scanner = DirectPins::new::<NUM_KEYS>(input_pins).continuous::<18>();
 
         component.run(scanner, context.as_dyn()).await

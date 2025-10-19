@@ -8,6 +8,8 @@ use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
+#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
+use embassy_nrf::mode::Async;
 use embassy_nrf::peripherals::RNG;
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
@@ -18,6 +20,7 @@ use {
     nrf_sdc::SoftdeviceController,
     rand_chacha::ChaCha12Rng,
     rand_chacha::rand_core::SeedableRng,
+    trouble_host::prelude::DefaultPacketPool,
     trouble_host::prelude::{AddrKind, BdAddr},
     trouble_host::{HostResources, Stack},
 };
@@ -49,7 +52,7 @@ bind_interrupts!(struct Irqs {
 #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
 fn build_sdc<'d, const N: usize>(
     p: nrf_sdc::Peripherals<'d>,
-    rng: &'d mut Rng<RNG>,
+    rng: &'d mut Rng<Async>,
     mpsl: &'d MultiprotocolServiceLayer,
     mem: &'d mut nrf_sdc::Mem<N>,
 ) -> Result<SoftdeviceController<'d>, nrf_sdc::Error> {
@@ -77,7 +80,7 @@ pub struct Nrf52840 {
     storage: Storage<Flash<'static>>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
     #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
-    ble_stack: Stack<'static, SoftdeviceController<'static>>,
+    ble_stack: Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
 }
 
 impl Mcu for Nrf52840 {}
@@ -86,7 +89,7 @@ impl Mcu for Nrf52840 {}
 impl McuBle for Nrf52840 {
     type Controller = SoftdeviceController<'static>;
 
-    fn ble_stack(&self) -> &Stack<'static, Self::Controller> {
+    fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {
         &self.ble_stack
     }
 }
@@ -132,7 +135,7 @@ impl McuInit for Nrf52840 {
                 p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
             );
 
-            static RNG_CELL: StaticCell<Rng<'static, RNG>> = StaticCell::new();
+            static RNG_CELL: StaticCell<Rng<'static, Async>> = StaticCell::new();
             let mut rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
 
             let mut rng2 = ChaCha12Rng::from_rng(&mut rng).unwrap();
@@ -141,7 +144,8 @@ impl McuInit for Nrf52840 {
             let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
             let sdc = unwrap!(build_sdc(sdc_p, rng, mpsl, sdc_mem));
 
-            static RESOURCES: StaticCell<HostResources<2, 4, 72>> = StaticCell::new();
+            static RESOURCES: StaticCell<HostResources<DefaultPacketPool, 2, 4, 72>> =
+                StaticCell::new();
             let resources = RESOURCES.init(HostResources::new());
             trouble_host::new(sdc, resources)
                 .set_random_address(device_address_to_ble_address(&address))
