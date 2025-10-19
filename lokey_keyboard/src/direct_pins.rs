@@ -77,11 +77,15 @@ impl<I: InputSwitch + WaitableInputSwitch + 'static, const NUM_IS: usize, const 
                     if let Some(key_index) = self.transform.into_iter().position(|v| v == Some(i)) {
                         let key_index = u16::try_from(key_index).expect("too many keys");
                         if active {
-                            context.internal_channel.send(Message::Press { key_index });
+                            context
+                                .internal_channel
+                                .send(Message::Press { key_index })
+                                .await;
                         } else {
                             context
                                 .internal_channel
-                                .send(Message::Release { key_index });
+                                .send(Message::Release { key_index })
+                                .await;
                         }
                     }
                     Timer::after(wait_duration).await;

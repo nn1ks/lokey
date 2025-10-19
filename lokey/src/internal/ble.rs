@@ -1,15 +1,14 @@
 use crate::internal::MAX_MESSAGE_SIZE_WITH_TAG;
 use crate::mcu::{self, Mcu, McuBle};
-use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap};
 use crate::{Address, internal};
-use alloc::vec::Vec;
 use arrayvec::ArrayVec;
 use core::mem::transmute;
 use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_futures::join::join;
 use embassy_futures::select::{select, select3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 use embassy_time::Timer;
 use trouble_host::gatt::{GattClient, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
@@ -17,6 +16,9 @@ use trouble_host::prelude::{
     ConnectConfig, DefaultPacketPool, FromGatt, ScanConfig, Uuid,
 };
 use trouble_host::types::gatt_traits::FromGattError;
+
+// TODO: Don't hardcode max number of peripherals
+const MAX_NUM_PERIPHERALS: usize = 10;
 
 pub enum TransportConfig {
     Central {
@@ -80,8 +82,8 @@ mod peripheral {
     }
 }
 
-static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
-static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
+static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
+static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
 static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
 
 pub struct Transport<Mcu: 'static> {
@@ -108,10 +110,10 @@ impl<Mcu: mcu::Mcu + McuBle> internal::Transport for Transport<Mcu> {
         }
     }
 
-    fn send(&self, message_bytes: &[u8]) {
+    async fn send(&self, message_bytes: &[u8]) {
         if IS_CONNECTED.load(Ordering::Acquire) {
             match ArrayVec::try_from(message_bytes) {
-                Ok(array) => SEND_CHANNEL.send(Message(array)),
+                Ok(array) => SEND_CHANNEL.send(Message(array)).await,
                 Err(_) => error!("Size of message exceeds configured max message size"),
             };
         }
@@ -141,7 +143,7 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
                 transmute::<&[u8; 6], &BdAddr>(&address.0)
             })
         })
-        .collect::<Vec<_>>();
+        .collect::<ArrayVec<_, MAX_NUM_PERIPHERALS>>();
     let config = ConnectConfig {
         scan_config: ScanConfig {
             filter_accept_list: filter_accept_list.as_slice(),
@@ -261,7 +263,7 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
                             debug!("Received message from peripheral: {:?}", message);
                             match ArrayVec::try_from(message) {
                                 Ok(array) => {
-                                    RECV_CHANNEL.send(Message(array));
+                                    RECV_CHANNEL.send(Message(array)).await;
                                 }
                                 Err(_) => {
                                     error!("Reiceved message exceeds configured max message size")
@@ -382,7 +384,7 @@ async fn peripheral<M: Mcu + McuBle>(mcu: &'static M, central_address: Address) 
                                         );
                                         match ArrayVec::try_from(write_event.data()) {
                                             Ok(array) => {
-                                                RECV_CHANNEL.send(Message(array));
+                                                RECV_CHANNEL.send(Message(array)).await;
                                             }
                                             Err(_) => {
                                                 error!(

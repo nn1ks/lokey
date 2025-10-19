@@ -1,11 +1,13 @@
-use super::{DynTransport, Message};
-use crate::internal::{self, MAX_MESSAGE_SIZE, MAX_MESSAGE_SIZE_WITH_TAG};
-use crate::util::error;
-use crate::util::pubsub::{PubSubChannel, Subscriber};
+use crate::internal::{
+    self, MAX_MESSAGE_SIZE, MAX_MESSAGE_SIZE_WITH_TAG, MAX_NUM_RECEIVERS, Message,
+};
+use crate::util::{error, unwrap};
 use arrayvec::ArrayVec;
 use core::marker::PhantomData;
-use embassy_futures::join::join;
+use embassy_futures::join::join3;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel;
+use embassy_sync::pubsub::{PubSubChannel, Subscriber, WaitResult};
 use generic_array::GenericArray;
 use typenum::Unsigned;
 
@@ -15,7 +17,15 @@ use typenum::Unsigned;
 
 pub struct Channel<Transport> {
     transport: Transport,
-    inner_channel: PubSubChannel<CriticalSectionRawMutex, ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>>,
+    rx_channel: PubSubChannel<
+        CriticalSectionRawMutex,
+        ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
+        1,
+        MAX_NUM_RECEIVERS,
+        2,
+    >,
+    tx_channel:
+        channel::Channel<CriticalSectionRawMutex, ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>, 1>,
 }
 
 impl<Transport: internal::Transport> Channel<Transport> {
@@ -23,12 +33,14 @@ impl<Transport: internal::Transport> Channel<Transport> {
     pub fn new(transport: Transport) -> Self {
         Self {
             transport,
-            inner_channel: PubSubChannel::new(),
+            rx_channel: PubSubChannel::new(),
+            tx_channel: channel::Channel::new(),
         }
     }
 
     pub async fn run(&self) {
         let handle_messages = async {
+            let publisher = unwrap!(self.rx_channel.publisher());
             loop {
                 let mut buf = [0; MAX_MESSAGE_SIZE_WITH_TAG];
                 let len = self.transport.receive(&mut buf).await;
@@ -37,10 +49,18 @@ impl<Transport: internal::Transport> Channel<Transport> {
                     continue;
                 }
                 let v = ArrayVec::try_from(&buf[..len]).unwrap();
-                self.inner_channel.publish(v);
+                publisher.publish(v).await;
             }
         };
-        join(handle_messages, self.transport.run()).await;
+        let send_messages = async {
+            let publisher = unwrap!(self.rx_channel.publisher());
+            loop {
+                let message = self.tx_channel.receive().await;
+                self.transport.send(&message).await;
+                publisher.publish(message).await;
+            }
+        };
+        join3(handle_messages, send_messages, self.transport.run()).await;
     }
 
     /// Converts this channel into a dynamic one.
@@ -49,21 +69,20 @@ impl<Transport: internal::Transport> Channel<Transport> {
     /// generic.
     pub fn as_dyn_ref(&self) -> DynChannelRef<'_> {
         DynChannelRef {
-            transport: DynTransport::from_ref(&self.transport),
-            inner_channel: &self.inner_channel,
+            inner_channel: &self.rx_channel,
+            tx_channel: &self.tx_channel,
         }
     }
 
-    pub fn send<M: Message>(&self, message: M) {
+    pub async fn send<M: Message>(&self, message: M) {
         if let Some(bytes) = build_message_bytes(message) {
-            self.transport.send(&bytes);
-            self.inner_channel.publish(bytes);
+            self.tx_channel.send(bytes).await;
         }
     }
 
     pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
         Receiver {
-            subscriber: self.inner_channel.subscriber(),
+            subscriber: unwrap!(self.rx_channel.subscriber()),
             _phantom: PhantomData,
         }
     }
@@ -71,22 +90,27 @@ impl<Transport: internal::Transport> Channel<Transport> {
 
 #[derive(Clone, Copy)]
 pub struct DynChannelRef<'a> {
-    transport: &'a DynTransport,
-    inner_channel:
-        &'a PubSubChannel<CriticalSectionRawMutex, ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>>,
+    inner_channel: &'a PubSubChannel<
+        CriticalSectionRawMutex,
+        ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
+        1,
+        MAX_NUM_RECEIVERS,
+        2,
+    >,
+    tx_channel:
+        &'a channel::Channel<CriticalSectionRawMutex, ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>, 1>,
 }
 
 impl DynChannelRef<'_> {
-    pub fn send<M: Message>(&self, message: M) {
+    pub async fn send<M: Message>(&self, message: M) {
         if let Some(bytes) = build_message_bytes(message) {
-            self.transport.send(&bytes);
-            self.inner_channel.publish(bytes);
+            self.tx_channel.send(bytes).await;
         }
     }
 
     pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
         Receiver {
-            subscriber: self.inner_channel.subscriber(),
+            subscriber: unwrap!(self.inner_channel.subscriber()),
             _phantom: PhantomData,
         }
     }
@@ -101,14 +125,24 @@ fn build_message_bytes<M: Message>(message: M) -> Option<ArrayVec<u8, MAX_MESSAG
 }
 
 pub struct Receiver<'a, Message> {
-    subscriber: Subscriber<'a, CriticalSectionRawMutex, ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>>,
+    subscriber: Subscriber<
+        'a,
+        CriticalSectionRawMutex,
+        ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
+        1,
+        MAX_NUM_RECEIVERS,
+        2,
+    >,
     _phantom: PhantomData<Message>,
 }
 
 impl<Message: internal::Message> Receiver<'_, Message> {
     pub async fn next(&mut self) -> Message {
         loop {
-            let message_bytes = self.subscriber.next_message().await;
+            let message_bytes = match self.subscriber.next_message().await {
+                WaitResult::Lagged(_) => continue,
+                WaitResult::Message(v) => v,
+            };
             if message_bytes.len() < 4 {
                 error!(
                     "Message must have at least 4 bytes, but found {} bytes: {:?}",

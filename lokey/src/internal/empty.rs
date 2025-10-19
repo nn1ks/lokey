@@ -1,5 +1,4 @@
 use crate::{Address, internal, mcu};
-use core::future::Future;
 use core::marker::PhantomData;
 
 pub struct TransportConfig;
@@ -20,9 +19,9 @@ impl<Mcu: mcu::Mcu> internal::Transport for Transport<Mcu> {
 
     async fn run(&self) {}
 
-    fn send(&self, _: &[u8]) {}
+    async fn send(&self, _: &[u8]) {}
 
-    fn receive(&self, _: &mut [u8]) -> impl Future<Output = usize> {
-        core::future::pending()
+    async fn receive(&self, _: &mut [u8]) -> usize {
+        core::future::pending().await
     }
 }

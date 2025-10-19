@@ -218,7 +218,8 @@ where
 
                 info!("Starting BLE advertisement");
                 self.internal_channel
-                    .send(Event::StartedAdvertising { scannable });
+                    .send(Event::StartedAdvertising { scannable })
+                    .await;
 
                 let advertiser = match select(
                     host.peripheral.advertise(&adv_params, adv),
@@ -237,13 +238,15 @@ where
                             }
                         }
                         self.internal_channel
-                            .send(Event::StoppedAdvertising { scannable });
+                            .send(Event::StoppedAdvertising { scannable })
+                            .await;
                         continue;
                     }
                     Either::Second(()) => {
                         debug!("Cancelling advertisement");
                         self.internal_channel
-                            .send(Event::StoppedAdvertising { scannable });
+                            .send(Event::StoppedAdvertising { scannable })
+                            .await;
                         continue;
                     }
                 };
@@ -254,18 +257,21 @@ where
                         Either::First(Err(e)) => {
                             error!("Failed to accept connection: {}", e);
                             self.internal_channel
-                                .send(Event::StoppedAdvertising { scannable });
+                                .send(Event::StoppedAdvertising { scannable })
+                                .await;
                             continue;
                         }
                         Either::Second(()) => {
                             debug!("Cancelling advertisement");
                             self.internal_channel
-                                .send(Event::StoppedAdvertising { scannable });
+                                .send(Event::StoppedAdvertising { scannable })
+                                .await;
                             continue;
                         }
                     };
                 self.internal_channel
-                    .send(Event::StoppedAdvertising { scannable });
+                    .send(Event::StoppedAdvertising { scannable })
+                    .await;
                 let device_address = Address(new_connection.peer_address().into_inner());
                 let new_connection = match new_connection.with_attribute_server(server) {
                     Ok(v) => v,
@@ -278,7 +284,8 @@ where
 
                 info!("BLE connected");
                 self.internal_channel
-                    .send(Event::Connected { device_address });
+                    .send(Event::Connected { device_address })
+                    .await;
 
                 loop {
                     let connection = connection.read().await;
@@ -286,14 +293,16 @@ where
                     if !connection.raw().is_connected() {
                         debug!("BLE is not connected");
                         self.internal_channel
-                            .send(Event::Disconnected { device_address });
+                            .send(Event::Disconnected { device_address })
+                            .await;
                         break;
                     }
                     match connection.next().await {
                         GattConnectionEvent::Disconnected { reason } => {
                             info!("BLE disconnected (reason: {})", reason);
                             self.internal_channel
-                                .send(Event::Disconnected { device_address });
+                                .send(Event::Disconnected { device_address })
+                                .await;
                             break;
                         }
                         // TODO
@@ -367,7 +376,8 @@ where
                     }
                 }
                 self.internal_channel
-                    .send(Event::Disconnected { device_address });
+                    .send(Event::Disconnected { device_address })
+                    .await;
             }
         };
 
@@ -405,10 +415,12 @@ where
                                 }
                                 cancel_advertisement.signal(());
                             }
-                            self.internal_channel.send(Event::SwitchedProfile {
-                                profile_index: index,
-                                changed: is_different_profile,
-                            });
+                            self.internal_channel
+                                .send(Event::SwitchedProfile {
+                                    profile_index: index,
+                                    changed: is_different_profile,
+                                })
+                                .await;
                         }
                     }
                     Message::SelectNextProfile => {
@@ -424,10 +436,12 @@ where
                             connection.raw().disconnect();
                         }
                         cancel_advertisement.signal(());
-                        self.internal_channel.send(Event::SwitchedProfile {
-                            profile_index: new_profile_index,
-                            changed: num_profiles.get() > 1,
-                        });
+                        self.internal_channel
+                            .send(Event::SwitchedProfile {
+                                profile_index: new_profile_index,
+                                changed: num_profiles.get() > 1,
+                            })
+                            .await;
                     }
                     Message::SelectPreviousProfile => {
                         let active = active_profile_index.load(Ordering::SeqCst);
@@ -442,10 +456,12 @@ where
                             connection.raw().disconnect();
                         }
                         cancel_advertisement.signal(());
-                        self.internal_channel.send(Event::SwitchedProfile {
-                            profile_index: new_profile_index,
-                            changed: num_profiles.get() > 1,
-                        });
+                        self.internal_channel
+                            .send(Event::SwitchedProfile {
+                                profile_index: new_profile_index,
+                                changed: num_profiles.get() > 1,
+                            })
+                            .await;
                     }
                     Message::DisconnectActive => {
                         if let Some(connection) = &*connection.read().await {

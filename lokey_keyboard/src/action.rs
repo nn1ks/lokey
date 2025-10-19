@@ -325,7 +325,8 @@ impl Action for ToggleExternalTransport {
     async fn on_press(&'static self, context: DynContext) {
         context
             .internal_channel
-            .send(toggle::Message::Toggle(self.0));
+            .send(toggle::Message::Toggle(self.0))
+            .await;
     }
 
     async fn on_release(&'static self, _: DynContext) {}
@@ -337,7 +338,8 @@ impl Action for ActivateExternalTransport {
     async fn on_press(&'static self, context: DynContext) {
         context
             .internal_channel
-            .send(toggle::Message::Activate(self.0));
+            .send(toggle::Message::Activate(self.0))
+            .await;
     }
 
     async fn on_release(&'static self, _: DynContext) {}
@@ -349,7 +351,8 @@ impl Action for DeactivateExternalTransport {
     async fn on_press(&'static self, context: DynContext) {
         context
             .internal_channel
-            .send(toggle::Message::Deactivate(self.0));
+            .send(toggle::Message::Deactivate(self.0))
+            .await;
     }
 
     async fn on_release(&'static self, _: DynContext) {}
@@ -370,7 +373,10 @@ mod ble {
 
     impl Action for BleDisconnectActive {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::DisconnectActive);
+            context
+                .internal_channel
+                .send(Message::DisconnectActive)
+                .await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -380,9 +386,12 @@ mod ble {
 
     impl Action for BleClear {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::Clear {
-                profile_index: self.0,
-            });
+            context
+                .internal_channel
+                .send(Message::Clear {
+                    profile_index: self.0,
+                })
+                .await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -392,7 +401,7 @@ mod ble {
 
     impl Action for BleClearActive {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::ClearActive);
+            context.internal_channel.send(Message::ClearActive).await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -402,7 +411,7 @@ mod ble {
 
     impl Action for BleClearAll {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::ClearAll);
+            context.internal_channel.send(Message::ClearAll).await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -414,7 +423,8 @@ mod ble {
         async fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SelectProfile { index: self.0 });
+                .send(Message::SelectProfile { index: self.0 })
+                .await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -424,7 +434,10 @@ mod ble {
 
     impl Action for BleNextProfile {
         async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::SelectNextProfile);
+            context
+                .internal_channel
+                .send(Message::SelectNextProfile)
+                .await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -436,7 +449,8 @@ mod ble {
         async fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SelectPreviousProfile);
+                .send(Message::SelectPreviousProfile)
+                .await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -461,7 +475,8 @@ mod usb_ble {
         async fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SetActive(TransportSelection::Usb));
+                .send(Message::SetActive(TransportSelection::Usb))
+                .await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}
@@ -477,7 +492,8 @@ mod usb_ble {
         async fn on_press(&'static self, context: DynContext) {
             context
                 .internal_channel
-                .send(Message::SetActive(TransportSelection::Ble));
+                .send(Message::SetActive(TransportSelection::Ble))
+                .await;
         }
 
         async fn on_release(&'static self, _context: DynContext) {}

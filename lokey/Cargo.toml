@@ -82,6 +82,15 @@ max-internal-message-size-256 = []
 max-internal-message-size-512 = []
 max-internal-message-size-1024 = []
 
+max-num-internal-receivers-8 = []
+max-num-internal-receivers-16 = []
+max-num-internal-receivers-24 = []
+max-num-internal-receivers-32 = []
+max-num-internal-receivers-40 = []
+max-num-internal-receivers-48 = []
+max-num-internal-receivers-56 = []
+max-num-internal-receivers-64 = []
+
 
 [dependencies]
 bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }

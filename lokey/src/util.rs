@@ -1,6 +1,32 @@
 pub mod channel;
 pub mod pubsub;
 
+macro_rules! __declare_const_for_feature_group {
+    // Entry: list of (feature, value) tuples
+    ($name:ident, [ $( ( $feat:expr, $val:expr ) ),+ $(,)? ]) => {
+        // Default when none of the features are enabled
+        #[cfg(not(any( $( feature = $feat ),* )))]
+        pub const $name: usize = 0;
+
+        // Emit per-feature consts, each excluding all remaining features to avoid duplicate defs.
+        $crate::util::declare_const_for_feature_group!(@emit $name, $( ( $feat, $val ) ),+ );
+    };
+
+    // Recursive emitter: when more than one pair remain, emit for the first while excluding the rest
+    (@emit $name:ident, ( $feat:expr, $val:expr ), $( ( $rest_feat:expr, $rest_val:expr ) ),+ ) => {
+        #[cfg(all(feature = $feat, not(any( $( feature = $rest_feat ),* ))))]
+        pub const $name: usize = $val;
+
+        $crate::util::declare_const_for_feature_group!(@emit $name, $( ( $rest_feat, $rest_val ) ),+ );
+    };
+
+    // Base case: single remaining pair -> no exclusion necessary
+    (@emit $name:ident, ( $feat:expr, $val:expr ) ) => {
+        #[cfg(feature = $feat)]
+        pub const $name: usize = $val;
+    };
+}
+
 #[macro_export]
 #[doc(hidden)]
 #[collapse_debuginfo(yes)]
@@ -83,6 +109,8 @@ macro_rules! __debug {
     };
 }
 
+#[doc(inline)]
+pub(crate) use __declare_const_for_feature_group as declare_const_for_feature_group;
 #[doc(inline)]
 pub use {
     __debug as debug, __error as error, __info as info, __panic as panic, __unwrap as unwrap,

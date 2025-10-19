@@ -181,11 +181,15 @@ impl<
                             if Instant::now().duration_since(last_change) > defer_duration {
                                 defers.remove(defer_index);
                                 if was_active {
-                                    context.internal_channel.send(Message::Press { key_index })
+                                    context
+                                        .internal_channel
+                                        .send(Message::Press { key_index })
+                                        .await;
                                 } else {
                                     context
                                         .internal_channel
                                         .send(Message::Release { key_index })
+                                        .await;
                                 }
                             }
                         } else if is_active != states[i][j] {

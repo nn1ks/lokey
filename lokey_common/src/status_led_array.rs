@@ -447,7 +447,8 @@ impl Hook for BootHook {
         };
         context
             .internal_channel
-            .send(Message::new(action_id, action));
+            .send(Message::new(action_id, action))
+            .await;
     }
 }
 
@@ -457,7 +458,6 @@ pub use ble::{BleAdvertisementHook, BleProfileHook};
 #[cfg(feature = "external-ble")]
 mod ble {
     use super::*;
-    use alloc::vec;
     use lokey::external;
 
     pub struct BleAdvertisementHook;
@@ -477,7 +477,8 @@ mod ble {
                         };
                         context
                             .internal_channel
-                            .send(Message::new(action_id.clone(), action));
+                            .send(Message::new(action_id.clone(), action))
+                            .await;
                         current_action_id = Some(action_id);
                     }
                     external::ble::Event::StoppedAdvertising { scannable: true } => {
@@ -486,7 +487,8 @@ mod ble {
                             let action = Action::Stop { action_id };
                             context
                                 .internal_channel
-                                .send(Message::new(new_action_id, action));
+                                .send(Message::new(new_action_id, action))
+                                .await;
                         }
                     }
                     _ => {}
@@ -514,7 +516,8 @@ mod ble {
                     };
                     context
                         .internal_channel
-                        .send(Message::new(action_id, action));
+                        .send(Message::new(action_id, action))
+                        .await;
                 }
             }
         }

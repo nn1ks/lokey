@@ -4,92 +4,42 @@ mod channel;
 pub mod empty;
 
 use crate::mcu::Mcu;
+use crate::util::declare_const_for_feature_group;
 use crate::{Address, Device, Transports};
 pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
-use core::mem::transmute;
 use generic_array::{ArrayLength, GenericArray};
 
-#[cfg(all(
-    not(feature = "max-internal-message-size-8"),
-    not(feature = "max-internal-message-size-16"),
-    not(feature = "max-internal-message-size-32"),
-    not(feature = "max-internal-message-size-64"),
-    not(feature = "max-internal-message-size-128"),
-    not(feature = "max-internal-message-size-256"),
-    not(feature = "max-internal-message-size-512"),
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 0;
+declare_const_for_feature_group!(
+    MAX_NUM_RECEIVERS,
+    [
+        ("max-num-internal-receivers-8", 8),
+        ("max-num-internal-receivers-16", 16),
+        ("max-num-internal-receivers-24", 24),
+        ("max-num-internal-receivers-32", 32),
+        ("max-num-internal-receivers-40", 40),
+        ("max-num-internal-receivers-48", 48),
+        ("max-num-internal-receivers-56", 56),
+        ("max-num-internal-receivers-64", 64),
+    ]
+);
 
-#[cfg(all(
-    feature = "max-internal-message-size-8",
-    not(feature = "max-internal-message-size-16"),
-    not(feature = "max-internal-message-size-32"),
-    not(feature = "max-internal-message-size-64"),
-    not(feature = "max-internal-message-size-128"),
-    not(feature = "max-internal-message-size-256"),
-    not(feature = "max-internal-message-size-512"),
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 8;
+declare_const_for_feature_group!(
+    MAX_MESSAGE_SIZE,
+    [
+        ("max-internal-message-size-8", 8),
+        ("max-internal-message-size-16", 16),
+        ("max-internal-message-size-32", 32),
+        ("max-internal-message-size-64", 64),
+        ("max-internal-message-size-128", 128),
+        ("max-internal-message-size-256", 256),
+        ("max-internal-message-size-512", 512),
+        ("max-internal-message-size-1024", 1024),
+    ]
+);
 
-#[cfg(all(
-    feature = "max-internal-message-size-16",
-    not(feature = "max-internal-message-size-32"),
-    not(feature = "max-internal-message-size-64"),
-    not(feature = "max-internal-message-size-128"),
-    not(feature = "max-internal-message-size-256"),
-    not(feature = "max-internal-message-size-512"),
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 16;
-
-#[cfg(all(
-    feature = "max-internal-message-size-32",
-    not(feature = "max-internal-message-size-64"),
-    not(feature = "max-internal-message-size-128"),
-    not(feature = "max-internal-message-size-256"),
-    not(feature = "max-internal-message-size-512"),
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 32;
-
-#[cfg(all(
-    feature = "max-internal-message-size-64",
-    not(feature = "max-internal-message-size-128"),
-    not(feature = "max-internal-message-size-256"),
-    not(feature = "max-internal-message-size-512"),
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 64;
-
-#[cfg(all(
-    feature = "max-internal-message-size-128",
-    not(feature = "max-internal-message-size-256"),
-    not(feature = "max-internal-message-size-512"),
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 128;
-
-#[cfg(all(
-    feature = "max-internal-message-size-256",
-    not(feature = "max-internal-message-size-512"),
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 256;
-
-#[cfg(all(
-    feature = "max-internal-message-size-512",
-    not(feature = "max-internal-message-size-1024"),
-))]
-pub const MAX_MESSAGE_SIZE: usize = 512;
-
-#[cfg(feature = "max-internal-message-size-1024")]
-pub const MAX_MESSAGE_SIZE: usize = 1024;
-
-pub const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + 4;
+const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + 4;
 
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::InternalTransport;
 
@@ -117,31 +67,7 @@ pub trait Transport: Any {
 
     fn run(&self) -> impl Future<Output = ()>;
 
-    fn send(&self, message_bytes: &[u8]);
+    fn send(&self, message_bytes: &[u8]) -> impl Future<Output = ()>;
 
     fn receive(&self, buf: &mut [u8]) -> impl Future<Output = usize>;
-}
-
-trait DynTransportTrait: Any {
-    fn send(&self, message_bytes: &[u8]);
-}
-
-impl<T: Transport> DynTransportTrait for T {
-    fn send(&self, message_bytes: &[u8]) {
-        Transport::send(self, message_bytes)
-    }
-}
-
-#[repr(transparent)]
-pub struct DynTransport(dyn DynTransportTrait);
-
-impl DynTransport {
-    pub const fn from_ref<T: Transport>(value: &T) -> &Self {
-        let value: &dyn DynTransportTrait = value;
-        unsafe { transmute(value) }
-    }
-
-    pub fn send(&self, message_bytes: &[u8]) {
-        self.0.send(message_bytes)
-    }
 }

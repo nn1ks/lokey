@@ -22,6 +22,23 @@
 //! </li>
 //! </ul>
 //!
+//! #### Number of receivers for internal messages
+//!
+//! <ul>
+//! <li>
+//!     <span class="stab portability"><code>max-num-internal-receivers-*</code></span>
+//!     — Sets the maximum number of receivers for internal messages where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>24</code>,
+//!     <code>32</code>,
+//!     <code>40</code>,
+//!     <code>48</code>,
+//!     <code>56</code>,
+//!     <code>64</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! </ul>
 //!
 #![cfg_attr(
     feature = "macros",
