@@ -12,16 +12,16 @@ use core::future::Future;
 use generic_array::{ArrayLength, GenericArray};
 
 declare_const_for_feature_group!(
-    MAX_NUM_RECEIVERS,
+    RECEIVER_SLOTS,
     [
-        ("max-num-internal-receivers-8", 8),
-        ("max-num-internal-receivers-16", 16),
-        ("max-num-internal-receivers-24", 24),
-        ("max-num-internal-receivers-32", 32),
-        ("max-num-internal-receivers-40", 40),
-        ("max-num-internal-receivers-48", 48),
-        ("max-num-internal-receivers-56", 56),
-        ("max-num-internal-receivers-64", 64),
+        ("internal-receiver-slots-8", 8),
+        ("internal-receiver-slots-16", 16),
+        ("internal-receiver-slots-24", 24),
+        ("internal-receiver-slots-32", 32),
+        ("internal-receiver-slots-40", 40),
+        ("internal-receiver-slots-48", 48),
+        ("internal-receiver-slots-56", 56),
+        ("internal-receiver-slots-64", 64),
     ]
 );
 

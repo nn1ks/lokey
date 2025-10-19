@@ -1,6 +1,4 @@
-use crate::internal::{
-    self, MAX_MESSAGE_SIZE, MAX_MESSAGE_SIZE_WITH_TAG, MAX_NUM_RECEIVERS, Message,
-};
+use crate::internal::{self, MAX_MESSAGE_SIZE, MAX_MESSAGE_SIZE_WITH_TAG, Message, RECEIVER_SLOTS};
 use crate::util::{error, unwrap};
 use arrayvec::ArrayVec;
 use core::marker::PhantomData;
@@ -21,7 +19,7 @@ pub struct Channel<Transport> {
         CriticalSectionRawMutex,
         ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
         1,
-        MAX_NUM_RECEIVERS,
+        RECEIVER_SLOTS,
         2,
     >,
     tx_channel:
@@ -94,7 +92,7 @@ pub struct DynChannelRef<'a> {
         CriticalSectionRawMutex,
         ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
         1,
-        MAX_NUM_RECEIVERS,
+        RECEIVER_SLOTS,
         2,
     >,
     tx_channel:
@@ -130,7 +128,7 @@ pub struct Receiver<'a, Message> {
         CriticalSectionRawMutex,
         ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
         1,
-        MAX_NUM_RECEIVERS,
+        RECEIVER_SLOTS,
         2,
     >,
     _phantom: PhantomData<Message>,
