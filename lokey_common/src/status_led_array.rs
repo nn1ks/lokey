@@ -4,6 +4,7 @@ use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
+use generic_array::GenericArray;
 use lokey::mcu::pwm::PwmChannel;
 use lokey::util::warn;
 use lokey::{Address, Component, DynContext, internal};
@@ -32,7 +33,7 @@ impl ActionId {
 #[derive(Clone, Encode, Decode)]
 pub enum Action {
     Individual {
-        indices: Vec<usize>,
+        indices_bitmask: u64,
         timeout_ms: Option<u16>,
     },
     Progress {
@@ -56,7 +57,7 @@ pub enum Action {
 pub struct Message {
     pub action_id: ActionId,
     pub action: Action,
-    pub filter_devices: Option<Vec<Address>>,
+    pub filter_device: Option<Address>,
 }
 
 impl Message {
@@ -64,30 +65,34 @@ impl Message {
         Self {
             action_id,
             action,
-            filter_devices: None,
+            filter_device: None,
         }
     }
 
-    pub fn filter_devices(mut self, addresses: Vec<Address>) -> Self {
-        self.filter_devices = Some(addresses);
+    pub fn filter_device(mut self, address: Address) -> Self {
+        self.filter_device = Some(address);
         self
     }
 }
 
+// TODO
 impl internal::Message for Message {
-    type Bytes = Vec<u8>;
+    type SIZE = typenum::U0; // TODO
 
     const TAG: [u8; 4] = [0x77, 0xaf, 0xc7, 0x3d];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
     where
         Self: Sized,
     {
-        bitcode::decode(bytes).ok()
+        let _ = bytes;
+        None
+        // bitcode::decode(bytes).ok()
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
-        bitcode::encode(self)
+    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
+        GenericArray::default()
+        // bitcode::encode(self).try_into().unwrap()
     }
 }
 
@@ -162,12 +167,12 @@ impl<'a, 'b, const N: usize> ActionHandler<'a, 'b, N> {
         };
         match action {
             Action::Individual {
-                indices,
+                indices_bitmask,
                 timeout_ms,
             } => {
-                let indices = indices.clone();
+                let indices_bitmask = *indices_bitmask;
                 let timeout_ms = *timeout_ms;
-                self.activate_individual(&indices, timeout_ms, started)
+                self.activate_individual(indices_bitmask, timeout_ms, started)
                     .await;
             }
             Action::Progress { value, timeout_ms } => {
@@ -195,7 +200,7 @@ impl<'a, 'b, const N: usize> ActionHandler<'a, 'b, N> {
 
     async fn activate_individual(
         &mut self,
-        indices: &[usize],
+        indices_bitmask: u64,
         timeout_ms: Option<u16>,
         started: Instant,
     ) {
@@ -205,13 +210,15 @@ impl<'a, 'b, const N: usize> ActionHandler<'a, 'b, N> {
                 .unwrap_or(Duration::from_ticks(0))
         });
         if remaining.is_none_or(|v| v > Duration::from_ticks(0)) {
-            for index in indices {
-                match self.pwm_channels.get_mut(*index) {
-                    Some(pwm_channel) => {
-                        pwm_channel.enable();
-                        pwm_channel.set_duty(0);
+            for i in 0..64 {
+                if indices_bitmask & (1 << i) > 0 {
+                    match self.pwm_channels.get_mut(i) {
+                        Some(pwm_channel) => {
+                            pwm_channel.enable();
+                            pwm_channel.set_duty(0);
+                        }
+                        None => warn!("PWM channel with index {} does not exist", i),
                     }
-                    None => warn!("PWM channel with index {} does not exist", index),
                 }
             }
         }
@@ -371,8 +378,8 @@ impl<const NUM_LEDS: usize, Hooks: HookBundle> StatusLedArray<NUM_LEDS, Hooks> {
                 let recv = async {
                     loop {
                         let message = receiver.next().await;
-                        if let Some(device_addresses) = message.filter_devices
-                            && !device_addresses.contains(&self.context.address)
+                        if let Some(device_address) = message.filter_device
+                            && device_address != self.context.address
                         {
                             continue;
                         }
@@ -502,7 +509,7 @@ mod ble {
                 {
                     let action_id = ActionId::new(context.address);
                     let action = Action::Individual {
-                        indices: vec![profile_index as usize],
+                        indices_bitmask: 1 << profile_index,
                         timeout_ms: Some(1000),
                     };
                     context
