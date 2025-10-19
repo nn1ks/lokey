@@ -48,11 +48,11 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type SIZE = typenum::U2;
+    type Size = typenum::U2;
 
     const TAG: [u8; 4] = [0x1a, 0xbe, 0x84, 0x10];
 
-    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -69,7 +69,7 @@ impl internal::Message for Message {
         Some(message)
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         match self {
             Self::SelectProfile { index } => [0, *index],
             Self::SelectNextProfile => [1, 0],
@@ -94,11 +94,11 @@ pub enum Event {
 }
 
 impl internal::Message for Event {
-    type SIZE = typenum::U7;
+    type Size = typenum::U7;
 
     const TAG: [u8; 4] = [0xc6, 0x7a, 0xbd, 0xb0];
 
-    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -128,7 +128,7 @@ impl internal::Message for Event {
         }
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         fn build_with_address(tag_byte: u8, address: &Address) -> [u8; 7] {
             let mut bytes = [0; 7];
             bytes[0] = tag_byte;

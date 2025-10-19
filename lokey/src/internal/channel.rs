@@ -117,7 +117,7 @@ impl DynChannelRef<'_> {
 }
 
 fn build_message_bytes<M: Message>(message: M) -> Option<ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>> {
-    if M::SIZE::to_usize() > MAX_MESSAGE_SIZE {
+    if M::Size::USIZE > MAX_MESSAGE_SIZE {
         error!("Size of message exceeds configured max message size");
         return None;
     }
@@ -152,14 +152,14 @@ impl<Message: internal::Message> Receiver<'_, Message> {
                 continue;
             }
             if message_bytes[..4] == Message::TAG {
-                if Message::SIZE::to_usize() > MAX_MESSAGE_SIZE {
+                if Message::Size::USIZE > MAX_MESSAGE_SIZE {
                     error!("Size of received message exceeds configured max message size");
                     continue;
                 }
-                if message_bytes.len() < 4 + Message::SIZE::to_usize() {
+                if message_bytes.len() < 4 + Message::Size::USIZE {
                     error!(
                         "Invalid size of message (expected {}, found {})",
-                        Message::SIZE::to_usize(),
+                        Message::Size::USIZE,
                         message_bytes.len() - 4,
                     );
                     continue;
@@ -167,8 +167,8 @@ impl<Message: internal::Message> Receiver<'_, Message> {
                 let data_bytes = message_bytes[4..]
                     .iter()
                     .copied()
-                    .take(Message::SIZE::to_usize());
-                let array = GenericArray::<u8, Message::SIZE>::try_from_iter(data_bytes).unwrap();
+                    .take(Message::Size::USIZE);
+                let array = GenericArray::<u8, Message::Size>::try_from_iter(data_bytes).unwrap();
                 if let Some(message) = Message::from_bytes(array) {
                     return message;
                 }

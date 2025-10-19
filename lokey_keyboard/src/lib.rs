@@ -261,11 +261,11 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type SIZE = typenum::U3;
+    type Size = typenum::U3;
 
     const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
 
-    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -283,7 +283,7 @@ impl internal::Message for Message {
         }
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         match self {
             Message::Press { key_index } => {
                 let bytes = key_index.to_be_bytes();

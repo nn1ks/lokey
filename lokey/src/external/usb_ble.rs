@@ -25,11 +25,11 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type SIZE = typenum::U1;
+    type Size = typenum::U1;
 
     const TAG: [u8; 4] = [0x73, 0xe2, 0x8c, 0xcf];
 
-    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -44,7 +44,7 @@ impl internal::Message for Message {
         Some(Self::SetActive(transport_selection))
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         match self {
             Message::SetActive(v) => match v {
                 TransportSelection::Usb => [0].into(),

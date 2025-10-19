@@ -44,15 +44,15 @@ const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + 4;
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::InternalTransport;
 
 pub trait Message: Send + 'static {
-    type SIZE: ArrayLength;
+    type Size: ArrayLength;
 
     const TAG: [u8; 4];
 
-    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized;
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE>;
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
 }
 
 pub trait Transport: Any {

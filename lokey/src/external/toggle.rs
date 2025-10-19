@@ -30,11 +30,11 @@ impl Message {
 }
 
 impl internal::Message for Message {
-    type SIZE = typenum::U7;
+    type Size = typenum::U7;
 
     const TAG: [u8; 4] = [0x16, 0xb3, 0x17, 0x8e];
 
-    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -46,7 +46,7 @@ impl internal::Message for Message {
         }
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let (first_byte, address) = match self {
             Self::Activate(address) => (0, address),
             Self::Deactivate(address) => (1, address),
