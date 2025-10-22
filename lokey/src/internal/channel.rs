@@ -1,4 +1,7 @@
-use crate::internal::{self, MAX_MESSAGE_SIZE, MAX_MESSAGE_SIZE_WITH_TAG, Message, RECEIVER_SLOTS};
+use crate::internal::{
+    self, MAX_MESSAGE_SIZE, MAX_MESSAGE_SIZE_WITH_TAG, MaximumReceiversReached, Message,
+    RECEIVER_SLOTS,
+};
 use crate::util::{error, unwrap};
 use arrayvec::ArrayVec;
 use core::marker::PhantomData;
@@ -78,11 +81,15 @@ impl<Transport: internal::Transport> Channel<Transport> {
         }
     }
 
-    pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
-        Receiver {
-            subscriber: unwrap!(self.rx_channel.subscriber()),
+    pub fn receiver<M: Message>(&self) -> Result<Receiver<'_, M>, MaximumReceiversReached> {
+        let subscriber = self
+            .rx_channel
+            .subscriber()
+            .map_err(|_| MaximumReceiversReached)?;
+        Ok(Receiver {
+            subscriber,
             _phantom: PhantomData,
-        }
+        })
     }
 }
 

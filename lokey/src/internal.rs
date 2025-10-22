@@ -41,6 +41,8 @@ declare_const_for_feature_group!(
 
 const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + 4;
 
+pub struct MaximumReceiversReached;
+
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::InternalTransport;
 
 pub trait Message: Send + 'static {
