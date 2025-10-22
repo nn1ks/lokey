@@ -4,7 +4,7 @@
 //!
 #![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
 //!
-//! #### Internal message size
+//! #### Resource configuration
 //!
 //! <ul>
 //! <li>
@@ -20,14 +20,35 @@
 //!     <code>1024</code>.
 //!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
 //! </li>
-//! </ul>
-//!
-//! #### Number of receivers for internal messages
-//!
-//! <ul>
 //! <li>
-//!     <span class="stab portability"><code>max-num-internal-receivers-*</code></span>
-//!     — Sets the maximum number of receivers for internal messages where <code>*</code> must be one of the following values:
+//!     <span class="stab portability"><code>internal-receiver-slots-*</code></span>
+//!     — Sets the number of slots for receivers of internal messages where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>24</code>,
+//!     <code>32</code>,
+//!     <code>40</code>,
+//!     <code>48</code>,
+//!     <code>56</code>,
+//!     <code>64</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! <li>
+//!     <span class="stab portability"><code>external-receiver-slots-*</code></span>
+//!     — Sets the number of slots for receivers of external messages where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>24</code>,
+//!     <code>32</code>,
+//!     <code>40</code>,
+//!     <code>48</code>,
+//!     <code>56</code>,
+//!     <code>64</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! <li>
+//!     <span class="stab portability"><code>external-observer-slots-*</code></span>
+//!     — Sets the number of slots for observers of external messages where <code>*</code> must be one of the following values:
 //!     <code>8</code>,
 //!     <code>16</code>,
 //!     <code>24</code>,
@@ -125,6 +146,7 @@ pub mod mcu;
 mod state;
 pub mod util;
 
+use crate::external::{IdentityOverride, Override, TryFromMessage};
 use bitcode::{Decode, Encode};
 use core::future::Future;
 #[doc(hidden)]
@@ -135,11 +157,19 @@ pub use state::{DynState, State, StateContainer};
 #[doc(hidden)]
 pub use static_cell;
 
-pub struct Context<D: Device, T: Transports<D::Mcu>, S: StateContainer> {
+pub struct Context<D, T, S, O = IdentityOverride<external::DeviceTransportTxMessage<D, T>>>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+    O: Override + 'static,
+    O::TxMessage: Into<external::DeviceTransportTxMessage<D, T>>
+        + TryFromMessage<external::DeviceTransportTxMessage<D, T>>,
+{
     pub address: Address,
     pub mcu: &'static D::Mcu,
     pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
-    pub external_channel: &'static external::Channel<external::DeviceTransport<D, T>>,
+    pub external_channel: &'static external::Channel<external::DeviceTransport<D, T>, O>,
     pub state: &'static S,
 }
 

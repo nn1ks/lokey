@@ -1,8 +1,7 @@
 use super::{ExternalMessage, Key};
-use crate::external::{Message, MessageSender, Override};
-use alloc::boxed::Box;
+use crate::external::Override;
 use alloc::vec::Vec;
-use core::any::Any;
+use lokey::external::MessageSender;
 
 struct OverrideData {
     required: Vec<Key>,
@@ -43,40 +42,38 @@ impl KeyOverride {
 }
 
 impl Override for KeyOverride {
-    fn override_message(&mut self, message: Box<dyn Message>, sender: &mut MessageSender) {
-        let message_ref: &dyn Any = &message;
-        let message = match message_ref.downcast_ref::<ExternalMessage>() {
-            Some(v) => v,
-            None => {
-                sender.send(message);
-                return;
-            }
-        };
+    type TxMessage = ExternalMessage;
+
+    async fn override_message(
+        &mut self,
+        message: ExternalMessage,
+        sender: &MessageSender<ExternalMessage>,
+    ) {
         match message {
             ExternalMessage::KeyPress(key) => {
                 let mut triggered_override = false;
                 if self
                     .overrides
                     .iter()
-                    .any(|data| data.required.contains(key))
+                    .any(|data| data.required.contains(&key))
                 {
-                    self.pressed_keys.push(*key);
+                    self.pressed_keys.push(key);
                     for data in &self.overrides {
                         if data.required.iter().all(|v| self.pressed_keys.contains(v)) {
                             triggered_override = true;
                             if !data.keep {
                                 for v in &data.required {
-                                    if v != key {
-                                        sender.send(Box::new(ExternalMessage::KeyRelease(*v)));
+                                    if *v != key {
+                                        sender.send(ExternalMessage::KeyRelease(*v));
                                     }
                                 }
                             }
-                            sender.send(Box::new(ExternalMessage::KeyPress(data.then)));
+                            sender.send(ExternalMessage::KeyPress(data.then));
                         }
                     }
                 }
                 if !triggered_override {
-                    sender.send(Box::new(ExternalMessage::KeyPress(*key)));
+                    sender.send(ExternalMessage::KeyPress(key));
                 }
             }
             ExternalMessage::KeyRelease(key) => {
@@ -84,26 +81,26 @@ impl Override for KeyOverride {
                 if self
                     .overrides
                     .iter()
-                    .any(|data| data.required.contains(key))
+                    .any(|data| data.required.contains(&key))
                 {
                     for data in &self.overrides {
                         if data.required.iter().all(|v| self.pressed_keys.contains(v)) {
                             untriggered_override = true;
                             if !data.keep {
                                 for v in &data.required {
-                                    if v != key {
-                                        sender.send(Box::new(ExternalMessage::KeyPress(*v)));
+                                    if *v != key {
+                                        sender.send(ExternalMessage::KeyPress(*v));
                                     }
                                 }
                             }
-                            sender.send(Box::new(ExternalMessage::KeyRelease(data.then)));
+                            sender.send(ExternalMessage::KeyRelease(data.then));
                         }
                     }
                 }
                 if !untriggered_override {
-                    sender.send(Box::new(ExternalMessage::KeyRelease(*key)));
+                    sender.send(ExternalMessage::KeyRelease(key));
                 }
-                if let Some(i) = self.pressed_keys.iter().rposition(|v| v == key) {
+                if let Some(i) = self.pressed_keys.iter().rposition(|v| *v == key) {
                     self.pressed_keys.remove(i);
                 }
             }

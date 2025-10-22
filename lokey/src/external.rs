@@ -11,22 +11,57 @@ pub mod usb;
 pub mod usb_ble;
 
 use crate::mcu::Mcu;
+use crate::util::declare_const_for_feature_group;
 use crate::{Address, Device, Transports, internal};
 use alloc::boxed::Box;
 pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
-use core::mem::transmute;
 use core::pin::Pin;
-use dyn_clone::DynClone;
 pub use message_service::MessageServiceRegistry;
-pub use r#override::{MessageSender, Override};
+pub use r#override::{IdentityOverride, MessageSender, Override};
+
+declare_const_for_feature_group!(
+    RECEIVER_SLOTS,
+    [
+        ("external-receiver-slots-8", 8),
+        ("external-receiver-slots-16", 16),
+        ("external-receiver-slots-24", 24),
+        ("external-receiver-slots-32", 32),
+        ("external-receiver-slots-40", 40),
+        ("external-receiver-slots-48", 48),
+        ("external-receiver-slots-56", 56),
+        ("external-receiver-slots-64", 64),
+    ]
+);
+
+declare_const_for_feature_group!(
+    OBSERVER_SLOTS,
+    [
+        ("external-observer-slots-8", 8),
+        ("external-observer-slots-16", 16),
+        ("external-observer-slots-24", 24),
+        ("external-observer-slots-32", 32),
+        ("external-observer-slots-40", 40),
+        ("external-observer-slots-48", 48),
+        ("external-observer-slots-56", 56),
+        ("external-observer-slots-64", 64),
+    ]
+);
+
+pub struct MaximumReceiversReached;
+
+pub struct MaximumObserversReached;
 
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::ExternalTransport;
 
-pub trait Message: Any + DynClone + Send + Sync {}
+pub type DeviceTransportTxMessage<D, T> =
+    <<T as Transports<<D as Device>::Mcu>>::ExternalTransport as Transport>::TxMessage;
 
-dyn_clone::clone_trait_object!(Message);
+pub type DeviceTransportRxMessage<D, T> =
+    <<T as Transports<<D as Device>::Mcu>>::ExternalTransport as Transport>::RxMessage;
+
+pub trait Message: Any + Clone + Send + Sync {}
 
 pub trait TryFromMessage<T>: Sized {
     fn try_from_message(value: T) -> Result<Self, MismatchedMessageType>;
@@ -52,8 +87,8 @@ pub struct MismatchedMessageType;
 pub trait Transport: Any {
     type Config;
     type Mcu: Mcu;
-    type TxMessage: Message;
-    type RxMessage: Message;
+    type TxMessage: Message + Clone;
+    type RxMessage: Message + Clone;
 
     fn create<T: internal::Transport<Mcu = Self::Mcu>>(
         config: Self::Config,
@@ -83,61 +118,5 @@ pub trait Transport: Any {
 
     fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
         Box::pin(core::future::pending())
-    }
-}
-
-trait DynTransportTrait: Any {
-    fn try_send_dyn(&self, message: Box<dyn Message>) -> Result<(), UnsupportedMessageType>;
-    fn set_active(&self, value: bool) -> bool;
-    fn is_active(&self) -> bool;
-    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>>;
-}
-
-impl<T: Transport> DynTransportTrait for T {
-    fn try_send_dyn(&self, message: Box<dyn Message>) -> Result<(), UnsupportedMessageType> {
-        let message: Box<dyn Any> = message;
-        let message = message
-            .downcast::<T::TxMessage>()
-            .map_err(|_| UnsupportedMessageType)?;
-        Transport::send(self, *message);
-        Ok(())
-    }
-
-    fn set_active(&self, value: bool) -> bool {
-        Transport::set_active(self, value)
-    }
-
-    fn is_active(&self) -> bool {
-        Transport::is_active(self)
-    }
-
-    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Transport::wait_for_activation_request(self)
-    }
-}
-
-#[repr(transparent)]
-pub struct DynTransport(dyn DynTransportTrait);
-
-impl DynTransport {
-    pub const fn from_ref<T: Transport>(value: &T) -> &Self {
-        let value: &dyn DynTransportTrait = value;
-        unsafe { transmute(value) }
-    }
-
-    pub fn try_send_dyn(&self, message: Box<dyn Message>) -> Result<(), UnsupportedMessageType> {
-        self.0.try_send_dyn(message)
-    }
-
-    pub fn set_active(&self, value: bool) -> bool {
-        self.0.set_active(value)
-    }
-
-    pub fn is_active(&self) -> bool {
-        self.0.is_active()
-    }
-
-    pub fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        self.0.wait_for_activation_request()
     }
 }
