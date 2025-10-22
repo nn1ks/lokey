@@ -77,11 +77,11 @@ impl Message {
 
 // TODO
 impl internal::Message for Message {
-    type SIZE = typenum::U0; // TODO
+    type Size = typenum::U0; // TODO
 
     const TAG: [u8; 4] = [0x77, 0xaf, 0xc7, 0x3d];
 
-    fn from_bytes(bytes: GenericArray<u8, Self::SIZE>) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -90,7 +90,7 @@ impl internal::Message for Message {
         // bitcode::decode(bytes).ok()
     }
 
-    fn to_bytes(&self) -> GenericArray<u8, Self::SIZE> {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         GenericArray::default()
         // bitcode::encode(self).try_into().unwrap()
     }
