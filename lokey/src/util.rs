@@ -6,6 +6,7 @@ macro_rules! __declare_const_for_feature_group {
     ($name:ident, [ $( ( $feat:expr, $val:expr ) ),+ $(,)? ]) => {
         // Default when none of the features are enabled
         #[cfg(not(any( $( feature = $feat ),* )))]
+        #[doc(auto_cfg = false)]
         pub const $name: usize = 0;
 
         // Emit per-feature consts, each excluding all remaining features to avoid duplicate defs.
@@ -15,6 +16,7 @@ macro_rules! __declare_const_for_feature_group {
     // Recursive emitter: when more than one pair remain, emit for the first while excluding the rest
     (@emit $name:ident, ( $feat:expr, $val:expr ), $( ( $rest_feat:expr, $rest_val:expr ) ),+ ) => {
         #[cfg(all(feature = $feat, not(any( $( feature = $rest_feat ),* ))))]
+        #[doc(auto_cfg = false)]
         pub const $name: usize = $val;
 
         $crate::util::declare_const_for_feature_group!(@emit $name, $( ( $rest_feat, $rest_val ) ),+ );
@@ -23,6 +25,7 @@ macro_rules! __declare_const_for_feature_group {
     // Base case: single remaining pair -> no exclusion necessary
     (@emit $name:ident, ( $feat:expr, $val:expr ) ) => {
         #[cfg(feature = $feat)]
+        #[doc(auto_cfg = false)]
         pub const $name: usize = $val;
     };
 }
