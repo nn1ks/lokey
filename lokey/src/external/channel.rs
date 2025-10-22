@@ -70,14 +70,14 @@ where
                                     external::r#override::Message::TxMessage(v) => v,
                                 };
                                 let message = message.into();
-                                self.transport.send(message.clone());
+                                self.transport.send(message.clone()).await;
                                 publisher.publish(message).await;
                             }
                         };
                         join(override_fut, recv_fut).await;
                     }
                     Err(MismatchedMessageType) => {
-                        self.transport.send(message.clone());
+                        self.transport.send(message.clone()).await;
                         publisher.publish(message).await;
                     }
                 }

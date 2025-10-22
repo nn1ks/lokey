@@ -13,11 +13,9 @@ pub mod usb_ble;
 use crate::mcu::Mcu;
 use crate::util::declare_const_for_feature_group;
 use crate::{Address, Device, Transports, internal};
-use alloc::boxed::Box;
 pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
-use core::pin::Pin;
 pub use message_service::MessageServiceRegistry;
 pub use r#override::{IdentityOverride, MessageSender, Override};
 
@@ -99,16 +97,18 @@ pub trait Transport: Any {
 
     fn run(&self) -> impl Future<Output = ()>;
 
-    fn send(&self, message: Self::TxMessage);
+    fn send(&self, message: Self::TxMessage) -> impl Future<Output = ()>;
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>>;
+    fn receive(&self) -> impl Future<Output = Self::RxMessage>;
 
     /// Activates or deactivates the transport.
     ///
     /// Returns `false` if this transport does not support deactivating, otherwise `true`.
-    fn set_active(&self, value: bool) -> bool {
-        let _ = value;
-        false
+    fn set_active(&self, value: bool) -> impl Future<Output = bool> {
+        async {
+            let _ = value;
+            false
+        }
     }
 
     /// Returns whether the transport is currently activated.
@@ -116,7 +116,7 @@ pub trait Transport: Any {
         true
     }
 
-    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(core::future::pending())
+    fn wait_for_activation_request(&self) -> impl Future<Output = ()> {
+        core::future::pending()
     }
 }

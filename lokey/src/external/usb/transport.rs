@@ -4,8 +4,6 @@ use crate::external::usb::{self, InitMessageService, RxMessageService, TxMessage
 use crate::util::channel::Channel;
 use crate::util::{error, info, unwrap};
 use crate::{Address, external, internal, mcu};
-use alloc::boxed::Box;
-use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join3;
 use embassy_futures::select::{Either, select};
@@ -130,15 +128,15 @@ where
         join3(wakeup, write_report, read_report).await.0
     }
 
-    fn send(&self, message: Self::TxMessage) {
+    async fn send(&self, message: Self::TxMessage) {
         self.tx_channel.send(message);
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
-        Box::pin(self.rx_channel.receive())
+    async fn receive(&self) -> Self::RxMessage {
+        self.rx_channel.receive().await
     }
 
-    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(self.activation_request_signal.wait())
+    async fn wait_for_activation_request(&self) {
+        self.activation_request_signal.wait().await
     }
 }

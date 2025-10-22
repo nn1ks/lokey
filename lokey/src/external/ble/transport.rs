@@ -10,7 +10,6 @@ use crate::{Address, external, internal};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::num::NonZeroU8;
-use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
 use embassy_futures::select::{Either, select};
@@ -554,15 +553,15 @@ where
         .await;
     }
 
-    fn send(&self, message: Self::TxMessage) {
+    async fn send(&self, message: Self::TxMessage) {
         self.tx_channel.send(message);
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
-        Box::pin(async { self.rx_channel.receive().await })
+    async fn receive(&self) -> Self::RxMessage {
+        self.rx_channel.receive().await
     }
 
-    fn set_active(&self, value: bool) -> bool {
+    async fn set_active(&self, value: bool) -> bool {
         info!(
             "Setting active status of external BLE transport to {}",
             value
