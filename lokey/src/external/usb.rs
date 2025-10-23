@@ -10,7 +10,6 @@ use embassy_sync::signal::Signal;
 use embassy_usb::driver::Driver;
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 use portable_atomic::AtomicBool;
-use portable_atomic_util::Arc;
 pub use transport::Transport;
 
 #[derive(Clone)]
@@ -52,37 +51,39 @@ pub trait CreateDriver: Mcu {
     fn create_driver<'d>(&'static self) -> Self::Driver<'d>;
 }
 
-pub struct DeviceHandler {
+struct DeviceHandlerContext {
     configured: bool,
-    suspended: Arc<AtomicBool>,
-    activation_request_signal: Arc<Signal<CriticalSectionRawMutex, ()>>,
+    suspended: AtomicBool,
+    activation_request_signal: Signal<CriticalSectionRawMutex, ()>,
 }
 
-impl DeviceHandler {
+impl DeviceHandlerContext {
     pub fn new() -> Self {
         Self {
             configured: false,
-            suspended: Arc::new(AtomicBool::new(false)),
-            activation_request_signal: Arc::new(Signal::new()),
+            suspended: AtomicBool::new(false),
+            activation_request_signal: Signal::new(),
         }
     }
 
-    pub fn suspended(&self) -> &Arc<AtomicBool> {
-        &self.suspended
-    }
-
-    pub fn activation_request_signal(&self) -> &Arc<Signal<CriticalSectionRawMutex, ()>> {
-        &self.activation_request_signal
-    }
-}
-
-impl Default for DeviceHandler {
-    fn default() -> Self {
-        Self::new()
+    fn create_device_handler(&self) -> DeviceHandler<'_> {
+        DeviceHandler {
+            configured: self.configured,
+            suspended: &self.suspended,
+            activation_request_signal: &self.activation_request_signal,
+        }
     }
 }
 
-impl embassy_usb::Handler for DeviceHandler {
+struct DeviceHandler<'a> {
+    configured: bool,
+    suspended: &'a AtomicBool,
+    activation_request_signal: &'a Signal<CriticalSectionRawMutex, ()>,
+}
+
+impl<'a> DeviceHandler<'a> {}
+
+impl<'a> embassy_usb::Handler for DeviceHandler<'a> {
     fn enabled(&mut self, enabled: bool) {
         self.configured = false;
         self.suspended.store(false, Ordering::Release);
