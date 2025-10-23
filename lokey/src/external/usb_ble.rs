@@ -206,7 +206,7 @@ pub struct TransportConfig {
     pub serial_number: Option<&'static str>,
     pub self_powered: bool,
     pub num_ble_profiles: u8,
-    pub appearance: BluetoothUuid16,
+    pub appearance: &'static BluetoothUuid16,
     pub deactivate_unused_transport: bool,
 }
 
@@ -223,7 +223,7 @@ impl Default for TransportConfig {
             serial_number: None,
             self_powered: false,
             num_ble_profiles: 4,
-            appearance: appearance::UNKNOWN,
+            appearance: &appearance::UNKNOWN,
             deactivate_unused_transport: true,
         }
     }

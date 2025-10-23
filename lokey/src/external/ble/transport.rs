@@ -4,21 +4,20 @@ use crate::external::ble::{
     self, InitMessageService, RxMessageService, ServiceUuid, TxMessageService,
 };
 use crate::mcu::{self, McuBle, McuStorage, storage};
-use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap, warn};
 use crate::{Address, external, internal};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
+use embassy_sync::channel::Channel;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
 use embassy_time::Timer;
-use generic_array::GenericArray;
+use generic_array::{ArrayLength, GenericArray};
 use portable_atomic::{AtomicBool, AtomicU8};
 use trouble_host::att::AttErrorCode;
 use trouble_host::gap::{GapConfig, PeripheralConfig};
@@ -29,15 +28,18 @@ use trouble_host::prelude::{
 };
 use trouble_host::{BleHostError, BondInformation};
 
+// TODO: Don't hardcode maximum number of bond infos
+const MAX_NUM_BOND_INFOS: usize = 10;
+
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 
 pub struct Transport<Mcu: 'static, TxMessages, RxMessages, const CONN_MAX: usize = 1> {
-    tx_channel: Channel<CriticalSectionRawMutex, TxMessages>,
-    rx_channel: Channel<CriticalSectionRawMutex, RxMessages>,
+    tx_channel: Channel<CriticalSectionRawMutex, TxMessages, 1>,
+    rx_channel: Channel<CriticalSectionRawMutex, RxMessages, 1>,
     name: &'static str,
     num_profiles: u8,
-    appearance: BluetoothUuid16,
+    appearance: &'static BluetoothUuid16,
     mcu: &'static Mcu,
     internal_channel: internal::DynChannelRef<'static>,
 }
@@ -76,11 +78,11 @@ where
         const ATT_MAX: usize = 50;
         const CCCD_MAX: usize = 50;
 
-        let mut table = AttributeTable::<'static, NoopRawMutex, ATT_MAX>::new();
+        let mut table = AttributeTable::<'_, NoopRawMutex, ATT_MAX>::new();
 
         let gap_config = GapConfig::Peripheral(PeripheralConfig {
             name: self.name,
-            appearance: Box::leak(Box::new(self.appearance)),
+            appearance: self.appearance,
         });
         if let Err(e) = gap_config.build(&mut table) {
             error!("Failed to set GAP config for BLE transport: {}", e);
@@ -94,14 +96,14 @@ where
         let rx_message_service =
             unwrap!(message_service_registry.get::<RxMessage::MessageService>());
 
-        let server = Box::leak(Box::new(AttributeServer::<
-            'static,
+        let server = AttributeServer::<
+            '_,
             NoopRawMutex,
             DefaultPacketPool,
             ATT_MAX,
             CCCD_MAX,
             CONN_MAX,
-        >::new(table)));
+        >::new(table);
 
         let Some(num_profiles) = NonZeroU8::new(self.num_profiles) else {
             return;
@@ -126,24 +128,45 @@ where
         // const APPEARANCE_ADV_TYPE: u8 = 0x19;
         // const KEYBOARD_APPEARANCE: &[u8] = &[0xC1, 0x03];
 
-        let mut adv_service_uuids_16 = Vec::new();
-        let mut adv_service_uuids_128 = Vec::new();
-        for service_uuid in TxMessage::service_uuids()
-            .into_iter()
-            .chain(RxMessage::service_uuids())
-        {
-            match service_uuid {
-                ServiceUuid::Uuid16(v) => adv_service_uuids_16.push(v),
-                ServiceUuid::Uuid128(v) => adv_service_uuids_128.push(v),
-            }
+        fn build_uuids_16<T: ArrayLength>(
+            service_uuids: &GenericArray<ServiceUuid, T>,
+        ) -> ArrayVec<[u8; 2], { <T as typenum::Unsigned>::USIZE }> {
+            service_uuids
+                .iter()
+                .filter_map(|service_uuid| match service_uuid {
+                    ServiceUuid::Uuid16(v) => Some(*v),
+                    ServiceUuid::Uuid128(_) => None,
+                })
+                .collect::<ArrayVec<_, _>>()
         }
+
+        fn build_uuids_128<T: ArrayLength>(
+            service_uuids: &GenericArray<ServiceUuid, T>,
+        ) -> ArrayVec<[u8; 16], { <T as typenum::Unsigned>::USIZE }> {
+            service_uuids
+                .iter()
+                .filter_map(|service_uuid| match service_uuid {
+                    ServiceUuid::Uuid16(_) => None,
+                    ServiceUuid::Uuid128(v) => Some(*v),
+                })
+                .collect::<ArrayVec<_, _>>()
+        }
+
+        let tx_service_uuids = TxMessage::service_uuids();
+        let adv_service_uuids_16_tx = build_uuids_16(&tx_service_uuids);
+        let adv_service_uuids_128_tx = build_uuids_128(&tx_service_uuids);
+        let rx_service_uuids = RxMessage::service_uuids();
+        let adv_service_uuids_16_rx = build_uuids_16(&rx_service_uuids);
+        let adv_service_uuids_128_rx = build_uuids_128(&rx_service_uuids);
 
         unwrap!(AdStructure::encode_slice(
             &[
                 AdStructure::CompleteLocalName(self.name.as_bytes()),
                 AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-                AdStructure::ServiceUuids16(&adv_service_uuids_16),
-                AdStructure::ServiceUuids128(&adv_service_uuids_128),
+                AdStructure::ServiceUuids16(&adv_service_uuids_16_tx),
+                AdStructure::ServiceUuids16(&adv_service_uuids_16_rx),
+                AdStructure::ServiceUuids128(&adv_service_uuids_128_tx),
+                AdStructure::ServiceUuids128(&adv_service_uuids_128_rx),
                 // AdStructure::Unknown {
                 //     ty: APPEARANCE_ADV_TYPE,
                 //     data: KEYBOARD_APPEARANCE,
@@ -155,7 +178,7 @@ where
         // TODO: add services to scan data
         let scan_data = [0; 31];
 
-        let mut bond_infos = Vec::new();
+        let mut bond_infos = ArrayVec::<_, MAX_NUM_BOND_INFOS>::new();
         for _ in 0..num_profiles.get() {
             // match mcu.storage().fetch::<BondInformation>(i).await {
             //     Ok(v) => bond_infos.push(v),
@@ -173,7 +196,7 @@ where
 
         let connection = RwLock::<
             CriticalSectionRawMutex,
-            Option<GattConnection<'static, 'static, DefaultPacketPool>>,
+            Option<GattConnection<'_, '_, DefaultPacketPool>>,
         >::new(None);
 
         let cancel_activation_wait = Signal::<CriticalSectionRawMutex, ()>::new();
@@ -272,7 +295,7 @@ where
                     .send(Event::StoppedAdvertising { scannable })
                     .await;
                 let device_address = Address(new_connection.peer_address().into_inner());
-                let new_connection = match new_connection.with_attribute_server(server) {
+                let new_connection = match new_connection.with_attribute_server(&server) {
                     Ok(v) => v,
                     Err(e) => {
                         error!("Failed to add attribute server: {}", e);
@@ -352,7 +375,7 @@ where
                                     && let Some(message) =
                                         rx_message_service.receive(write_event).await
                                 {
-                                    self.rx_channel.send(message);
+                                    self.rx_channel.send(message).await;
                                 }
                                 event.accept()
                             } else {
@@ -554,7 +577,7 @@ where
     }
 
     async fn send(&self, message: Self::TxMessage) {
-        self.tx_channel.send(message);
+        self.tx_channel.send(message).await;
     }
 
     async fn receive(&self) -> Self::RxMessage {

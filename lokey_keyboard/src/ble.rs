@@ -64,10 +64,10 @@ impl InitMessageService for ExternalMessageService {
 }
 
 impl TxMessageService<ExternalMessage> for ExternalMessageService {
-    async fn send(
+    async fn send<'stack, 'server>(
         &self,
         message: ExternalMessage,
-        connection: &GattConnection<'static, 'static, DefaultPacketPool>,
+        connection: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) {
         let mut keyboard_report = self.keyboard_report.lock().await;
         message.update_keyboard_report(&mut keyboard_report);

@@ -18,7 +18,7 @@ pub struct TransportConfig {
     pub model_number: Option<&'static str>,
     pub serial_number: Option<&'static str>,
     pub num_profiles: u8,
-    pub appearance: BluetoothUuid16,
+    pub appearance: &'static BluetoothUuid16,
 }
 
 impl Default for TransportConfig {
@@ -32,7 +32,7 @@ impl Default for TransportConfig {
             model_number: None,
             serial_number: None,
             num_profiles: 4,
-            appearance: appearance::UNKNOWN,
+            appearance: &appearance::UNKNOWN,
         }
     }
 }

@@ -13,10 +13,10 @@ pub trait InitMessageService {
 }
 
 pub trait TxMessageService<T: Message>: Any {
-    fn send(
+    fn send<'stack, 'server>(
         &self,
         message: T,
-        connection: &GattConnection<'static, 'static, DefaultPacketPool>,
+        connection: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) -> impl Future<Output = ()>;
 }
 
@@ -36,10 +36,10 @@ impl InitMessageService for () {
 }
 
 impl TxMessageService<NoMessage> for () {
-    async fn send(
+    async fn send<'stack, 'server>(
         &self,
         message: NoMessage,
-        _: &GattConnection<'static, 'static, DefaultPacketPool>,
+        _: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) {
         match message {}
     }
