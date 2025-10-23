@@ -146,7 +146,6 @@ pub mod mcu;
 mod state;
 pub mod util;
 
-use crate::external::{IdentityOverride, Override, TryFromMessage};
 use bitcode::{Decode, Encode};
 use core::future::Future;
 #[doc(hidden)]
@@ -157,23 +156,25 @@ pub use state::{DynState, State, StateContainer};
 #[doc(hidden)]
 pub use static_cell;
 
-pub struct Context<D, T, S, O = IdentityOverride<external::DeviceTransportTxMessage<D, T>>>
+pub struct Context<D, T, S>
 where
     D: Device,
     T: Transports<D::Mcu>,
     S: StateContainer,
-    O: Override + 'static,
-    O::TxMessage: Into<external::DeviceTransportTxMessage<D, T>>
-        + TryFromMessage<external::DeviceTransportTxMessage<D, T>>,
 {
     pub address: Address,
     pub mcu: &'static D::Mcu,
     pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
-    pub external_channel: &'static external::Channel<external::DeviceTransport<D, T>, O>,
+    pub external_channel: &'static external::Channel<external::DeviceTransport<D, T>>,
     pub state: &'static S,
 }
 
-impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Context<D, T, S> {
+impl<D, T, S> Context<D, T, S>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
     pub fn as_dyn(&self) -> DynContext {
         let mcu = self.mcu;
         DynContext {
@@ -194,13 +195,24 @@ impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Context<D, T, S> {
     }
 }
 
-impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Clone for Context<D, T, S> {
+impl<D, T, S> Clone for Context<D, T, S>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Copy for Context<D, T, S> {}
+impl<D, T, S> Copy for Context<D, T, S>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
+}
 
 /// A dynamic dispatch version of [`Context`].
 #[derive(Clone, Copy)]

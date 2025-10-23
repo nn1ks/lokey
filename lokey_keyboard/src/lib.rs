@@ -304,7 +304,15 @@ pub enum ExternalMessage {
     KeyRelease(Key),
 }
 
-impl external::Message for ExternalMessage {}
+impl external::Message for ExternalMessage {
+    fn has_inner_message<M: external::Message>() -> bool {
+        false
+    }
+
+    fn inner_message<M: external::Message>(&self) -> Option<&M> {
+        None
+    }
+}
 
 impl ExternalMessage {
     #[cfg(any(feature = "external-usb", feature = "external-ble"))]

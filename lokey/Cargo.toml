@@ -141,6 +141,7 @@ trouble-host = { version = "0.5", features = ["security"], optional = true }
 typenum = "1.17.0"
 typeid = "1.0.3"
 usbd-hid = { version = "0.8.2", optional = true }
+derive_more = { version = "2.0.1", default-features = false, features = ["display", "error", "from"] }
 
 [dev-dependencies]
 cortex-m-rt = "0.7.0"

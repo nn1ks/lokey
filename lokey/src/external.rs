@@ -16,6 +16,7 @@ use crate::{Address, Device, Transports, internal};
 pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
+use derive_more::{Display, Error, From};
 pub use message_service::MessageServiceRegistry;
 pub use r#override::{IdentityOverride, MessageSender, Override};
 
@@ -47,9 +48,33 @@ declare_const_for_feature_group!(
     ]
 );
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[display("The provided message type is not supported")]
+pub struct UnsupportedMessageType;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[display("The message type does not match")]
+pub struct MismatchedMessageType;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[display("The maximum number of receivers ({}) was reached", RECEIVER_SLOTS)]
 pub struct MaximumReceiversReached;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[display("The maximum number of observers ({}) was reached", OBSERVER_SLOTS)]
 pub struct MaximumObserversReached;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error, From)]
+pub enum TryReceiverError {
+    UnsupportedMessageType(UnsupportedMessageType),
+    MaximumReceiversReached(MaximumReceiversReached),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error, From)]
+pub enum TryObserverError {
+    UnsupportedMessageType(UnsupportedMessageType),
+    MaximumObserversReached(MaximumObserversReached),
+}
 
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::ExternalTransport;
 
@@ -59,7 +84,10 @@ pub type DeviceTransportTxMessage<D, T> =
 pub type DeviceTransportRxMessage<D, T> =
     <<T as Transports<<D as Device>::Mcu>>::ExternalTransport as Transport>::RxMessage;
 
-pub trait Message: Any + Clone + Send + Sync {}
+pub trait Message: Any + Clone + Send + Sync {
+    fn has_inner_message<M: Message>() -> bool;
+    fn inner_message<M: Message>(&self) -> Option<&M>;
+}
 
 pub trait TryFromMessage<T>: Sized {
     fn try_from_message(value: T) -> Result<Self, MismatchedMessageType>;
@@ -74,13 +102,15 @@ impl<T: Message> TryFromMessage<T> for T {
 #[derive(Debug, Clone)]
 pub enum NoMessage {}
 
-impl Message for NoMessage {}
+impl Message for NoMessage {
+    fn has_inner_message<M: Message>() -> bool {
+        false
+    }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct UnsupportedMessageType;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MismatchedMessageType;
+    fn inner_message<M: Message>(&self) -> Option<&M> {
+        None
+    }
+}
 
 pub trait Transport: Any {
     type Config;
