@@ -24,6 +24,9 @@ use {
     trouble_host::{HostResources, Stack},
 };
 
+type WordSize = typenum::U4;
+type EraseSize = typenum::U4096;
+
 pub struct Config {
     pub storage_flash_range: Range<u32>,
     pub ble_gap_device_name: Option<&'static str>,
@@ -76,7 +79,7 @@ fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
 }
 
 pub struct Nrf52840 {
-    storage: Storage<Flash<'static>>,
+    storage: Storage<Flash<'static>, WordSize, EraseSize>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
     #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
     ble_stack: Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
@@ -171,8 +174,10 @@ impl McuInit for Nrf52840 {
 
 impl McuStorage for Nrf52840 {
     type Flash = Flash<'static>;
+    type WordSize = WordSize;
+    type EraseSize = EraseSize;
 
-    fn storage(&self) -> &Storage<Flash<'static>> {
+    fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
         &self.storage
     }
 }

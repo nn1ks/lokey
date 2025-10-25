@@ -7,6 +7,7 @@ pub mod storage;
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::any::Any;
 use embedded_storage_async::nor_flash::MultiwriteNorFlash;
+use generic_array::ArrayLength;
 #[cfg(feature = "nrf52840")]
 pub use nrf52840::Nrf52840;
 #[cfg(feature = "rp2040")]
@@ -39,7 +40,9 @@ pub trait McuInit: Mcu {
 
 pub trait McuStorage {
     type Flash: MultiwriteNorFlash;
-    fn storage(&self) -> &Storage<Self::Flash>;
+    type WordSize: ArrayLength;
+    type EraseSize: ArrayLength;
+    fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize>;
 }
 
 pub trait HeapSize {
