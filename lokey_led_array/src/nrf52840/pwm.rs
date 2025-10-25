@@ -1,4 +1,3 @@
-use crate::mcu;
 use core::cell::RefCell;
 use embassy_nrf::pwm::{self, Prescaler};
 use embassy_sync::blocking_mutex::Mutex;
@@ -17,7 +16,7 @@ impl<'d, const N: usize> Pwm<'d, N> {
     }
 }
 
-impl<'d, const N: usize> mcu::pwm::Pwm<N> for Pwm<'d, N> {
+impl<'d, const N: usize> crate::pwm::Pwm<N> for Pwm<'d, N> {
     type Channel = PwmChannel<'d>;
 
     fn max_duty(&self) -> u16 {
@@ -49,7 +48,7 @@ pub struct PwmChannel<'d> {
     max_duty: u16,
 }
 
-impl<'d> mcu::pwm::PwmChannel for PwmChannel<'d> {
+impl<'d> crate::pwm::PwmChannel for PwmChannel<'d> {
     fn max_duty(&self) -> u16 {
         self.max_duty
     }

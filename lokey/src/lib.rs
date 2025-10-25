@@ -148,7 +148,6 @@ pub mod mcu;
 mod state;
 pub mod util;
 
-use bitcode::{Decode, Encode};
 use core::future::Future;
 #[doc(hidden)]
 pub use embedded_alloc;
@@ -227,7 +226,7 @@ pub struct DynContext {
 }
 
 /// A random static address for a device.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Address(pub [u8; 6]);
 

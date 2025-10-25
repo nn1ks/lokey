@@ -1,4 +1,3 @@
-pub mod pwm;
 #[cfg(feature = "external-usb")]
 mod usb;
 

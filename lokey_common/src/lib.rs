@@ -12,5 +12,3 @@ extern crate alloc;
 pub mod blink;
 #[cfg(feature = "layer")]
 pub mod layer;
-#[cfg(feature = "status-led-array")]
-pub mod status_led_array;

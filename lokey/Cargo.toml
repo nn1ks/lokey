@@ -111,8 +111,7 @@ external-observer-slots-64 = []
 
 
 [dependencies]
-bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }
-defmt = { version = "1.0.1", features = ["alloc"], optional = true }
+defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 dyn-clone = "1.0.20"
 embassy-futures = "0.1.1"

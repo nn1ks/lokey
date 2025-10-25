@@ -1,19 +1,32 @@
+//! # Feature flags
+//!
+#![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
+//!
+
+#![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
+#[cfg(feature = "nrf52840")]
+pub mod nrf52840;
+pub mod pwm;
+
+extern crate alloc;
+
 use alloc::vec::Vec;
-use bitcode::{Decode, Encode};
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
 use generic_array::GenericArray;
-use lokey::mcu::pwm::PwmChannel;
 use lokey::util::warn;
 use lokey::{Address, Component, DynContext, internal};
 use portable_atomic::AtomicU32;
+use pwm::PwmChannel;
 use seq_macro::seq;
 
 static ACTION_ID: AtomicU32 = AtomicU32::new(0);
 
-#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[non_exhaustive]
 pub struct ActionId {
@@ -30,7 +43,6 @@ impl ActionId {
     }
 }
 
-#[derive(Clone, Encode, Decode)]
 pub enum Action {
     Individual {
         indices_bitmask: u64,
@@ -53,7 +65,6 @@ pub enum Action {
     },
 }
 
-#[derive(Encode, Decode)]
 pub struct Message {
     pub action_id: ActionId,
     pub action: Action,
@@ -347,15 +358,15 @@ impl<'a, 'b, const N: usize> ActionHandler<'a, 'b, N> {
     }
 }
 
-pub struct StatusLedArray<const NUM_LEDS: usize, Hooks> {
+pub struct LedArray<const NUM_LEDS: usize, Hooks> {
     context: DynContext,
     gamma_correction: fn(f32) -> f32,
     hook_bundle: Hooks,
 }
 
-impl<const NUM_LEDS: usize, Hooks: HookBundle> Component for StatusLedArray<NUM_LEDS, Hooks> {}
+impl<const NUM_LEDS: usize, Hooks: HookBundle> Component for LedArray<NUM_LEDS, Hooks> {}
 
-impl<const NUM_LEDS: usize, Hooks: HookBundle> StatusLedArray<NUM_LEDS, Hooks> {
+impl<const NUM_LEDS: usize, Hooks: HookBundle> LedArray<NUM_LEDS, Hooks> {
     pub const fn new(context: DynContext, hook_bundle: Hooks) -> Self {
         Self {
             context,
