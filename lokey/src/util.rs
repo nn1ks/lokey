@@ -1,6 +1,3 @@
-pub mod channel;
-pub mod pubsub;
-
 macro_rules! __declare_const_for_feature_group {
     // Entry: list of (feature, value) tuples
     ($name:ident, [ $( ( $feat:expr, $val:expr ) ),+ $(,)? ]) => {
