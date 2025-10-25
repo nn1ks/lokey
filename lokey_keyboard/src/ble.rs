@@ -13,13 +13,15 @@ impl TxMessage for ExternalMessage {
     const ATTRIBUTE_COUNT: usize = HidService::ATTRIBUTE_COUNT;
     const CCCD_COUNT: usize = HidService::CCCD_COUNT;
 
-    type LEN_SERVICE_UUIDS = typenum::U1;
+    type LenServiceUuids16 = typenum::U1;
+    type LenServiceUuids128 = typenum::U0;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
-        [ServiceUuid::Uuid16(
-            service::HUMAN_INTERFACE_DEVICE.to_le_bytes(),
-        )]
-        .into()
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16> {
+        [service::HUMAN_INTERFACE_DEVICE.to_le_bytes()].into()
+    }
+
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128> {
+        [].into()
     }
 }
 

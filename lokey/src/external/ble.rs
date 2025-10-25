@@ -152,22 +152,17 @@ impl internal::Message for Event {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ServiceUuid {
-    Uuid16([u8; 2]),
-    Uuid128([u8; 16]),
-}
-
 pub trait TxMessage: external::Message + Sized {
     type MessageService: TxMessageService<Self> + InitMessageService;
 
     const ATTRIBUTE_COUNT: usize;
     const CCCD_COUNT: usize;
 
-    #[allow(non_camel_case_types)]
-    type LEN_SERVICE_UUIDS: ArrayLength;
+    type LenServiceUuids16: ArrayLength;
+    type LenServiceUuids128: ArrayLength;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS>;
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16>;
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128>;
 }
 
 pub trait RxMessage: external::Message + Sized {
@@ -176,10 +171,11 @@ pub trait RxMessage: external::Message + Sized {
     const ATTRIBUTE_COUNT: usize;
     const CCCD_COUNT: usize;
 
-    #[allow(non_camel_case_types)]
-    type LEN_SERVICE_UUIDS: ArrayLength;
+    type LenServiceUuids16: ArrayLength;
+    type LenServiceUuids128: ArrayLength;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS>;
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16>;
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128>;
 }
 
 impl TxMessage for NoMessage {
@@ -188,9 +184,14 @@ impl TxMessage for NoMessage {
     const ATTRIBUTE_COUNT: usize = 0;
     const CCCD_COUNT: usize = 0;
 
-    type LEN_SERVICE_UUIDS = typenum::U0;
+    type LenServiceUuids16 = typenum::U0;
+    type LenServiceUuids128 = typenum::U0;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16> {
+        [].into()
+    }
+
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128> {
         [].into()
     }
 }
@@ -201,9 +202,14 @@ impl RxMessage for NoMessage {
     const ATTRIBUTE_COUNT: usize = 0;
     const CCCD_COUNT: usize = 0;
 
-    type LEN_SERVICE_UUIDS = typenum::U0;
+    type LenServiceUuids16 = typenum::U0;
+    type LenServiceUuids128 = typenum::U0;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16> {
+        [].into()
+    }
+
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128> {
         [].into()
     }
 }

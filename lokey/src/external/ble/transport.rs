@@ -1,7 +1,5 @@
 use super::{Event, Message, TransportConfig};
-use crate::external::ble::{
-    self, InitMessageService, RxMessageService, ServiceUuid, TxMessageService,
-};
+use crate::external::ble::{self, InitMessageService, RxMessageService, TxMessageService};
 use crate::mcu::{self, McuBle, McuStorage, storage};
 use crate::util::{debug, error, info, unwrap, warn};
 use crate::{Address, external, internal};
@@ -16,7 +14,7 @@ use embassy_sync::mutex::Mutex;
 use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
 use embassy_time::Timer;
-use generic_array::{ArrayLength, GenericArray};
+use generic_array::GenericArray;
 use portable_atomic::{AtomicBool, AtomicU8};
 use trouble_host::att::AttErrorCode;
 use trouble_host::gap::{GapConfig, PeripheralConfig};
@@ -122,36 +120,10 @@ where
         // const APPEARANCE_ADV_TYPE: u8 = 0x19;
         // const KEYBOARD_APPEARANCE: &[u8] = &[0xC1, 0x03];
 
-        fn build_uuids_16<T: ArrayLength>(
-            service_uuids: &GenericArray<ServiceUuid, T>,
-        ) -> ArrayVec<[u8; 2], { <T as typenum::Unsigned>::USIZE }> {
-            service_uuids
-                .iter()
-                .filter_map(|service_uuid| match service_uuid {
-                    ServiceUuid::Uuid16(v) => Some(*v),
-                    ServiceUuid::Uuid128(_) => None,
-                })
-                .collect::<ArrayVec<_, _>>()
-        }
-
-        fn build_uuids_128<T: ArrayLength>(
-            service_uuids: &GenericArray<ServiceUuid, T>,
-        ) -> ArrayVec<[u8; 16], { <T as typenum::Unsigned>::USIZE }> {
-            service_uuids
-                .iter()
-                .filter_map(|service_uuid| match service_uuid {
-                    ServiceUuid::Uuid16(_) => None,
-                    ServiceUuid::Uuid128(v) => Some(*v),
-                })
-                .collect::<ArrayVec<_, _>>()
-        }
-
-        let tx_service_uuids = TxMessage::service_uuids();
-        let adv_service_uuids_16_tx = build_uuids_16(&tx_service_uuids);
-        let adv_service_uuids_128_tx = build_uuids_128(&tx_service_uuids);
-        let rx_service_uuids = RxMessage::service_uuids();
-        let adv_service_uuids_16_rx = build_uuids_16(&rx_service_uuids);
-        let adv_service_uuids_128_rx = build_uuids_128(&rx_service_uuids);
+        let adv_service_uuids_16_tx = TxMessage::service_uuids_16();
+        let adv_service_uuids_128_tx = TxMessage::service_uuids_128();
+        let adv_service_uuids_16_rx = RxMessage::service_uuids_16();
+        let adv_service_uuids_128_rx = RxMessage::service_uuids_128();
 
         unwrap!(AdStructure::encode_slice(
             &[

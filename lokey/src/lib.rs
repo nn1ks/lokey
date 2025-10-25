@@ -137,8 +137,6 @@ async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawne
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![feature(impl_trait_in_assoc_type)]
-#![feature(min_generic_const_args)]
-#![allow(incomplete_features)]
 
 pub mod external;
 pub mod internal;
