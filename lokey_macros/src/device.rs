@@ -7,7 +7,6 @@ use syn::spanned::Spanned;
 
 #[derive(FromMeta)]
 struct DeviceArgs {
-    heap_size: Option<syn::Expr>,
     address: Option<syn::Expr>,
     mcu_config: Option<syn::Expr>,
     internal_transport_config: Option<syn::Expr>,
@@ -62,13 +61,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         syn::FnArg::Receiver(_) => abort!(context_param.span(), invalid_device_type_error),
     };
 
-    let heap_size = match args.heap_size {
-        Some(v) => v.to_token_stream(),
-        None => quote! {
-            <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::HeapSize>::DEFAULT_HEAP_SIZE
-        },
-    };
-
     let address = match args.address {
         Some(v) => v.to_token_stream(),
         None => quote! { <#device_type_path as ::lokey::Device>::DEFAULT_ADDRESS },
@@ -88,11 +80,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     quote! {
-        extern crate alloc;
-
-        #[global_allocator]
-        static HEAP: ::lokey::embedded_alloc::LlffHeap = ::lokey::embedded_alloc::LlffHeap::empty();
-
         #[::embassy_executor::main]
         async fn main(spawner: ::embassy_executor::Spawner) {
             fn __modify_mcu_config(
@@ -111,14 +98,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 __config: &mut <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::Config
             ) {
                 #modify_external_transport_config
-            }
-
-            // Initialize allocator
-            {
-                use ::core::mem::MaybeUninit;
-                const HEAP_SIZE: usize = #heap_size;
-                static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
-                unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
             }
 
             let address: ::lokey::Address = #address;
@@ -208,7 +187,8 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             #[::embassy_executor::task]
             async fn __run_external_channel(channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>) {
-                channel.run().await;
+                let message_override = ::lokey::external::IdentityOverride::new();
+                channel.run(message_override).await;
             }
             spawner.must_spawn(__run_external_channel(external_channel));
 
