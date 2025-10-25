@@ -5,7 +5,6 @@ use embassy_sync::mutex::Mutex;
 use embassy_usb::Builder;
 use embassy_usb::class::hid::HidWriter;
 use embassy_usb::driver::Driver;
-use lokey::external::MessageServiceRegistry;
 use lokey::external::usb::{InitMessageService, TxMessage, TxMessageService};
 use lokey::util::error;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
@@ -26,14 +25,11 @@ pub struct ExternalMessageService<'d, D: Driver<'d>> {
 }
 
 impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d, D> {
-    fn init<'a>(registry: &mut MessageServiceRegistry<'a>, builder: &mut Builder<'d, D>)
+    fn init<'a>(builder: &mut Builder<'d, D>) -> Self
     where
         'd: 'a,
         D: 'a,
     {
-        if registry.contains::<Self>() {
-            return;
-        }
         let hid_config = embassy_usb::class::hid::Config {
             report_descriptor: KeyboardReport::desc(),
             request_handler: None,
@@ -42,7 +38,7 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d,
         };
         let state = Box::leak(Box::new(embassy_usb::class::hid::State::new()));
         let hid_writer = HidWriter::<_, KEYBOARD_REPORT_SIZE>::new(builder, state, hid_config);
-        let message_service = Self {
+        Self {
             inner: Mutex::new(Data {
                 hid_writer,
                 keyboard_report: KeyboardReport {
@@ -52,8 +48,7 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d,
                     keycodes: [0; 6],
                 },
             }),
-        };
-        let _ = registry.insert(message_service);
+        }
     }
 }
 

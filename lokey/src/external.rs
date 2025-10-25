@@ -2,7 +2,6 @@
 pub mod ble;
 mod channel;
 pub mod empty;
-mod message_service;
 mod r#override;
 pub mod toggle;
 #[cfg(feature = "external-usb")]
@@ -17,7 +16,6 @@ pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
 use derive_more::{Display, Error, From};
-pub use message_service::MessageServiceRegistry;
 pub use r#override::{IdentityOverride, MessageSender, Override};
 
 declare_const_for_feature_group!(

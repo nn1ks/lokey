@@ -1,5 +1,4 @@
 use super::{Event, Message, TransportConfig};
-use crate::external::MessageServiceRegistry;
 use crate::external::ble::{
     self, InitMessageService, RxMessageService, ServiceUuid, TxMessageService,
 };
@@ -88,13 +87,8 @@ where
             error!("Failed to set GAP config for BLE transport: {}", e);
         }
 
-        let mut message_service_registry = MessageServiceRegistry::new();
-        TxMessage::MessageService::init(&mut message_service_registry, &mut table);
-        RxMessage::MessageService::init(&mut message_service_registry, &mut table);
-        let tx_message_service =
-            unwrap!(message_service_registry.get::<TxMessage::MessageService>());
-        let rx_message_service =
-            unwrap!(message_service_registry.get::<RxMessage::MessageService>());
+        let tx_message_service = TxMessage::MessageService::init(&mut table);
+        let rx_message_service = RxMessage::MessageService::init(&mut table);
 
         let server = AttributeServer::<
             '_,

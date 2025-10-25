@@ -1,10 +1,9 @@
-use crate::external::message_service::MessageServiceRegistry;
 use crate::external::{Message, NoMessage};
 use embassy_usb::Builder;
 use embassy_usb::driver::Driver;
 
 pub trait InitMessageService<'d, D: Driver<'d>> {
-    fn init<'a>(registry: &mut MessageServiceRegistry<'a>, builder: &mut Builder<'d, D>)
+    fn init<'a>(builder: &mut Builder<'d, D>) -> Self
     where
         'd: 'a,
         D: 'a;
@@ -19,7 +18,7 @@ pub trait RxMessageService<T: Message> {
 }
 
 impl<'d, D: Driver<'d>> InitMessageService<'d, D> for () {
-    fn init<'a>(_: &mut MessageServiceRegistry<'a>, _: &mut Builder<'d, D>)
+    fn init<'a>(_: &mut Builder<'d, D>)
     where
         'd: 'a,
         D: 'a,

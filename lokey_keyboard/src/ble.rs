@@ -2,7 +2,6 @@ use super::ExternalMessage;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::mutex::Mutex;
 use generic_array::GenericArray;
-use lokey::external::MessageServiceRegistry;
 use lokey::external::ble::{InitMessageService, ServiceUuid, TxMessage, TxMessageService};
 use lokey::util::error;
 use trouble_host::prelude::*;
@@ -49,16 +48,12 @@ pub struct ExternalMessageService {
 
 impl InitMessageService for ExternalMessageService {
     fn init<'a, const ATT_MAX: usize>(
-        registry: &mut MessageServiceRegistry<'a>,
         attribute_table: &mut AttributeTable<'static, NoopRawMutex, ATT_MAX>,
-    ) {
-        if !registry.contains::<Self>() {
-            let hid_service = HidService::new(attribute_table);
-            let message_service = Self {
-                hid_service,
-                keyboard_report: Mutex::new(KeyboardReport::default()),
-            };
-            let _ = registry.insert(message_service);
+    ) -> Self {
+        let hid_service = HidService::new(attribute_table);
+        Self {
+            hid_service,
+            keyboard_report: Mutex::new(KeyboardReport::default()),
         }
     }
 }

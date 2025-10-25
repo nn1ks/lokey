@@ -1,9 +1,8 @@
 use super::{CreateDriver, TransportConfig};
-use crate::external::MessageServiceRegistry;
 use crate::external::usb::{
     self, DeviceHandlerContext, InitMessageService, RxMessageService, TxMessageService,
 };
-use crate::util::{error, info, unwrap};
+use crate::util::{error, info};
 use crate::{Address, external, internal, mcu};
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join3;
@@ -72,16 +71,8 @@ where
 
         builder.handler(&mut device_handler);
 
-        let mut message_service_registry = MessageServiceRegistry::new();
-
-        TxMessage::MessageService::init(&mut message_service_registry, &mut builder);
-        RxMessage::MessageService::init(&mut message_service_registry, &mut builder);
-        let tx_message_service = unwrap!(
-            message_service_registry.get::<TxMessage::MessageService<'_, Mcu::Driver<'_>>>()
-        );
-        let rx_message_service = unwrap!(
-            message_service_registry.get::<RxMessage::MessageService<'_, Mcu::Driver<'_>>>()
-        );
+        let tx_message_service = TxMessage::MessageService::init(&mut builder);
+        let rx_message_service = RxMessage::MessageService::init(&mut builder);
 
         let mut usb = builder.build();
 
