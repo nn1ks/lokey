@@ -140,8 +140,6 @@ async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawne
 #![feature(min_generic_const_args)]
 #![allow(incomplete_features)]
 
-extern crate alloc;
-
 pub mod external;
 pub mod internal;
 pub mod mcu;
@@ -149,8 +147,6 @@ mod state;
 pub mod util;
 
 use core::future::Future;
-#[doc(hidden)]
-pub use embedded_alloc;
 #[cfg(feature = "macros")]
 pub use lokey_macros::{State, device};
 pub use state::{DynState, State, StateContainer};
