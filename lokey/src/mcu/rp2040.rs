@@ -1,7 +1,7 @@
 #[cfg(feature = "external-usb")]
 pub mod usb;
 
-use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
+use super::{Mcu, McuInit, McuStorage, Storage};
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
 use embassy_rp::flash;
@@ -58,9 +58,4 @@ impl McuStorage for Rp2040 {
     fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
         &self.storage
     }
-}
-
-impl HeapSize for Rp2040 {
-    // The RP2040 has 264kB of RAM
-    const DEFAULT_HEAP_SIZE: usize = 64 * 1024; // 64kB
 }

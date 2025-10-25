@@ -45,10 +45,6 @@ pub trait McuStorage {
     fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize>;
 }
 
-pub trait HeapSize {
-    const DEFAULT_HEAP_SIZE: usize;
-}
-
 #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
 pub trait McuBle {
     type Controller: trouble_host::Controller;
@@ -82,9 +78,5 @@ mod dummy {
             S: StateContainer,
         {
         }
-    }
-
-    impl HeapSize for DummyMcu {
-        const DEFAULT_HEAP_SIZE: usize = 0;
     }
 }

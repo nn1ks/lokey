@@ -1,7 +1,7 @@
 #[cfg(feature = "external-usb")]
 mod usb;
 
-use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
+use super::{Mcu, McuInit, McuStorage, Storage};
 use crate::util::unwrap;
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
@@ -180,9 +180,4 @@ impl McuStorage for Nrf52840 {
     fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
         &self.storage
     }
-}
-
-impl HeapSize for Nrf52840 {
-    // The nRF52840 has 256kB of RAM
-    const DEFAULT_HEAP_SIZE: usize = 64 * 1024; // 64kB
 }
