@@ -31,7 +31,7 @@ use embassy_futures::select::{Either, select};
 use futures_util::future::select_all;
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
-pub use key_override::KeyOverride;
+pub use key_override::{KeyOverride, KeyOverrideEntry};
 use lokey::util::{debug, error};
 use lokey::{Component, DynContext, external, internal};
 /// Macro for building a [`Layout`].
