@@ -11,6 +11,7 @@ struct DeviceArgs {
     mcu_config: Option<syn::Expr>,
     internal_transport_config: Option<syn::Expr>,
     external_transport_config: Option<syn::Expr>,
+    message_override: Option<syn::Expr>,
 }
 
 pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -77,6 +78,11 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     let modify_external_transport_config = match args.external_transport_config {
         Some(v) => quote! { #v(__config); },
         None => quote! {},
+    };
+
+    let message_override = match args.message_override {
+        Some(v) => quote! { #v },
+        None => quote! { ::lokey::external::IdentityOverride::new() },
     };
 
     quote! {
@@ -187,7 +193,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             #[::embassy_executor::task]
             async fn __run_external_channel(channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>) {
-                let message_override = ::lokey::external::IdentityOverride::new();
+                let message_override = #message_override;
                 channel.run(message_override).await;
             }
             spawner.must_spawn(__run_external_channel(external_channel));
