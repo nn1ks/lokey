@@ -13,6 +13,10 @@ export default defineConfig({
     ['link', { rel: "manifest", href: "/favicon/site.webmanifest" }],
   ],
 
+  sitemap: {
+    hostname: "https://lokey.rs",
+  },
+
   cleanUrls: true,
   rewrites(id) {
     return id.replace(/^pages\/(.+)/, '$1')
