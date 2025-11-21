@@ -49,10 +49,6 @@
   --vp-c-default-3: var(--vp-c-gray-3);
   --vp-c-default-soft: var(--vp-c-gray-soft);
 
-  /* --vp-c-brand-1: var(--vp-c-indigo-1); */
-  --vp-c-brand-1: #e4c654;
-  --vp-c-brand-2: #bc9e25;
-  --vp-c-brand-3: #927b1d;
   --vp-c-brand-soft: var(--vp-c-indigo-soft);
 
   --vp-c-tip-1: var(--vp-c-brand-1);
@@ -81,7 +77,7 @@
   --vp-button-brand-bg: var(--vp-c-brand-3);
   --vp-button-brand-hover-border: transparent;
   --vp-button-brand-hover-text: var(--vp-c-white);
-  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-4);
   --vp-button-brand-active-border: transparent;
   --vp-button-brand-active-text: var(--vp-c-white);
   --vp-button-brand-active-bg: var(--vp-c-brand-1);
@@ -92,38 +88,9 @@
  * -------------------------------------------------------------------------- */
 
 :root {
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-image-filter: blur(44px);
-}
-
-@media (min-width: 640px) {
-  :root {
-    --vp-home-hero-image-filter: blur(56px);
-  }
-}
-
-@media (min-width: 960px) {
-  :root {
-    --vp-home-hero-image-filter: blur(68px);
-  }
-}
-
-:root.dark {
-  --vp-home-hero-name-background: -webkit-linear-gradient(120deg,
-      #ca4894 30%,
-      #a071ff);
-  --vp-home-hero-image-background-image: linear-gradient(-45deg,
-      #ca489477 50%,
-      #a071ff77 50%);
-}
-
-:root:not(.dark) {
-  --vp-home-hero-name-background: -webkit-linear-gradient(120deg,
-      #a01e6a 30%,
-      #6723f0);
-  --vp-home-hero-image-background-image: linear-gradient(-45deg,
-      #a01e6a88 50%,
-      #6723f088 50%);
+  --vp-home-hero-name-color: var(--vp-c-text-1);
+  --vp-home-hero-name-background: none;
+  --vp-home-hero-image-background-image: none;
 }
 
 /**
@@ -150,15 +117,17 @@
  * -------------------------------------------------------------------------- */
 
 :root.dark {
-  --vp-c-brand-1: #d6bc5f;
-  --vp-c-brand-2: #bc9e25;
-  --vp-c-brand-3: #876f0f;
+  --vp-c-brand-1: hsl(48, 60%, 63%);
+  --vp-c-brand-2: hsl(48, 80%, 75%);
+  --vp-c-brand-3: hsl(44, 40%, 35%);
+  --vp-c-brand-4: hsl(48, 50%, 40%);
 }
 
 :root:not(.dark) {
-  --vp-c-brand-1: #866900;
-  --vp-c-brand-2: #9e8009;
-  --vp-c-brand-3: #ac9014;
+  --vp-c-brand-1: hsl(48, 90%, 33%);
+  --vp-c-brand-2: hsl(48, 100%, 25%);
+  --vp-c-brand-3: hsl(44, 40%, 40%);
+  --vp-c-brand-4: hsl(48, 50%, 45%);
 }
 
 :root.dark {
@@ -183,7 +152,7 @@
   src: local("Noto Serif"),
     url("/fonts/Noto Serif/NotoSerif-VariableFont_wdth,wght.ttf") format("truetype-variations"),
     url("/fonts/Noto Serif/NotoSerif-VariableFont_wdth,wght.ttf") format("truetype");
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -194,7 +163,7 @@
   src: local("Noto Serif Italic"),
     url("/fonts/Noto Serif/NotoSerif-Italic-VariableFont_wdth,wght.ttf") format("truetype-variations"),
     url("/fonts/Noto Serif/NotoSerif-Italic-VariableFont_wdth,wght.ttf") format("truetype");
-  font-display: swap;
+  font-display: block;
 }
 
 .heading {
@@ -204,6 +173,8 @@
 .heading .name {
   /* without this the "y" in "Lokey" is cut off */
   padding-bottom: 10px;
+
+  text-decoration: underline;
 }
 
 .content-container>.main {

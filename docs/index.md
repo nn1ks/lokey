@@ -10,7 +10,7 @@ hero:
     src: /logo-with-border.svg
   actions:
     - theme: brand
-      text: Docs
+      text: Get Started
       link: /introduction/what-is-lokey
     - theme: alt
       text: API Documentation
