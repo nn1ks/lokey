@@ -5,7 +5,7 @@ use trouble_host::gatt::{GattConnection, WriteEvent};
 use trouble_host::prelude::{AttributeTable, DefaultPacketPool};
 
 pub trait InitMessageService {
-    fn init<'a, const ATT_MAX: usize>(
+    fn init<const ATT_MAX: usize>(
         attribute_table: &mut AttributeTable<'static, NoopRawMutex, ATT_MAX>,
     ) -> Self;
 }

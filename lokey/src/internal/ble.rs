@@ -61,7 +61,7 @@ impl AsGatt for Message {
 impl FromGatt for Message {
     fn from_gatt(data: &[u8]) -> Result<Self, FromGattError> {
         ArrayVec::try_from(data)
-            .map(|v| Message(v))
+            .map(Message)
             .map_err(|_| FromGattError::InvalidLength)
     }
 }

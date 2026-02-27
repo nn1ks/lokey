@@ -114,11 +114,11 @@ impl internal::Message for Event {
                 device_address: Address(address_bytes),
             }),
             [4, profile_index, 0, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
-                profile_index: profile_index,
+                profile_index,
                 changed: false,
             }),
             [4, profile_index, 1, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
-                profile_index: profile_index,
+                profile_index,
                 changed: true,
             }),
             v => {
