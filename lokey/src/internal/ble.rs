@@ -42,6 +42,13 @@ const MESSAGE_TO_PERIPHERAL_CHARACTERISTIC_UUID: Uuid = Uuid::Uuid128([
 #[derive(Default)]
 struct Message(ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>);
 
+#[cfg(feature = "defmt")]
+impl defmt::Format for Message {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "Message({:?})", self.0.as_slice())
+    }
+}
+
 impl AsGatt for Message {
     const MIN_SIZE: usize = 0;
     const MAX_SIZE: usize = 1024;
