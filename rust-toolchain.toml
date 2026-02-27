@@ -1,5 +1,5 @@
 [toolchain]
-channel = "nightly"
+channel = "nightly-2026-02-24"
 targets = ["thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
 profile = "complete"
 components = ["llvm-tools-preview"]
