@@ -9,6 +9,22 @@ pub trait State<T> {
 pub trait StateContainer: 'static {
     fn try_get_raw(&self, type_id: TypeId) -> Option<&dyn Any>;
     fn try_get_mut_raw(&mut self, type_id: TypeId) -> Option<&mut dyn Any>;
+
+    fn try_get<T: 'static>(&self) -> Option<&T>
+    where
+        Self: Sized,
+    {
+        self.try_get_raw(TypeId::of::<T>())
+            .map(|v| v.downcast_ref().unwrap())
+    }
+
+    fn try_get_mut<T: 'static>(&mut self) -> Option<&mut T>
+    where
+        Self: Sized,
+    {
+        self.try_get_mut_raw(TypeId::of::<T>())
+            .map(|v| v.downcast_mut().unwrap())
+    }
 }
 
 #[repr(transparent)]
