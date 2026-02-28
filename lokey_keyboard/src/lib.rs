@@ -6,8 +6,6 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-extern crate alloc;
-
 pub mod action;
 #[cfg(feature = "external-ble")]
 pub mod ble;
@@ -43,7 +41,7 @@ use lokey::{
 /// # Example
 ///
 /// ```no_run
-#[doc = include_str!("../../doctest_setup_with_allocator")]
+#[doc = include_str!("../../doctest_setup")]
 /// # fn with_macro() {
 /// use lokey_common::layer::LayerId;
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
