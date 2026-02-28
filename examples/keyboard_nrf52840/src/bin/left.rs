@@ -9,26 +9,30 @@ use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::{Context, Device};
 use lokey_common::blink::Blink;
 use lokey_common::layer::LayerId;
-use lokey_common::status_led_array::{
-    BleAdvertisementHook, BleProfileHook, BootHook, StatusLedArray,
-};
 use lokey_keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
     ToggleExternalTransport,
 };
-use lokey_keyboard::{Key, KeyOverride, Keys, MatrixConfig, layout};
+use lokey_keyboard::{Key, KeyOverride, KeyOverrideEntry, MatrixConfig, Scanner, layout};
+use lokey_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, LedArray};
 
-#[lokey::device]
+fn key_override() -> KeyOverride<2, 1> {
+    KeyOverride::new([KeyOverrideEntry::new([Key::LShift, Key::A], Key::E)])
+}
+
+#[global_allocator]
+static HEAP: embedded_alloc::LlffHeap = embedded_alloc::LlffHeap::empty();
+
+#[lokey::device(message_override = key_override())]
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
+    unsafe {
+        embedded_alloc::init!(HEAP, 1024);
+    }
+
     context
         .state
         .layer_manager
         .add_conditional_layer([LayerId(1), LayerId(2)], LayerId(4))
-        .await;
-
-    context
-        .external_channel
-        .add_override(KeyOverride::new().with([Key::LShift, Key::A], Key::E))
         .await;
 
     let layout = layout!(
@@ -73,17 +77,23 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
         ],
     );
 
-    let keys_future = context.enable(Keys::<MatrixConfig, NUM_KEYS>::new().layout(layout));
+    let scanner_future = context.enable(Scanner::<MatrixConfig, NUM_KEYS>::new());
+    let layout_future = context.enable(layout);
 
     let blink_future = context.enable(Blink::new());
 
     let hooks = (BootHook, BleAdvertisementHook, BleProfileHook);
-    let status_led_array_future =
-        context.enable(StatusLedArray::<4, _>::new(context.as_dyn(), hooks));
+    let led_array_future = context.enable(LedArray::<4, _>::new(context.as_dyn(), hooks));
 
-    join!(keys_future, blink_future, status_led_array_future).await;
+    join!(
+        scanner_future,
+        layout_future,
+        blink_future,
+        led_array_future
+    )
+    .await;
 
-    // context.spawner.spawn(task()).unwrap();
+    // _spawner.must_spawn(task());
     // #[embassy_executor::task]
     // async fn task() {
     //     loop {

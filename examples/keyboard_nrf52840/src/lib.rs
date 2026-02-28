@@ -10,8 +10,6 @@ use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::external::{NoMessage, usb};
-use lokey::mcu::nrf52840::pwm::Pwm;
-use lokey::mcu::pwm::{Pwm as _, PwmChannel};
 use lokey::mcu::{Nrf52840, nrf52840};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
@@ -19,12 +17,17 @@ use lokey::{
 };
 use lokey_common::blink::Blink;
 use lokey_common::layer::LayerManager;
-use lokey_common::status_led_array::{HookBundle, StatusLedArray};
-use lokey_keyboard::{DirectPins, DirectPinsConfig, Keys, Matrix, MatrixConfig};
+use lokey_keyboard::{
+    ActionContainer, DirectPins, DirectPinsConfig, Layout, Matrix, MatrixConfig, Scanner,
+};
+use lokey_led_array::nrf52840::Pwm;
+use lokey_led_array::pwm::{Pwm as _, PwmChannel};
+use lokey_led_array::{HookBundle, LedArray};
 use panic_probe as _;
 use switch_hal::IntoSwitch;
 
 pub const NUM_KEYS: usize = 36;
+pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 
 #[derive(Default, State)]
 pub struct DefaultState {
@@ -38,8 +41,8 @@ impl Transports<Nrf52840> for Central {
     // type ExternalTransportConfig =
     //     external::toggle::TransportConfig<external::ble::TransportConfig>;
     // type ExternalTransportConfig = external::usb_ble::TransportConfig;
-    // type InternalTransportConfig = internal::empty::TransportConfig;
-    type InternalTransport = internal::ble::Transport<Nrf52840>;
+    type InternalTransport = internal::empty::Transport<Nrf52840>;
+    // type InternalTransport = internal::ble::Transport<Nrf52840>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         external::usb::TransportConfig {
@@ -64,10 +67,10 @@ impl Transports<Nrf52840> for Central {
     }
 
     fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
-        // internal::empty::TransportConfig
-        internal::ble::TransportConfig::Central {
-            peripheral_addresses: &[KeyboardRight::DEFAULT_ADDRESS],
-        }
+        internal::empty::TransportConfig
+        // internal::ble::TransportConfig::Central {
+        //     peripheral_addresses: &[KeyboardRight::DEFAULT_ADDRESS],
+        // }
     }
 }
 
@@ -116,8 +119,19 @@ impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
     }
 }
 
-impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for KeyboardLeft {
-    async fn enable<T>(component: Keys<MatrixConfig, NUM_KEYS>, context: Context<Self, T, S>)
+impl<S: StateContainer, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
+    for KeyboardLeft
+{
+    async fn enable<T>(component: Layout<A>, context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
+        component.run(context).await;
+    }
+}
+
+impl<S: StateContainer> ComponentSupport<Scanner<MatrixConfig, NUM_KEYS>, S> for KeyboardLeft {
+    async fn enable<T>(component: Scanner<MatrixConfig, NUM_KEYS>, context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
     {
@@ -199,8 +213,8 @@ impl<S: StateContainer> ComponentSupport<Keys<MatrixConfig, NUM_KEYS>, S> for Ke
     }
 }
 
-impl<S: StateContainer, H: HookBundle> ComponentSupport<StatusLedArray<4, H>, S> for KeyboardLeft {
-    async fn enable<T>(component: StatusLedArray<4, H>, _context: Context<Self, T, S>)
+impl<S: StateContainer, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for KeyboardLeft {
+    async fn enable<T>(component: LedArray<4, H>, _context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
     {
@@ -245,8 +259,21 @@ impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardRight {
     }
 }
 
-impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
-    async fn enable<T>(component: Keys<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
+impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, 1>, S> for KeyboardRight {
+    async fn enable<T>(component: Scanner<DirectPinsConfig, 1>, context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
+        let direct_pins = DirectPins::new::<1>([
+            Input::new(unsafe { P1_11::steal() }, Pull::Up).into_active_low_switch()
+        ])
+        .continuous::<0>();
+        component.run(direct_pins, context.as_dyn()).await;
+    }
+}
+
+impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
+    async fn enable<T>(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
     {
@@ -272,11 +299,21 @@ impl LedAction {
 }
 
 impl lokey_keyboard::Action for LedAction {
-    async fn on_press(&'static self, _context: lokey::DynContext) {
+    async fn on_press<D, T, S>(&self, _context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         self.pin.lock().await.set_high();
     }
 
-    async fn on_release(&'static self, _context: lokey::DynContext) {
+    async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         self.pin.lock().await.set_low();
     }
 }
