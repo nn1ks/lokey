@@ -49,6 +49,7 @@ lokey = { path = "../lokey" }
 lokey_common = { path = "../lokey_common", features = ["layer"] }
 lokey_keyboard_macros = { path = "../lokey_keyboard_macros", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
+seq-macro = "0.3.6"
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }
 static_cell = "2.1.0"
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
