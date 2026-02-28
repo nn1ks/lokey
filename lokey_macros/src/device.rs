@@ -82,7 +82,12 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let message_override = match args.message_override {
         Some(v) => quote! { #v },
-        None => quote! { ::lokey::external::IdentityOverride::new() },
+        None => {
+            let tx_message_type = quote! {
+                <::lokey::external::DeviceTransport<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::TxMessage
+            };
+            quote! { ::lokey::external::IdentityOverride::<#tx_message_type>::new() }
+        }
     };
 
     quote! {
