@@ -1,10 +1,15 @@
 use super::{Debounce, Message, ScannerDriver};
 use crate::DynContext;
-use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use embassy_time::{Duration, Instant, Timer};
 use lokey::Component;
 use lokey::util::error;
 use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
+
+/// Size of the debounce buffer. This limits the number of key state changes that can be tracked
+/// simultaneously.
+// TODO: Make configurable
+const DEBOUNCE_BUFFER_SIZE: usize = 64;
 
 /// Configuration for the [`Matrix`] scanner.
 #[derive(Clone, Default)]
@@ -116,8 +121,8 @@ impl<
         }
 
         let mut states = [[false; NUM_IS]; NUM_OS];
-        let mut timeouts = Vec::<(u16, Instant)>::new();
-        let mut defers = Vec::<(u16, Instant, bool)>::new();
+        let mut timeouts = ArrayVec::<(u16, Instant), DEBOUNCE_BUFFER_SIZE>::new();
+        let mut defers = ArrayVec::<(u16, Instant, bool), DEBOUNCE_BUFFER_SIZE>::new();
         loop {
             for output_switch in &mut self.output_switches {
                 if output_switch.on().is_err() {
@@ -174,6 +179,10 @@ impl<
                                 }
                                 timeouts.remove(timeout_index);
                             }
+                            if timeouts.is_full() {
+                                error!("timeouts buffer overflow, dropping oldest event");
+                                timeouts.remove(0);
+                            }
                             timeouts.push((key_index, Instant::now()));
                         }
                         if let Some(defer_index) =
@@ -202,6 +211,10 @@ impl<
                                 }
                             }
                         } else if is_active != states[i][j] {
+                            if defers.is_full() {
+                                error!("defer buffer overflow, dropping oldest event");
+                                defers.remove(0);
+                            }
                             defers.push((key_index, Instant::now(), is_active));
                         }
                         states[i][j] = is_active;
