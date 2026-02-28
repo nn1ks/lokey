@@ -48,6 +48,9 @@ where
     }
 
     async fn run(&self) {
+        let mut tx_hid_state = embassy_usb::class::hid::State::new();
+        let mut rx_hid_state = embassy_usb::class::hid::State::new();
+
         let driver = self.mcu.create_driver();
 
         let mut config = embassy_usb::Config::from(self.config.clone());
@@ -71,8 +74,8 @@ where
 
         builder.handler(&mut device_handler);
 
-        let tx_message_service = TxMessage::MessageService::init(&mut builder);
-        let rx_message_service = RxMessage::MessageService::init(&mut builder);
+        let tx_message_service = TxMessage::MessageService::init(&mut builder, &mut tx_hid_state);
+        let rx_message_service = RxMessage::MessageService::init(&mut builder, &mut rx_hid_state);
 
         let mut usb = builder.build();
 

@@ -1,9 +1,8 @@
 use crate::ExternalMessage;
-use alloc::boxed::Box;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_usb::Builder;
-use embassy_usb::class::hid::HidWriter;
+use embassy_usb::class::hid::{HidWriter, State as HidState};
 use embassy_usb::driver::Driver;
 use lokey::external::usb::{InitMessageService, TxMessage, TxMessageService};
 use lokey::util::error;
@@ -25,7 +24,7 @@ pub struct ExternalMessageService<'d, D: Driver<'d>> {
 }
 
 impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d, D> {
-    fn init<'a>(builder: &mut Builder<'d, D>) -> Self
+    fn init<'a>(builder: &mut Builder<'d, D>, hid_state: &'d mut HidState<'d>) -> Self
     where
         'd: 'a,
         D: 'a,
@@ -36,8 +35,8 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d,
             poll_ms: 60,
             max_packet_size: 64,
         };
-        let state = Box::leak(Box::new(embassy_usb::class::hid::State::new()));
-        let hid_writer = HidWriter::<_, KEYBOARD_REPORT_SIZE>::new(builder, state, hid_config);
+
+        let hid_writer = HidWriter::<_, KEYBOARD_REPORT_SIZE>::new(builder, hid_state, hid_config);
         Self {
             inner: Mutex::new(Data {
                 hid_writer,
