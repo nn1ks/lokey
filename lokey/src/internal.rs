@@ -9,6 +9,7 @@ use crate::{Address, Device, Transports};
 pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
+use derive_more::{Display, Error};
 use generic_array::{ArrayLength, GenericArray};
 
 declare_const_for_feature_group!(
@@ -41,6 +42,8 @@ declare_const_for_feature_group!(
 
 const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + 4;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[display("The maximum number of receivers ({}) was reached", RECEIVER_SLOTS)]
 pub struct MaximumReceiversReached;
 
 pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::InternalTransport;
