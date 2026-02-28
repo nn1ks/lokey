@@ -57,5 +57,8 @@ trouble-host = { version = "0.5", features = ["security"], optional = true }
 typenum = "1.19.0"
 usbd-hid = { version = "0.8.2", optional = true }
 
+[dev-dependencies]
+embedded-alloc = "0.7.0"
+
 [package.metadata.docs.rs]
 features = ["macros", "defmt", "external-usb", "external-ble"]

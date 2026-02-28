@@ -40,16 +40,10 @@ use lokey::{
 /// the other arrays. The symbol `Transparent` means that the action at the same position from the
 /// previous layer is used or [`NoOp`](action::NoOp) if it is the first layer.
 ///
-/// This macro requires the nightly feature `impl_trait_in_assoc_type`.
-///
 /// # Example
 ///
 /// ```no_run
 #[doc = include_str!("../../doctest_setup_with_allocator")]
-/// # mod a {
-/// #![feature(impl_trait_in_assoc_type)]
-/// # }
-///
 /// # fn with_macro() {
 /// use lokey_common::layer::LayerId;
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
@@ -72,61 +66,27 @@ use lokey::{
 /// # }
 ///
 ///
-/// # fn without_macro() {
 /// // The layout built with the macro is equivalent to this layout:
 ///
+/// # fn without_macro() {
 /// use lokey_common::layer::LayerId;
-/// use lokey_keyboard::{DynAction, Key, Layout};
+/// use lokey_keyboard::{Key, Layout};
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer, PerLayer};
-/// use static_cell::StaticCell;
 ///
-/// let layout = {
-///     static LAYOUT: StaticCell<Layout<3>> = StaticCell::new();
-///     LAYOUT.init(Layout::new([
-///         {
-///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
-///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
-///                 {
-///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
-///                     (LayerId(0), DynAction::from_ref(ACTION.init(KeyCode::new(Key::A))))
-///                 },
-///                 {
-///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
-///                     (LayerId(1), DynAction::from_ref(ACTION.init(KeyCode::new(Key::C))))
-///                 },
-///             ])))
-///         },
-///         {
-///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
-///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
-///                 {
-///                     static ACTION: StaticCell<HoldTap<KeyCode, KeyCode>> = StaticCell::new();
-///                     (LayerId(0), DynAction::from_ref(ACTION.init(HoldTap::new(
-///                         KeyCode::new(Key::LControl),
-///                         KeyCode::new(Key::B),
-///                     ))))
-///                 },
-///                 {
-///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
-///                     (LayerId(1), DynAction::from_ref(ACTION.init(KeyCode::new(Key::D))))
-///                 },
-///             ])))
-///         },
-///         {
-///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
-///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
-///                 {
-///                     static ACTION: StaticCell<Layer> = StaticCell::new();
-///                     (LayerId(0), DynAction::from_ref(ACTION.init(Layer::new(LayerId(1)))))
-///                 },
-///                 {
-///                     static ACTION: StaticCell<Layer> = StaticCell::new();
-///                     (LayerId(1), DynAction::from_ref(ACTION.init(Layer::new(LayerId(1)))))
-///                 },
-///             ])))
-///         },
-///     ]))
-/// };
+/// let layout = Layout::new((
+///     PerLayer::new(
+///         (KeyCode::new(Key::A), KeyCode::new(Key::C)),
+///         [LayerId(0), LayerId(1)].into()
+///     ),
+///     PerLayer::new(
+///         (HoldTap::new(KeyCode::new(Key::LControl), KeyCode::new(Key::B)), KeyCode::new(Key::D)),
+///         [LayerId(0), LayerId(1)].into()
+///     ),
+///     PerLayer::new(
+///         (Layer::new(LayerId(1)), Layer::new(LayerId(1))),
+///         [LayerId(0), LayerId(1)].into()
+///     ),
+/// ));
 /// # }
 /// ```
 #[cfg(feature = "macros")]
