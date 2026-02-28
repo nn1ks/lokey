@@ -20,8 +20,10 @@ defmt-rtt = { version = "1.1.0", optional = true }
 embassy-executor = { version = "0.9.1", features = ["arch-cortex-m", "executor-thread", "nightly"] }
 embassy-rp = "0.8.0"
 embassy-time = "0.5.0"
+embedded-alloc = "0.7.0"
 lokey = { path = "../../lokey", features = ["rp2040", "external-usb"] }
 lokey_common = { path = "../../lokey_common", features = ["layer", "blink"] }
 lokey_keyboard = { path = "../../lokey_keyboard", features = ["external-usb"] }
 panic-probe = "1.0.0"
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
+typenum = "1.19.0"

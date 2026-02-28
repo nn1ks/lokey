@@ -1,5 +1,6 @@
 #![no_main]
 #![no_std]
+#![feature(impl_trait_in_assoc_type)]
 #![feature(future_join)]
 
 use core::future::join;
@@ -17,7 +18,9 @@ use lokey::{
 use lokey_common::blink::Blink;
 use lokey_common::layer::LayerManager;
 use lokey_keyboard::action::KeyCode;
-use lokey_keyboard::{Debounce, DirectPins, DirectPinsConfig, Key, Keys, layout};
+use lokey_keyboard::{
+    ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
+};
 use panic_probe as _;
 use switch_hal::IntoSwitch;
 
@@ -70,9 +73,10 @@ impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
 }
 
 const NUM_KEYS: usize = 1;
+pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 
-impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> for KeyboardLeft {
-    async fn enable<T>(component: Keys<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
+impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardLeft {
+    async fn enable<T>(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
     {
@@ -85,30 +89,49 @@ impl<S: StateContainer> ComponentSupport<Keys<DirectPinsConfig, NUM_KEYS>, S> fo
     }
 }
 
+impl<S: StateContainer, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
+    for KeyboardLeft
+{
+    async fn enable<T>(component: Layout<A>, context: Context<Self, T, S>)
+    where
+        T: Transports<Self::Mcu>,
+    {
+        component.run(context).await
+    }
+}
+
+#[global_allocator]
+static HEAP: embedded_alloc::LlffHeap = embedded_alloc::LlffHeap::empty();
+
 #[lokey::device]
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
+    unsafe {
+        embedded_alloc::init!(HEAP, 1024);
+    }
+
     let layout = layout!(
         // Layer 0
         [KeyCode::new(Key::A)],
         // Layer 1
         [Transparent]
     );
-    let keys_future = context.enable(
-        Keys::<DirectPinsConfig, NUM_KEYS>::new()
-            .layout(layout)
-            .scanner_config(DirectPinsConfig {
-                debounce_key_press: Debounce::Defer {
-                    duration: Duration::from_millis(30),
-                },
-                debounce_key_release: Debounce::Defer {
-                    duration: Duration::from_millis(30),
-                },
-            }),
-    );
+
+    let layout_future = context.enable(layout);
+
+    let scanner_future = context.enable(Scanner::<DirectPinsConfig, NUM_KEYS>::with_config(
+        DirectPinsConfig {
+            debounce_key_press: Debounce::Defer {
+                duration: Duration::from_millis(30),
+            },
+            debounce_key_release: Debounce::Defer {
+                duration: Duration::from_millis(30),
+            },
+        },
+    ));
 
     let blink_future = context.enable(Blink::new());
 
-    join!(keys_future, blink_future).await;
+    join!(layout_future, scanner_future, blink_future).await;
 
     // spawner.spawn(task()).unwrap();
     // #[embassy_executor::task]
