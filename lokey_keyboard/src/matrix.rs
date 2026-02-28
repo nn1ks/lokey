@@ -1,6 +1,5 @@
 use super::{Debounce, Message, ScannerDriver};
 use crate::DynContext;
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use embassy_time::{Duration, Instant, Timer};
 use lokey::Component;
@@ -125,19 +124,20 @@ impl<
                     error!("failed to turn output pin on");
                 }
             }
-            futures_util::future::select_all(self.input_switches.iter_mut().map(|input_switch| {
-                Box::pin(async {
-                    if input_switch.wait_for_active().await.is_err() {
-                        error!("failed to get active status of pin");
-                    }
-                })
-            }))
-            .await;
+
+            let input_switches_futures = self.input_switches.each_mut().map(|input_switch| async {
+                if input_switch.wait_for_active().await.is_err() {
+                    error!("failed to get active status of pin");
+                }
+            });
+            embassy_futures::select::select_array(input_switches_futures).await;
+
             for output_switch in self.output_switches.iter_mut() {
                 if output_switch.off().is_err() {
                     error!("failed to turn output pin on");
                 }
             }
+
             loop {
                 let mut any_active = false;
                 for (i, output_switch) in self.output_switches.iter_mut().enumerate() {
