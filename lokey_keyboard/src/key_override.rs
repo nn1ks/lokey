@@ -76,16 +76,16 @@ impl<const NUM_REQUIRED: usize, const NUM_ENTRIES: usize> Override
                             if !data.keep {
                                 for v in &data.required {
                                     if *v != key {
-                                        sender.send(ExternalMessage::KeyRelease(*v));
+                                        sender.send(ExternalMessage::KeyRelease(*v)).await;
                                     }
                                 }
                             }
-                            sender.send(ExternalMessage::KeyPress(data.then));
+                            sender.send(ExternalMessage::KeyPress(data.then)).await;
                         }
                     }
                 }
                 if !triggered_override {
-                    sender.send(ExternalMessage::KeyPress(key));
+                    sender.send(ExternalMessage::KeyPress(key)).await;
                 }
             }
             ExternalMessage::KeyRelease(key) => {
@@ -102,19 +102,16 @@ impl<const NUM_REQUIRED: usize, const NUM_ENTRIES: usize> Override
                             });
 
                         let mut released_last_key = false;
-                        match pressed_keys
+                        if let Some(pressed_key_index) = pressed_keys
                             .iter_mut()
                             .position(|(pressed_key, _)| *pressed_key == key)
                         {
-                            Some(pressed_key_index) => {
-                                if pressed_keys[pressed_key_index].1 == 0 {
-                                    pressed_keys.remove(pressed_key_index);
-                                    released_last_key = true;
-                                } else {
-                                    pressed_keys[pressed_key_index].1 -= 1;
-                                }
+                            if pressed_keys[pressed_key_index].1 == 0 {
+                                pressed_keys.remove(pressed_key_index);
+                                released_last_key = true;
+                            } else {
+                                pressed_keys[pressed_key_index].1 -= 1;
                             }
-                            None => {}
                         };
 
                         if all_required_keys_are_pressed && released_last_key {
@@ -122,16 +119,16 @@ impl<const NUM_REQUIRED: usize, const NUM_ENTRIES: usize> Override
                             if !data.keep {
                                 for v in &data.required {
                                     if *v != key {
-                                        sender.send(ExternalMessage::KeyPress(*v));
+                                        sender.send(ExternalMessage::KeyPress(*v)).await;
                                     }
                                 }
                             }
-                            sender.send(ExternalMessage::KeyRelease(data.then));
+                            sender.send(ExternalMessage::KeyRelease(data.then)).await;
                         }
                     }
                 }
                 if !untriggered_override {
-                    sender.send(ExternalMessage::KeyRelease(key));
+                    sender.send(ExternalMessage::KeyRelease(key)).await;
                 }
             }
         }

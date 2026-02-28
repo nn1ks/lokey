@@ -1,8 +1,9 @@
-use super::{Debounce, Message, Scanner};
+use super::{Debounce, Message, ScannerDriver};
 use crate::DynContext;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use embassy_time::{Duration, Instant, Timer};
+use lokey::Component;
 use lokey::util::error;
 use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
 
@@ -89,10 +90,18 @@ impl<
     const NUM_IS: usize,
     const NUM_OS: usize,
     const NUM_KEYS: usize,
-> Scanner for Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
+> Component for Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
 {
-    const NUM_KEYS: usize = NUM_KEYS;
+}
 
+impl<
+    I: InputSwitch + WaitableInputSwitch + 'static,
+    O: OutputSwitch + 'static,
+    const NUM_IS: usize,
+    const NUM_OS: usize,
+    const NUM_KEYS: usize,
+> ScannerDriver<NUM_KEYS> for Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
+{
     type Config = MatrixConfig;
 
     async fn run(mut self, config: Self::Config, context: DynContext) {

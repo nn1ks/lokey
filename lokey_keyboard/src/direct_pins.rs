@@ -1,4 +1,4 @@
-use super::{Debounce, Message, Scanner};
+use super::{Debounce, Message, ScannerDriver};
 use crate::DynContext;
 use embassy_time::Timer;
 use futures_util::future::join_all;
@@ -44,10 +44,8 @@ impl<I, const NUM_IS: usize, const NUM_KEYS: usize> DirectPins<I, NUM_IS, NUM_KE
 }
 
 impl<I: InputSwitch + WaitableInputSwitch + 'static, const NUM_IS: usize, const NUM_KEYS: usize>
-    Scanner for DirectPins<I, NUM_IS, NUM_KEYS>
+    ScannerDriver<NUM_KEYS> for DirectPins<I, NUM_IS, NUM_KEYS>
 {
-    const NUM_KEYS: usize = NUM_KEYS;
-
     type Config = DirectPinsConfig;
 
     async fn run(mut self, config: Self::Config, context: DynContext) {

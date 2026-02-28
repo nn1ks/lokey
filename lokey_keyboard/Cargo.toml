@@ -36,6 +36,7 @@ external-ble = ["dep:trouble-host", "dep:usbd-hid", "dep:ssmarshal", "lokey/exte
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
 defmt = { version = "1.0.1", features = ["alloc"], optional = true }
+derive_more = { version = "2.0.1", default-features = false, features = ["error", "display"] }
 document-features = "0.2.11"
 embassy-executor = { version = "0.9.1", features = ["executor-thread", "executor-interrupt", "nightly"] }
 embassy-futures = "0.1.1"
