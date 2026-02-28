@@ -136,6 +136,13 @@ async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawne
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(
+    all(
+        feature = "external-usb",
+        any(feature = "nrf52840", feature = "rp2040")
+    ),
+    feature(impl_trait_in_assoc_type)
+)]
 
 pub mod external;
 pub mod internal;
