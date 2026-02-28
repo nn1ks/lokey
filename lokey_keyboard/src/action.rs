@@ -16,6 +16,7 @@ use portable_atomic::AtomicBool;
 use seq_macro::seq;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[display("The action container does not have a child at the specified index")]
 pub struct InvalidChildActionIndex {
     pub index: usize,

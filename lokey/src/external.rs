@@ -47,28 +47,34 @@ declare_const_for_feature_group!(
 );
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[display("The provided message type is not supported")]
 pub struct UnsupportedMessageType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[display("The message type does not match")]
 pub struct MismatchedMessageType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[display("The maximum number of receivers ({}) was reached", RECEIVER_SLOTS)]
 pub struct MaximumReceiversReached;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[display("The maximum number of observers ({}) was reached", OBSERVER_SLOTS)]
 pub struct MaximumObserversReached;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error, From)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TryReceiverError {
     UnsupportedMessageType(UnsupportedMessageType),
     MaximumReceiversReached(MaximumReceiversReached),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error, From)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TryObserverError {
     UnsupportedMessageType(UnsupportedMessageType),
     MaximumObserversReached(MaximumObserversReached),
