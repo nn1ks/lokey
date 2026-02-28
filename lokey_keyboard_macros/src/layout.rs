@@ -42,78 +42,33 @@ fn layer_actions(
 }
 
 pub fn layout(item: TokenStream) -> TokenStream {
-    let arrays = parse_macro_input!(item with Punctuated::<syn::ExprArray, syn::token::Comma>::parse_terminated);
+    let arrays = parse_macro_input!(
+        item with Punctuated::<syn::ExprArray, syn::token::Comma>::parse_terminated
+    );
     let layer_actions = layer_actions(arrays);
 
     let combined_actions = layer_actions
         .into_iter()
         .map(|actions| {
-            let v = actions
-                .into_iter()
+            let layer_indices = actions
+                .iter()
                 .enumerate()
-                .map(|(layer_index, action)| {
-                    let layer_index = u8::try_from(layer_index).unwrap();
-                    quote! {{
-                        trait ConstructAction {
-                            type Type;
-                            fn construct() -> Self::Type;
-                        }
-                        impl ConstructAction for () {
-                            type Type = impl ::lokey_keyboard::Action;
-                            fn construct() -> Self::Type {
-                                #action
-                            }
-                        }
-                        static ACTION: ::lokey::static_cell::StaticCell<<() as ConstructAction>::Type> = ::lokey::static_cell::StaticCell::new();
-                        let action = ::lokey_keyboard::DynAction::from_ref(ACTION.init(<() as ConstructAction>::construct()));
-                        (::lokey_common::layer::LayerId(#layer_index), action)
-                    }}
-                })
+                .map(|(i, _)| u8::try_from(i).unwrap())
                 .collect::<Vec<_>>();
-            let num_actions = v.len();
-            quote! {{
-                static PER_LAYER_ACTION: ::lokey::static_cell::StaticCell<::lokey_keyboard::action::PerLayer<#num_actions>> = ::lokey::static_cell::StaticCell::new();
-                let action = PER_LAYER_ACTION.init(::lokey_keyboard::action::PerLayer::new([#(#v,)*]));
-                ::lokey_keyboard::DynAction::from_ref(action)
-            }}
+            let layer_ids = quote! {
+                ::lokey_keyboard::generic_array::GenericArray::from_array(
+                    [#(::lokey_common::layer::LayerId(#layer_indices),)*]
+                )
+            };
+            let actions = quote! { (#(#actions,)*) };
+            quote! {
+                ::lokey_keyboard::action::PerLayer::new(#actions, #layer_ids)
+            }
         })
         .collect::<Vec<_>>();
-    let num_actions = combined_actions.len();
-    quote! {{
-        static LAYOUT: ::lokey::static_cell::StaticCell<::lokey_keyboard::Layout<#num_actions>> = ::lokey::static_cell::StaticCell::new();
-        LAYOUT.init(::lokey_keyboard::Layout::new([#(#combined_actions,)*]))
-    }}
-    .into()
-}
 
-pub fn static_layout(item: TokenStream) -> TokenStream {
-    let arrays = parse_macro_input!(item with Punctuated::<syn::ExprArray, syn::token::Comma>::parse_terminated);
-    let layer_actions = layer_actions(arrays);
-
-    let combined_actions = layer_actions
-        .into_iter()
-        .map(|actions| {
-            let v = actions
-                .into_iter()
-                .enumerate()
-                .map(|(layer_index, action)| {
-                    let layer_index = u8::try_from(layer_index).unwrap();
-                    quote! {{
-                        static DYN_ACTION: &'static ::lokey_keyboard::DynAction = ::lokey_keyboard::DynAction::from_ref(&#action);
-                        (::lokey_common::layer::LayerId(#layer_index), DYN_ACTION)
-                    }}
-                })
-                .collect::<Vec<_>>();
-            let num_actions = v.len();
-            quote! {{
-                static PER_LAYER_ACTION: ::lokey_keyboard::action::PerLayer<#num_actions> =
-                    ::lokey_keyboard::action::PerLayer::new([#(#v,)*]);
-                ::lokey_keyboard::DynAction::from_ref(&PER_LAYER_ACTION)
-            }}
-        })
-        .collect::<Vec<_>>();
     quote! {
-        ::lokey_keyboard::Layout::new([#(#combined_actions,)*])
+        ::lokey_keyboard::Layout::new((#(#combined_actions,)*))
     }
     .into()
 }
