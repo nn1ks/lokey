@@ -2,4 +2,5 @@
 
 - [lokey](https://docs.rs/lokey)
 - [lokey_keyboard](https://docs.rs/lokey_keyboard)
-- [lokey_common](https://docs.rs/lokey_common)
+- [lokey_layer](https://docs.rs/lokey_layer)
+- [lokey_led_array](https://docs.rs/lokey_led_array)
