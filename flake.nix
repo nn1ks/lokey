@@ -23,6 +23,8 @@
           rustToolchain
           rust-analyzer
           cargo-expand
+          cargo-depgraph
+          graphviz
           probe-rs-tools
           libusb1
           libusb1.dev
