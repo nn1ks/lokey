@@ -2,8 +2,7 @@ use super::ExternalMessage;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::mutex::Mutex;
 use generic_array::GenericArray;
-use lokey::external::MessageServiceRegistry;
-use lokey::external::ble::{InitMessageService, ServiceUuid, TxMessage, TxMessageService};
+use lokey::external::ble::{InitMessageService, TxMessage, TxMessageService};
 use lokey::util::error;
 use trouble_host::prelude::*;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
@@ -14,13 +13,15 @@ impl TxMessage for ExternalMessage {
     const ATTRIBUTE_COUNT: usize = HidService::ATTRIBUTE_COUNT;
     const CCCD_COUNT: usize = HidService::CCCD_COUNT;
 
-    type LEN_SERVICE_UUIDS = typenum::U1;
+    type LenServiceUuids16 = typenum::U1;
+    type LenServiceUuids128 = typenum::U0;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
-        [ServiceUuid::Uuid16(
-            service::HUMAN_INTERFACE_DEVICE.to_le_bytes(),
-        )]
-        .into()
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16> {
+        [service::HUMAN_INTERFACE_DEVICE.to_le_bytes()].into()
+    }
+
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128> {
+        [].into()
     }
 }
 
@@ -49,25 +50,21 @@ pub struct ExternalMessageService {
 
 impl InitMessageService for ExternalMessageService {
     fn init<'a, const ATT_MAX: usize>(
-        registry: &mut MessageServiceRegistry<'a>,
         attribute_table: &mut AttributeTable<'static, NoopRawMutex, ATT_MAX>,
-    ) {
-        if !registry.contains::<Self>() {
-            let hid_service = HidService::new(attribute_table);
-            let message_service = Self {
-                hid_service,
-                keyboard_report: Mutex::new(KeyboardReport::default()),
-            };
-            let _ = registry.insert(message_service);
+    ) -> Self {
+        let hid_service = HidService::new(attribute_table);
+        Self {
+            hid_service,
+            keyboard_report: Mutex::new(KeyboardReport::default()),
         }
     }
 }
 
 impl TxMessageService<ExternalMessage> for ExternalMessageService {
-    async fn send(
+    async fn send<'stack, 'server>(
         &self,
         message: ExternalMessage,
-        connection: &GattConnection<'static, 'static, DefaultPacketPool>,
+        connection: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) {
         let mut keyboard_report = self.keyboard_report.lock().await;
         message.update_keyboard_report(&mut keyboard_report);

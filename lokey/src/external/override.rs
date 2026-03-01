@@ -1,17 +1,67 @@
-use super::Message;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use core::marker::PhantomData;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 
-pub struct MessageSender {
-    pub(super) messages: Vec<Box<dyn Message>>,
+pub trait Override {
+    type TxMessage;
+    fn override_message(
+        &mut self,
+        message: Self::TxMessage,
+        sender: &MessageSender<Self::TxMessage>,
+    ) -> impl Future<Output = ()>;
 }
 
-impl MessageSender {
-    pub fn send(&mut self, message: Box<dyn Message>) {
-        self.messages.push(message);
+#[derive(Debug)]
+pub(super) enum Message<TxMessage> {
+    End,
+    TxMessage(TxMessage),
+}
+
+#[derive(Debug)]
+pub struct MessageSender<TxMessage> {
+    channel: Channel<CriticalSectionRawMutex, Message<TxMessage>, 1>,
+}
+
+impl<TxMessage> MessageSender<TxMessage> {
+    pub(super) fn new() -> Self {
+        Self {
+            channel: Channel::new(),
+        }
+    }
+
+    pub(super) async fn receive(&self) -> Message<TxMessage> {
+        self.channel.receive().await
+    }
+
+    pub(super) async fn send_end(&self) {
+        self.channel.send(Message::End).await;
+    }
+
+    pub async fn send(&self, message: TxMessage) {
+        self.channel.send(Message::TxMessage(message)).await;
     }
 }
 
-pub trait Override {
-    fn override_message(&mut self, message: Box<dyn Message>, sender: &mut MessageSender);
+#[derive(Debug, Default)]
+pub struct IdentityOverride<TxMessage> {
+    phantom: PhantomData<TxMessage>,
+}
+
+impl<TxMessage> IdentityOverride<TxMessage> {
+    pub const fn new() -> Self {
+        Self {
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<TxMessage> Override for IdentityOverride<TxMessage> {
+    type TxMessage = TxMessage;
+    async fn override_message(
+        &mut self,
+        message: Self::TxMessage,
+        sender: &MessageSender<Self::TxMessage>,
+    ) {
+        sender.send(message).await
+    }
 }

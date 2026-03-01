@@ -1,24 +1,24 @@
+use crate::external::r#override::MessageSender;
 use crate::external::{
-    self, DynTransport, Message, MessageSender, Override, TryFromMessage, UnsupportedMessageType,
+    self, MaximumObserversReached, MaximumReceiversReached, Message, MismatchedMessageType,
+    OBSERVER_SLOTS, RECEIVER_SLOTS, TryFromMessage, TryReceiverError, UnsupportedMessageType,
 };
-use crate::util::error;
-use crate::util::pubsub::{PubSubChannel, Subscriber};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use crate::util::unwrap;
 use core::any::Any;
-use core::cell::RefCell;
 use core::marker::PhantomData;
-use embassy_sync::blocking_mutex::Mutex;
+use embassy_futures::join::{join, join3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel;
+use embassy_sync::pubsub::{PubSubChannel, Subscriber, WaitResult};
 
 pub struct Channel<Transport>
 where
     Transport: external::Transport,
 {
     transport: Transport,
-    overrides: Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
-    tx_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
-    rx_channel: PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
+    tx_raw_channel: channel::Channel<CriticalSectionRawMutex, Transport::TxMessage, 1>,
+    tx_channel: PubSubChannel<CriticalSectionRawMutex, Transport::TxMessage, 1, OBSERVER_SLOTS, 1>,
+    rx_channel: PubSubChannel<CriticalSectionRawMutex, Transport::RxMessage, 1, RECEIVER_SLOTS, 1>,
 }
 
 impl<Transport> Channel<Transport>
@@ -29,14 +29,58 @@ where
     pub fn new(transport: Transport) -> Self {
         Self {
             transport,
-            overrides: Mutex::new(RefCell::new(Vec::new())),
+            tx_raw_channel: channel::Channel::new(),
             tx_channel: PubSubChannel::new(),
             rx_channel: PubSubChannel::new(),
         }
     }
 
-    pub async fn run(&self) {
-        self.transport.run().await;
+    pub async fn run<Override>(&self, mut message_override: Override)
+    where
+        Override: external::Override,
+        Override::TxMessage: Into<Transport::TxMessage> + TryFromMessage<Transport::TxMessage>,
+    {
+        let handle_messages = async {
+            let publisher = unwrap!(self.rx_channel.publisher());
+            loop {
+                let message = self.transport.receive().await;
+                publisher.publish(message).await;
+            }
+        };
+        let send_messages = async {
+            let publisher = unwrap!(self.tx_channel.publisher());
+            loop {
+                let message = self.tx_raw_channel.receive().await;
+                match Override::TxMessage::try_from_message(message.clone()) {
+                    Ok(override_message) => {
+                        let message_sender = MessageSender::new();
+                        let override_fut = async {
+                            message_override
+                                .override_message(override_message, &message_sender)
+                                .await;
+                            message_sender.send_end().await;
+                        };
+                        let recv_fut = async {
+                            loop {
+                                let message = match message_sender.receive().await {
+                                    external::r#override::Message::End => break,
+                                    external::r#override::Message::TxMessage(v) => v,
+                                };
+                                let message = message.into();
+                                self.transport.send(message.clone()).await;
+                                publisher.publish(message).await;
+                            }
+                        };
+                        join(override_fut, recv_fut).await;
+                    }
+                    Err(MismatchedMessageType) => {
+                        self.transport.send(message.clone()).await;
+                        publisher.publish(message).await;
+                    }
+                }
+            }
+        };
+        join3(handle_messages, send_messages, self.transport.run()).await;
     }
 
     /// Converts this channel into a dynamic one.
@@ -45,156 +89,230 @@ where
     /// generic parameters.
     pub fn as_dyn_ref(&self) -> DynChannelRef<'_> {
         DynChannelRef {
-            transport: DynTransport::from_ref(&self.transport),
-            overrides: &self.overrides,
-            tx_channel: &self.tx_channel,
+            phantom: PhantomData,
         }
     }
 
-    pub async fn add_override<O: Override + 'static>(&self, message_override: O) {
-        self.overrides
-            .lock(|v| v.borrow_mut().push(Box::new(message_override)));
-    }
-
-    pub fn send<M>(&self, message: M)
+    pub async fn send<M>(&self, message: M)
     where
         M: Into<Transport::TxMessage>,
     {
-        self.try_send_dyn(Box::new(message.into()));
+        self.tx_raw_channel.send(message.into()).await;
     }
 
-    pub fn try_send<M>(&self, message: M)
+    pub async fn try_send<M>(&self, message: M) -> Result<(), UnsupportedMessageType>
     where
         M: Message,
     {
-        self.as_dyn_ref().try_send(message)
+        let any: &dyn Any = &message;
+        let message = any
+            .downcast_ref::<Transport::TxMessage>()
+            .ok_or(UnsupportedMessageType)?;
+        self.tx_raw_channel.send(message.clone()).await;
+        Ok(())
     }
 
-    pub fn try_send_dyn(&self, message: Box<dyn Message>) {
-        self.as_dyn_ref().try_send_dyn(message)
-    }
-
-    pub fn any_send_listener(&self) -> Subscriber<'_, CriticalSectionRawMutex, Box<dyn Message>> {
-        self.tx_channel.subscriber()
-    }
-
-    pub fn send_listener<M>(&self) -> Receiver<'_, M>
+    pub fn receiver<M>(
+        &self,
+    ) -> Result<Receiver<'_, M, Transport::TxMessage>, MaximumReceiversReached>
     where
-        M: Into<Transport::TxMessage>,
+        M: TryFromMessage<Transport::TxMessage>,
     {
-        Receiver {
-            subscriber: self.tx_channel.subscriber(),
+        let subscriber = self
+            .tx_channel
+            .subscriber()
+            .map_err(|_| MaximumReceiversReached)?;
+        Ok(Receiver {
+            subscriber,
             phantom: PhantomData,
-        }
+        })
     }
 
-    pub fn try_send_listener<M>(&self) -> Receiver<'_, M>
-    where
-        M: Message,
-    {
-        Receiver {
-            subscriber: self.tx_channel.subscriber(),
-            phantom: PhantomData,
-        }
-    }
-
-    pub fn any_receiver(&self) -> Subscriber<'_, CriticalSectionRawMutex, Box<dyn Message>> {
-        self.rx_channel.subscriber()
-    }
-
-    pub fn receiver<M>(&self) -> Receiver<'_, M>
-    where
-        M: TryFromMessage<Transport::RxMessage>,
-    {
-        Receiver {
-            subscriber: self.rx_channel.subscriber(),
-            phantom: PhantomData,
-        }
-    }
-
-    pub fn try_receiver<M>(&self) -> Receiver<'_, M>
+    pub fn try_receiver<M>(
+        &self,
+    ) -> Result<TryReceiver<'_, M, Transport::TxMessage>, TryReceiverError>
     where
         M: Message,
     {
-        Receiver {
-            subscriber: self.rx_channel.subscriber(),
-            phantom: PhantomData,
+        if !Transport::TxMessage::has_inner_message::<M>() {
+            return Err(TryReceiverError::UnsupportedMessageType(
+                UnsupportedMessageType,
+            ));
         }
+        let subscriber = self
+            .tx_channel
+            .subscriber()
+            .map_err(|_| MaximumReceiversReached)?;
+        Ok(TryReceiver {
+            subscriber,
+            phantom: PhantomData,
+        })
+    }
+
+    pub fn observer<M>(
+        &self,
+    ) -> Result<Observer<'_, M, Transport::TxMessage>, MaximumObserversReached>
+    where
+        M: TryFromMessage<Transport::TxMessage>,
+    {
+        let subscriber = self
+            .tx_channel
+            .subscriber()
+            .map_err(|_| MaximumObserversReached)?;
+        Ok(Observer {
+            subscriber,
+            phantom: PhantomData,
+        })
+    }
+
+    pub fn try_observer<M>(
+        &self,
+    ) -> Result<TryObserver<'_, M, Transport::TxMessage>, MaximumObserversReached>
+    where
+        M: Message,
+    {
+        let subscriber = self
+            .tx_channel
+            .subscriber()
+            .map_err(|_| MaximumObserversReached)?;
+        Ok(TryObserver {
+            subscriber,
+            phantom: PhantomData,
+        })
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct DynChannelRef<'a> {
-    transport: &'a DynTransport,
-    overrides: &'a Mutex<CriticalSectionRawMutex, RefCell<Vec<Box<dyn Override>>>>,
-    tx_channel: &'a PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
+    phantom: PhantomData<&'a ()>,
 }
 
 impl DynChannelRef<'_> {
-    pub async fn add_override<O: Override + 'static>(&self, message_override: O) {
-        self.overrides
-            .lock(|v| v.borrow_mut().push(Box::new(message_override)));
-    }
+    // pub async fn try_send<M>(&self, message: M) -> Result<(), UnsupportedMessageType>
+    // where
+    //     M: Message,
+    // {
+    //     //
+    // }
 
-    pub fn try_send<M>(&self, message: M)
-    where
-        M: Message,
-    {
-        self.try_send_dyn(Box::new(message));
-    }
+    // pub fn try_observer<M>(&self) -> Result<Observer<'_, M>, UnsupportedMessageType>
+    // where
+    //     M: Message,
+    // {
+    //     //
+    // }
 
-    pub fn try_send_dyn(&self, message: Box<dyn Message>) {
-        self.overrides.lock(|overrides| {
-            let mut overrides = overrides.borrow_mut();
-            fn send_messages(
-                index: usize,
-                message: Box<dyn Message>,
-                overrides: &mut Vec<Box<dyn Override>>,
-                transport: &DynTransport,
-                tx_channel: &PubSubChannel<CriticalSectionRawMutex, Box<dyn Message>>,
-            ) {
-                if index == overrides.len() {
-                    tx_channel.publish(message.clone());
-                    if let Err(UnsupportedMessageType) = transport.try_send_dyn(message) {
-                        error!("Failed to send unsupported message type");
-                    }
-                } else {
-                    let mut sender = MessageSender {
-                        messages: Vec::new(),
-                    };
-                    overrides[index].override_message(message, &mut sender);
-                    for message in sender.messages {
-                        send_messages(index + 1, message, overrides, transport, tx_channel);
-                    }
-                }
+    // pub fn try_receiver<M>(&self) -> Result<Receiver<'_, M>, UnsupportedMessageType>
+    // where
+    //     M: Message,
+    // {
+    //     //
+    // }
+}
+
+pub struct Receiver<'a, Message, TxMessage>
+where
+    Message: TryFromMessage<TxMessage>,
+    TxMessage: Clone,
+{
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, TxMessage, 1, RECEIVER_SLOTS, 1>,
+    phantom: PhantomData<Message>,
+}
+
+impl<Message, TxMessage> Receiver<'_, Message, TxMessage>
+where
+    Message: TryFromMessage<TxMessage>,
+    TxMessage: Clone,
+{
+    pub async fn next(&mut self) -> Message {
+        loop {
+            let message = match self.subscriber.next_message().await {
+                WaitResult::Lagged(_) => continue,
+                WaitResult::Message(v) => v,
+            };
+            if let Ok(v) = Message::try_from_message(message) {
+                return v;
             }
-            send_messages(0, message, &mut overrides, self.transport, self.tx_channel);
-        });
-    }
-
-    pub fn try_send_listener<M>(&self) -> Receiver<'_, M>
-    where
-        M: Message,
-    {
-        Receiver {
-            subscriber: self.tx_channel.subscriber(),
-            phantom: PhantomData,
         }
     }
 }
 
-pub struct Receiver<'a, Message> {
-    subscriber: Subscriber<'a, CriticalSectionRawMutex, Box<dyn external::Message>>,
+pub struct TryReceiver<'a, Message, TxMessage>
+where
+    Message: external::Message,
+    TxMessage: external::Message,
+{
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, TxMessage, 1, RECEIVER_SLOTS, 1>,
     phantom: PhantomData<Message>,
 }
 
-impl<Message: external::Message> Receiver<'_, Message> {
+impl<Message, TxMessage> TryReceiver<'_, Message, TxMessage>
+where
+    Message: external::Message,
+    TxMessage: external::Message,
+{
     pub async fn next(&mut self) -> Message {
         loop {
-            let message = self.subscriber.next_message().await;
-            let message: Box<dyn Any> = message;
-            if let Ok(v) = message.downcast::<Message>() {
-                return *v;
+            let message = match self.subscriber.next_message().await {
+                WaitResult::Lagged(_) => continue,
+                WaitResult::Message(v) => v,
+            };
+            if let Some(inner_message) = message.inner_message::<Message>() {
+                return inner_message.clone();
+            }
+        }
+    }
+}
+
+pub struct Observer<'a, Message, TxMessage>
+where
+    Message: TryFromMessage<TxMessage>,
+    TxMessage: Clone,
+{
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, TxMessage, 1, OBSERVER_SLOTS, 1>,
+    phantom: PhantomData<Message>,
+}
+
+impl<Message, TxMessage> Observer<'_, Message, TxMessage>
+where
+    Message: TryFromMessage<TxMessage>,
+    TxMessage: Clone,
+{
+    pub async fn next(&mut self) -> Message {
+        loop {
+            let message = match self.subscriber.next_message().await {
+                WaitResult::Lagged(_) => continue,
+                WaitResult::Message(v) => v,
+            };
+            if let Ok(v) = Message::try_from_message(message) {
+                return v;
+            }
+        }
+    }
+}
+
+pub struct TryObserver<'a, Message, TxMessage>
+where
+    Message: external::Message,
+    TxMessage: external::Message,
+{
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, TxMessage, 1, OBSERVER_SLOTS, 1>,
+    phantom: PhantomData<Message>,
+}
+
+impl<Message, TxMessage> TryObserver<'_, Message, TxMessage>
+where
+    Message: external::Message,
+    TxMessage: external::Message,
+{
+    pub async fn next(&mut self) -> Message {
+        loop {
+            let message = match self.subscriber.next_message().await {
+                WaitResult::Lagged(_) => continue,
+                WaitResult::Message(v) => v,
+            };
+            if let Some(inner_message) = message.inner_message::<Message>() {
+                return inner_message.clone();
             }
         }
     }

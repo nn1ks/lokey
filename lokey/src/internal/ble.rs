@@ -1,16 +1,14 @@
+use crate::internal::MAX_MESSAGE_SIZE_WITH_TAG;
 use crate::mcu::{self, Mcu, McuBle};
-use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap};
 use crate::{Address, internal};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
-use core::future::Future;
+use arrayvec::ArrayVec;
 use core::mem::transmute;
-use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_futures::join::join;
 use embassy_futures::select::{select, select3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 use embassy_time::Timer;
 use trouble_host::gatt::{GattClient, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
@@ -18,6 +16,9 @@ use trouble_host::prelude::{
     ConnectConfig, DefaultPacketPool, FromGatt, ScanConfig, Uuid,
 };
 use trouble_host::types::gatt_traits::FromGattError;
+
+// TODO: Don't hardcode max number of peripherals
+const MAX_NUM_PERIPHERALS: usize = 10;
 
 pub enum TransportConfig {
     Central {
@@ -39,8 +40,14 @@ const MESSAGE_TO_PERIPHERAL_CHARACTERISTIC_UUID: Uuid = Uuid::Uuid128([
 ]);
 
 #[derive(Default)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-struct Message(Vec<u8>);
+struct Message(ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>);
+
+#[cfg(feature = "defmt")]
+impl defmt::Format for Message {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "Message({:?})", self.0.as_slice())
+    }
+}
 
 impl AsGatt for Message {
     const MIN_SIZE: usize = 0;
@@ -53,7 +60,9 @@ impl AsGatt for Message {
 
 impl FromGatt for Message {
     fn from_gatt(data: &[u8]) -> Result<Self, FromGattError> {
-        Ok(Message(Vec::from(data)))
+        ArrayVec::try_from(data)
+            .map(Message)
+            .map_err(|_| FromGattError::InvalidLength)
     }
 }
 
@@ -80,8 +89,8 @@ mod peripheral {
     }
 }
 
-static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
-static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message> = Channel::new();
+static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
+static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
 static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
 
 pub struct Transport<Mcu: 'static> {
@@ -108,14 +117,25 @@ impl<Mcu: mcu::Mcu + McuBle> internal::Transport for Transport<Mcu> {
         }
     }
 
-    fn send(&self, message_bytes: &[u8]) {
+    async fn send(&self, message_bytes: &[u8]) {
         if IS_CONNECTED.load(Ordering::Acquire) {
-            SEND_CHANNEL.send(Message(Vec::from(message_bytes)));
+            match ArrayVec::try_from(message_bytes) {
+                Ok(array) => SEND_CHANNEL.send(Message(array)).await,
+                Err(_) => error!("Size of message exceeds configured max message size"),
+            };
         }
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Vec<u8>> + '_>> {
-        Box::pin(async { RECV_CHANNEL.receive().await.0 })
+    async fn receive(&self, buf: &mut [u8]) -> usize {
+        let array = RECV_CHANNEL.receive().await.0;
+        if buf.len() < MAX_MESSAGE_SIZE_WITH_TAG {
+            panic!("Provided buffer is smaller than configured max message size");
+        }
+        let len = array.len();
+        for (i, value) in array.into_iter().enumerate() {
+            buf[i] = value;
+        }
+        len
     }
 }
 
@@ -130,7 +150,7 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
                 transmute::<&[u8; 6], &BdAddr>(&address.0)
             })
         })
-        .collect::<Vec<_>>();
+        .collect::<ArrayVec<_, MAX_NUM_PERIPHERALS>>();
     let config = ConnectConfig {
         scan_config: ScanConfig {
             filter_accept_list: filter_accept_list.as_slice(),
@@ -246,9 +266,16 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
                     match client.subscribe(&message_to_central, false).await {
                         Ok(mut listener) => loop {
                             let message = listener.next().await;
-                            let message = Message(Vec::from(message.as_ref()));
-                            debug!("Received message from peripheral: {}", message);
-                            RECV_CHANNEL.send(message);
+                            let message = message.as_ref();
+                            debug!("Received message from peripheral: {:?}", message);
+                            match ArrayVec::try_from(message) {
+                                Ok(array) => {
+                                    RECV_CHANNEL.send(Message(array)).await;
+                                }
+                                Err(_) => {
+                                    error!("Reiceved message exceeds configured max message size")
+                                }
+                            };
                         },
                         Err(e) => {
                             #[cfg(feature = "defmt")]
@@ -358,9 +385,20 @@ async fn peripheral<M: Mcu + McuBle>(mcu: &'static M, central_address: Address) 
                                     if write_event.handle()
                                         == server.service.message_to_peripheral.handle
                                     {
-                                        let message = Message(Vec::from(write_event.data()));
-                                        debug!("Received message from central: {}", message);
-                                        RECV_CHANNEL.send(message);
+                                        debug!(
+                                            "Received message from central: {}",
+                                            write_event.data()
+                                        );
+                                        match ArrayVec::try_from(write_event.data()) {
+                                            Ok(array) => {
+                                                RECV_CHANNEL.send(Message(array)).await;
+                                            }
+                                            Err(_) => {
+                                                error!(
+                                                    "Reiceved message exceeds configured max message size"
+                                                )
+                                            }
+                                        };
                                     }
                                 }
                                 GattEvent::Other(_) => {

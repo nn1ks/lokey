@@ -1,10 +1,9 @@
 use crate::util::panic;
-use alloc::vec;
-use alloc::vec::Vec;
+use core::marker::PhantomData;
 use core::ops::Range;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
-use embedded_storage_async::nor_flash::{MultiwriteNorFlash, NorFlash};
+use embedded_storage_async::nor_flash::MultiwriteNorFlash;
 use generic_array::{ArrayLength, GenericArray};
 use sequential_storage::cache::NoCache;
 use sequential_storage::map::{fetch_item, remove_item, store_item};
@@ -79,47 +78,53 @@ impl<E> Error<E> {
     }
 }
 
-trait NorFlashExt {
-    /// The largest of the write and read word size
-    const WORD_SIZE: usize;
+#[repr(C)]
+struct Buffer<E: Entry, WordSize: ArrayLength> {
+    buf1: GenericArray<u8, E::Size>,
+    buf2: [u8; ENTRY_TAG_SIZE],
+    buf3: GenericArray<u8, WordSize>,
 }
 
-impl<F: NorFlash> NorFlashExt for F {
-    const WORD_SIZE: usize = if Self::WRITE_SIZE > Self::READ_SIZE {
-        Self::WRITE_SIZE
-    } else {
-        Self::READ_SIZE
-    };
+impl<E: Entry, WordSize: ArrayLength> Buffer<E, WordSize> {
+    fn new() -> Self {
+        Self {
+            buf1: GenericArray::default(),
+            buf2: [0; _],
+            buf3: GenericArray::default(),
+        }
+    }
+
+    unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
+        let ptr = self as *mut Self as *mut u8;
+        unsafe {
+            core::slice::from_raw_parts_mut(ptr, E::Size::USIZE + ENTRY_TAG_SIZE + WordSize::USIZE)
+        }
+    }
 }
 
-const fn round_up_to_word_size<F: NorFlash>(value: usize) -> usize {
-    let remainder = value % F::WORD_SIZE;
-    value + F::WORD_SIZE - remainder
-}
-
-pub struct Storage<Flash> {
+pub struct Storage<Flash, WordSize: ArrayLength, EraseSize: ArrayLength> {
     flash: Mutex<CriticalSectionRawMutex, Flash>,
     flash_range: Range<u32>,
+    phantom: PhantomData<(WordSize, EraseSize)>,
 }
 
-impl<Flash: MultiwriteNorFlash> Storage<Flash> {
+impl<Flash: MultiwriteNorFlash, WordSize: ArrayLength, EraseSize: ArrayLength>
+    Storage<Flash, WordSize, EraseSize>
+{
     pub fn new(flash: Flash, flash_range: Range<u32>) -> Self {
         Self {
             flash: Mutex::new(flash),
             flash_range,
+            phantom: PhantomData,
         }
-    }
-
-    fn create_buffer<E: Entry>() -> Vec<u8> {
-        let buf_len = round_up_to_word_size::<Flash>(E::Size::USIZE + ENTRY_TAG_SIZE);
-        vec![0; buf_len]
     }
 
     pub async fn remove<E: Entry>(
         &self,
         tag_params: E::TagParams,
     ) -> Result<(), Error<Flash::Error>> {
-        let mut buf = Self::create_buffer::<E>();
+        let mut buf = GenericArray::<u8, EraseSize>::default();
+
         remove_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
@@ -136,13 +141,16 @@ impl<Flash: MultiwriteNorFlash> Storage<Flash> {
         tag_params: E::TagParams,
         entry: &E,
     ) -> Result<(), Error<Flash::Error>> {
-        let mut buf = Self::create_buffer::<E>();
+        let mut buf = Buffer::<E, WordSize>::new();
+        let buf = unsafe { buf.as_mut_slice() };
+
         let value_bytes = entry.to_bytes();
+
         store_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
             &mut NoCache::new(),
-            &mut buf,
+            buf,
             &E::tag(tag_params),
             &value_bytes.as_ref(),
         )
@@ -154,16 +162,19 @@ impl<Flash: MultiwriteNorFlash> Storage<Flash> {
         &self,
         tag_params: E::TagParams,
     ) -> Result<Option<E>, Error<Flash::Error>> {
-        let mut buf = Self::create_buffer::<E>();
+        let mut buf = Buffer::<E, WordSize>::new();
+        let buf = unsafe { buf.as_mut_slice() };
+
         let data: Option<&[u8]> = fetch_item(
             &mut *self.flash.lock().await,
             self.flash_range.clone(),
             &mut NoCache::new(),
-            &mut buf,
+            buf,
             &E::tag(tag_params),
         )
         .await
         .map_err(Error::from_sequential_storage)?;
+
         Ok(data.and_then(|data| {
             let data = GenericArray::try_from_slice(data).unwrap();
             E::from_bytes(data)

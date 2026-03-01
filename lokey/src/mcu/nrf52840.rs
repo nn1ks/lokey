@@ -1,8 +1,7 @@
-pub mod pwm;
 #[cfg(feature = "external-usb")]
 mod usb;
 
-use super::{HeapSize, Mcu, McuInit, McuStorage, Storage};
+use super::{Mcu, McuInit, McuStorage, Storage};
 use crate::util::unwrap;
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
@@ -24,6 +23,9 @@ use {
     trouble_host::prelude::{AddrKind, BdAddr},
     trouble_host::{HostResources, Stack},
 };
+
+type WordSize = typenum::U4;
+type EraseSize = typenum::U4096;
 
 pub struct Config {
     pub storage_flash_range: Range<u32>,
@@ -77,7 +79,7 @@ fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
 }
 
 pub struct Nrf52840 {
-    storage: Storage<Flash<'static>>,
+    storage: Storage<Flash<'static>, WordSize, EraseSize>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
     #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
     ble_stack: Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
@@ -172,13 +174,10 @@ impl McuInit for Nrf52840 {
 
 impl McuStorage for Nrf52840 {
     type Flash = Flash<'static>;
+    type WordSize = WordSize;
+    type EraseSize = EraseSize;
 
-    fn storage(&self) -> &Storage<Flash<'static>> {
+    fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
         &self.storage
     }
-}
-
-impl HeapSize for Nrf52840 {
-    // The nRF52840 has 256kB of RAM
-    const DEFAULT_HEAP_SIZE: usize = 64 * 1024; // 64kB
 }

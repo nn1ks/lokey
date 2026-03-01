@@ -1,4 +1,3 @@
-use crate::external::message_service::MessageServiceRegistry;
 use crate::external::{Message, NoMessage};
 use core::any::Any;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
@@ -6,17 +5,16 @@ use trouble_host::gatt::{GattConnection, WriteEvent};
 use trouble_host::prelude::{AttributeTable, DefaultPacketPool};
 
 pub trait InitMessageService {
-    fn init<'a, const ATT_MAX: usize>(
-        registry: &mut MessageServiceRegistry<'a>,
+    fn init<const ATT_MAX: usize>(
         attribute_table: &mut AttributeTable<'static, NoopRawMutex, ATT_MAX>,
-    );
+    ) -> Self;
 }
 
 pub trait TxMessageService<T: Message>: Any {
-    fn send(
+    fn send<'stack, 'server>(
         &self,
         message: T,
-        connection: &GattConnection<'static, 'static, DefaultPacketPool>,
+        connection: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) -> impl Future<Output = ()>;
 }
 
@@ -29,17 +27,16 @@ pub trait RxMessageService<T: Message>: Any {
 
 impl InitMessageService for () {
     fn init<'a, const ATT_MAX: usize>(
-        _: &mut MessageServiceRegistry<'a>,
         _: &mut AttributeTable<'static, NoopRawMutex, ATT_MAX>,
-    ) {
+    ) -> Self {
     }
 }
 
 impl TxMessageService<NoMessage> for () {
-    async fn send(
+    async fn send<'stack, 'server>(
         &self,
         message: NoMessage,
-        _: &GattConnection<'static, 'static, DefaultPacketPool>,
+        _: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) {
         match message {}
     }

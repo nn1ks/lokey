@@ -73,9 +73,45 @@ rp2040 = [
   "embassy-rp/rp2040",
 ]
 
+max-internal-message-size-8 = []
+max-internal-message-size-16 = []
+max-internal-message-size-32 = []
+max-internal-message-size-64 = []
+max-internal-message-size-128 = []
+max-internal-message-size-256 = []
+max-internal-message-size-512 = []
+max-internal-message-size-1024 = []
+
+internal-receiver-slots-8 = []
+internal-receiver-slots-16 = []
+internal-receiver-slots-24 = []
+internal-receiver-slots-32 = []
+internal-receiver-slots-40 = []
+internal-receiver-slots-48 = []
+internal-receiver-slots-56 = []
+internal-receiver-slots-64 = []
+
+external-receiver-slots-8 = []
+external-receiver-slots-16 = []
+external-receiver-slots-24 = []
+external-receiver-slots-32 = []
+external-receiver-slots-40 = []
+external-receiver-slots-48 = []
+external-receiver-slots-56 = []
+external-receiver-slots-64 = []
+
+external-observer-slots-8 = []
+external-observer-slots-16 = []
+external-observer-slots-24 = []
+external-observer-slots-32 = []
+external-observer-slots-40 = []
+external-observer-slots-48 = []
+external-observer-slots-56 = []
+external-observer-slots-64 = []
+
+
 [dependencies]
-bitcode = { git = "https://github.com/nn1ks/bitcode", branch = "fix-arc-impl", default-features = false, features = ["derive"] }
-defmt = { version = "1.0.1", features = ["alloc"], optional = true }
+defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 dyn-clone = "1.0.20"
 embassy-futures = "0.1.1"
@@ -84,18 +120,16 @@ embassy-rp = { version = "0.8.0", features = ["critical-section-impl", "time-dri
 embassy-sync = "0.7.2"
 embassy-time = "0.5.0"
 embassy-usb = { version = "0.5.1", features = ["usbd-hid"], optional = true }
-embedded-alloc = "0.6.0"
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embedded-storage-async = "0.4.1"
-futures-util = { version = "0.3.30", default-features = false, features = ["alloc", "portable-atomic"] }
-generic-array = "1.0.0"
+futures-util = { version = "0.3.30", default-features = false, features = ["portable-atomic"] }
+generic-array = "1.3.4"
 arrayvec = { version = "0.7.6", default-features = false }
 lokey_macros = { path = "../lokey_macros", version = "0.0.1", optional = true }
 nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c3653af73b511133c2f8231f33eb0696f4", features = ["critical-section-impl"], optional = true }
 nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c3653af73b511133c2f8231f33eb0696f4", features = ["central", "peripheral"], optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
-portable-atomic-util = { version = "0.2.0", features = ["alloc"] }
 rand_chacha = { version = "0.3.1", default-features = false, optional = true }
 seq-macro = "0.3.6"
 sequential-storage = "5.0.1"
@@ -104,6 +138,7 @@ trouble-host = { version = "0.5", features = ["security"], optional = true }
 typenum = "1.17.0"
 typeid = "1.0.3"
 usbd-hid = { version = "0.8.2", optional = true }
+derive_more = { version = "2.0.1", default-features = false, features = ["display", "error", "from"] }
 
 [dev-dependencies]
 cortex-m-rt = "0.7.0"

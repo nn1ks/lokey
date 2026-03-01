@@ -1,8 +1,6 @@
 use crate::external::NoMessage;
 use crate::{Address, external, internal, mcu};
-use alloc::boxed::Box;
 use core::marker::PhantomData;
-use core::pin::Pin;
 
 pub struct TransportConfig;
 
@@ -29,9 +27,9 @@ impl<Mcu: mcu::Mcu> external::Transport for Transport<Mcu> {
 
     async fn run(&self) {}
 
-    fn send(&self, _: Self::TxMessage) {}
+    async fn send(&self, _: Self::TxMessage) {}
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
-        Box::pin(core::future::pending())
+    async fn receive(&self) -> Self::RxMessage {
+        core::future::pending().await
     }
 }

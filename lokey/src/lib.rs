@@ -4,6 +4,63 @@
 //!
 #![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
 //!
+//! #### Resource configuration
+//!
+//! <ul>
+//! <li>
+//!     <span class="stab portability"><code>max-internal-message-size-*</code></span>
+//!     — Sets the maximum size of internal messages in bytes where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>32</code>,
+//!     <code>64</code>,
+//!     <code>128</code>,
+//!     <code>256</code>,
+//!     <code>512</code>,
+//!     <code>1024</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! <li>
+//!     <span class="stab portability"><code>internal-receiver-slots-*</code></span>
+//!     — Sets the number of slots for receivers of internal messages where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>24</code>,
+//!     <code>32</code>,
+//!     <code>40</code>,
+//!     <code>48</code>,
+//!     <code>56</code>,
+//!     <code>64</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! <li>
+//!     <span class="stab portability"><code>external-receiver-slots-*</code></span>
+//!     — Sets the number of slots for receivers of external messages where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>24</code>,
+//!     <code>32</code>,
+//!     <code>40</code>,
+//!     <code>48</code>,
+//!     <code>56</code>,
+//!     <code>64</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! <li>
+//!     <span class="stab portability"><code>external-observer-slots-*</code></span>
+//!     — Sets the number of slots for observers of external messages where <code>*</code> must be one of the following values:
+//!     <code>8</code>,
+//!     <code>16</code>,
+//!     <code>24</code>,
+//!     <code>32</code>,
+//!     <code>40</code>,
+//!     <code>48</code>,
+//!     <code>56</code>,
+//!     <code>64</code>.
+//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//! </li>
+//! </ul>
+//!
 #![cfg_attr(
     feature = "macros",
     doc = "
@@ -79,9 +136,13 @@ async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawne
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![feature(impl_trait_in_assoc_type)]
-
-extern crate alloc;
+#![cfg_attr(
+    all(
+        feature = "external-usb",
+        any(feature = "nrf52840", feature = "rp2040")
+    ),
+    feature(impl_trait_in_assoc_type)
+)]
 
 pub mod external;
 pub mod internal;
@@ -89,17 +150,19 @@ pub mod mcu;
 mod state;
 pub mod util;
 
-use bitcode::{Decode, Encode};
 use core::future::Future;
-#[doc(hidden)]
-pub use embedded_alloc;
 #[cfg(feature = "macros")]
 pub use lokey_macros::{State, device};
 pub use state::{DynState, State, StateContainer};
 #[doc(hidden)]
 pub use static_cell;
 
-pub struct Context<D: Device, T: Transports<D::Mcu>, S: StateContainer> {
+pub struct Context<D, T, S>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
     pub address: Address,
     pub mcu: &'static D::Mcu,
     pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
@@ -107,7 +170,12 @@ pub struct Context<D: Device, T: Transports<D::Mcu>, S: StateContainer> {
     pub state: &'static S,
 }
 
-impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Context<D, T, S> {
+impl<D, T, S> Context<D, T, S>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
     pub fn as_dyn(&self) -> DynContext {
         let mcu = self.mcu;
         DynContext {
@@ -128,13 +196,24 @@ impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Context<D, T, S> {
     }
 }
 
-impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Clone for Context<D, T, S> {
+impl<D, T, S> Clone for Context<D, T, S>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<D: Device, T: Transports<D::Mcu>, S: StateContainer> Copy for Context<D, T, S> {}
+impl<D, T, S> Copy for Context<D, T, S>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
+}
 
 /// A dynamic dispatch version of [`Context`].
 #[derive(Clone, Copy)]
@@ -147,7 +226,7 @@ pub struct DynContext {
 }
 
 /// A random static address for a device.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Encode, Decode)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Address(pub [u8; 6]);
 

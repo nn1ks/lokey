@@ -1,10 +1,15 @@
-use super::{Debounce, Message, Scanner};
+use super::{Debounce, Message, ScannerDriver};
 use crate::DynContext;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use embassy_time::{Duration, Instant, Timer};
+use lokey::Component;
 use lokey::util::error;
 use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
+
+/// Size of the debounce buffer. This limits the number of key state changes that can be tracked
+/// simultaneously.
+// TODO: Make configurable
+const DEBOUNCE_BUFFER_SIZE: usize = 64;
 
 /// Configuration for the [`Matrix`] scanner.
 #[derive(Clone, Default)]
@@ -89,10 +94,18 @@ impl<
     const NUM_IS: usize,
     const NUM_OS: usize,
     const NUM_KEYS: usize,
-> Scanner for Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
+> Component for Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
 {
-    const NUM_KEYS: usize = NUM_KEYS;
+}
 
+impl<
+    I: InputSwitch + WaitableInputSwitch + 'static,
+    O: OutputSwitch + 'static,
+    const NUM_IS: usize,
+    const NUM_OS: usize,
+    const NUM_KEYS: usize,
+> ScannerDriver<NUM_KEYS> for Matrix<I, O, NUM_IS, NUM_OS, NUM_KEYS>
+{
     type Config = MatrixConfig;
 
     async fn run(mut self, config: Self::Config, context: DynContext) {
@@ -108,27 +121,28 @@ impl<
         }
 
         let mut states = [[false; NUM_IS]; NUM_OS];
-        let mut timeouts = Vec::<(u16, Instant)>::new();
-        let mut defers = Vec::<(u16, Instant, bool)>::new();
+        let mut timeouts = ArrayVec::<(u16, Instant), DEBOUNCE_BUFFER_SIZE>::new();
+        let mut defers = ArrayVec::<(u16, Instant, bool), DEBOUNCE_BUFFER_SIZE>::new();
         loop {
             for output_switch in &mut self.output_switches {
                 if output_switch.on().is_err() {
                     error!("failed to turn output pin on");
                 }
             }
-            futures_util::future::select_all(self.input_switches.iter_mut().map(|input_switch| {
-                Box::pin(async {
-                    if input_switch.wait_for_active().await.is_err() {
-                        error!("failed to get active status of pin");
-                    }
-                })
-            }))
-            .await;
+
+            let input_switches_futures = self.input_switches.each_mut().map(|input_switch| async {
+                if input_switch.wait_for_active().await.is_err() {
+                    error!("failed to get active status of pin");
+                }
+            });
+            embassy_futures::select::select_array(input_switches_futures).await;
+
             for output_switch in self.output_switches.iter_mut() {
                 if output_switch.off().is_err() {
                     error!("failed to turn output pin on");
                 }
             }
+
             loop {
                 let mut any_active = false;
                 for (i, output_switch) in self.output_switches.iter_mut().enumerate() {
@@ -165,6 +179,10 @@ impl<
                                 }
                                 timeouts.remove(timeout_index);
                             }
+                            if timeouts.is_full() {
+                                error!("timeouts buffer overflow, dropping oldest event");
+                                timeouts.remove(0);
+                            }
                             timeouts.push((key_index, Instant::now()));
                         }
                         if let Some(defer_index) =
@@ -181,14 +199,22 @@ impl<
                             if Instant::now().duration_since(last_change) > defer_duration {
                                 defers.remove(defer_index);
                                 if was_active {
-                                    context.internal_channel.send(Message::Press { key_index })
+                                    context
+                                        .internal_channel
+                                        .send(Message::Press { key_index })
+                                        .await;
                                 } else {
                                     context
                                         .internal_channel
                                         .send(Message::Release { key_index })
+                                        .await;
                                 }
                             }
                         } else if is_active != states[i][j] {
+                            if defers.is_full() {
+                                error!("defer buffer overflow, dropping oldest event");
+                                defers.remove(0);
+                            }
                             defers.push((key_index, Instant::now(), is_active));
                         }
                         states[i][j] = is_active;

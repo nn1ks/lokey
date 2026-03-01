@@ -25,3 +25,4 @@ lokey_common = { path = "../../lokey_common", features = ["layer", "blink"] }
 lokey_keyboard = { path = "../../lokey_keyboard", features = ["external-usb"] }
 panic-probe = "1.0.0"
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
+typenum = "1.19.0"

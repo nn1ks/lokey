@@ -1,10 +1,12 @@
-use crate::external::message_service::MessageServiceRegistry;
 use crate::external::{Message, NoMessage};
 use embassy_usb::Builder;
+use embassy_usb::class::hid::State as HidState;
 use embassy_usb::driver::Driver;
 
 pub trait InitMessageService<'d, D: Driver<'d>> {
-    fn init<'a>(registry: &mut MessageServiceRegistry<'a>, builder: &mut Builder<'d, D>)
+    // TODO: Remove hid_state parameter as it is not needed for non-HID USB transports. The
+    //       parameter is currently added here to work around lifetime issues.
+    fn init<'a>(builder: &mut Builder<'d, D>, hid_state: &'d mut HidState<'d>) -> Self
     where
         'd: 'a,
         D: 'a;
@@ -19,7 +21,7 @@ pub trait RxMessageService<T: Message> {
 }
 
 impl<'d, D: Driver<'d>> InitMessageService<'d, D> for () {
-    fn init<'a>(_: &mut MessageServiceRegistry<'a>, _: &mut Builder<'d, D>)
+    fn init<'a>(_: &mut Builder<'d, D>, _: &'d mut HidState<'d>) -> Self
     where
         'd: 'a,
         D: 'a,

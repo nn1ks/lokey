@@ -18,7 +18,7 @@ pub struct TransportConfig {
     pub model_number: Option<&'static str>,
     pub serial_number: Option<&'static str>,
     pub num_profiles: u8,
-    pub appearance: BluetoothUuid16,
+    pub appearance: &'static BluetoothUuid16,
 }
 
 impl Default for TransportConfig {
@@ -32,7 +32,7 @@ impl Default for TransportConfig {
             model_number: None,
             serial_number: None,
             num_profiles: 4,
-            appearance: appearance::UNKNOWN,
+            appearance: &appearance::UNKNOWN,
         }
     }
 }
@@ -48,11 +48,11 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 2];
+    type Size = typenum::U2;
 
     const TAG: [u8; 4] = [0x1a, 0xbe, 0x84, 0x10];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -69,7 +69,7 @@ impl internal::Message for Message {
         Some(message)
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         match self {
             Self::SelectProfile { index } => [0, *index],
             Self::SelectNextProfile => [1, 0],
@@ -79,6 +79,7 @@ impl internal::Message for Message {
             Self::ClearActive => [5, 0],
             Self::ClearAll => [6, 0],
         }
+        .into()
     }
 }
 
@@ -93,31 +94,31 @@ pub enum Event {
 }
 
 impl internal::Message for Event {
-    type Bytes = [u8; 7];
+    type Size = typenum::U7;
 
     const TAG: [u8; 4] = [0xc6, 0x7a, 0xbd, 0xb0];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
-        match bytes {
+        match bytes.into_array::<7>() {
             [0, 0, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising { scannable: false }),
             [0, 1, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising { scannable: true }),
             [1, 0, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising { scannable: false }),
             [1, 1, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising { scannable: true }),
             [2, address_bytes @ ..] => Some(Self::Connected {
-                device_address: Address(*address_bytes),
+                device_address: Address(address_bytes),
             }),
             [3, address_bytes @ ..] => Some(Self::Disconnected {
-                device_address: Address(*address_bytes),
+                device_address: Address(address_bytes),
             }),
             [4, profile_index, 0, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
-                profile_index: *profile_index,
+                profile_index,
                 changed: false,
             }),
             [4, profile_index, 1, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
-                profile_index: *profile_index,
+                profile_index,
                 changed: true,
             }),
             v => {
@@ -127,7 +128,7 @@ impl internal::Message for Event {
         }
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         fn build_with_address(tag_byte: u8, address: &Address) -> [u8; 7] {
             let mut bytes = [0; 7];
             bytes[0] = tag_byte;
@@ -147,13 +148,8 @@ impl internal::Message for Event {
                 changed,
             } => [4, *profile_index, *changed as u8, 0, 0, 0, 0],
         }
+        .into()
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ServiceUuid {
-    Uuid16([u8; 2]),
-    Uuid128([u8; 16]),
 }
 
 pub trait TxMessage: external::Message + Sized {
@@ -162,10 +158,11 @@ pub trait TxMessage: external::Message + Sized {
     const ATTRIBUTE_COUNT: usize;
     const CCCD_COUNT: usize;
 
-    #[allow(non_camel_case_types)]
-    type LEN_SERVICE_UUIDS: ArrayLength;
+    type LenServiceUuids16: ArrayLength;
+    type LenServiceUuids128: ArrayLength;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS>;
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16>;
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128>;
 }
 
 pub trait RxMessage: external::Message + Sized {
@@ -174,10 +171,11 @@ pub trait RxMessage: external::Message + Sized {
     const ATTRIBUTE_COUNT: usize;
     const CCCD_COUNT: usize;
 
-    #[allow(non_camel_case_types)]
-    type LEN_SERVICE_UUIDS: ArrayLength;
+    type LenServiceUuids16: ArrayLength;
+    type LenServiceUuids128: ArrayLength;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS>;
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16>;
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128>;
 }
 
 impl TxMessage for NoMessage {
@@ -186,9 +184,14 @@ impl TxMessage for NoMessage {
     const ATTRIBUTE_COUNT: usize = 0;
     const CCCD_COUNT: usize = 0;
 
-    type LEN_SERVICE_UUIDS = typenum::U0;
+    type LenServiceUuids16 = typenum::U0;
+    type LenServiceUuids128 = typenum::U0;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16> {
+        [].into()
+    }
+
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128> {
         [].into()
     }
 }
@@ -199,9 +202,14 @@ impl RxMessage for NoMessage {
     const ATTRIBUTE_COUNT: usize = 0;
     const CCCD_COUNT: usize = 0;
 
-    type LEN_SERVICE_UUIDS = typenum::U0;
+    type LenServiceUuids16 = typenum::U0;
+    type LenServiceUuids128 = typenum::U0;
 
-    fn service_uuids() -> GenericArray<ServiceUuid, Self::LEN_SERVICE_UUIDS> {
+    fn service_uuids_16() -> GenericArray<[u8; 2], Self::LenServiceUuids16> {
+        [].into()
+    }
+
+    fn service_uuids_128() -> GenericArray<[u8; 16], Self::LenServiceUuids128> {
         [].into()
     }
 }

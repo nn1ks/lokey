@@ -1,15 +1,12 @@
 use super::{ble, usb};
 use crate::util::{error, info};
 use crate::{Address, external, internal, mcu};
-use alloc::boxed::Box;
-use core::cell::Cell;
-use core::future::Future;
-use core::pin::Pin;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
-use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
+use generic_array::GenericArray;
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -24,11 +21,11 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 1];
+    type Size = typenum::U1;
 
     const TAG: [u8; 4] = [0x73, 0xe2, 0x8c, 0xcf];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -43,11 +40,11 @@ impl internal::Message for Message {
         Some(Self::SetActive(transport_selection))
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         match self {
             Message::SetActive(v) => match v {
-                TransportSelection::Usb => [0],
-                TransportSelection::Ble => [1],
+                TransportSelection::Usb => [0].into(),
+                TransportSelection::Ble => [1].into(),
             },
         }
     }
@@ -56,7 +53,7 @@ impl internal::Message for Message {
 pub struct Transport<Usb, Ble> {
     usb_transport: Usb,
     ble_transport: Ble,
-    active: Mutex<CriticalSectionRawMutex, Cell<TransportSelection>>,
+    active: Mutex<CriticalSectionRawMutex, TransportSelection>,
     activation_request: Signal<CriticalSectionRawMutex, ()>,
     deactivate_unused_transport: bool,
     internal_channel: internal::DynChannelRef<'static>,
@@ -96,7 +93,7 @@ where
         let ble_transport =
             Ble::create(config.to_ble_config(), mcu, address, internal_channel).await;
 
-        let active = Mutex::new(Cell::new(TransportSelection::Ble));
+        let active = Mutex::new(TransportSelection::Ble);
         let activation_request = Signal::new();
 
         Transport {
@@ -119,15 +116,18 @@ where
                     Either::Second(()) => TransportSelection::Ble,
                 };
                 info!("Setting active transport to {}", transport_selection);
-                let previous_transport_selection =
-                    self.active.lock(|v| v.replace(transport_selection));
+                let mut active = self.active.lock().await;
+                let previous_transport_selection = *active;
+                *active = transport_selection;
                 if self.deactivate_unused_transport
                     && previous_transport_selection != transport_selection
                 {
                     self.usb_transport
-                        .set_active(transport_selection == TransportSelection::Usb);
+                        .set_active(transport_selection == TransportSelection::Usb)
+                        .await;
                     self.usb_transport
-                        .set_active(transport_selection == TransportSelection::Ble);
+                        .set_active(transport_selection == TransportSelection::Ble)
+                        .await;
                 }
                 self.activation_request.signal(());
             }
@@ -139,7 +139,8 @@ where
                 let message = receiver.next().await;
                 match message {
                     Message::SetActive(channel_selection) => {
-                        self.active.lock(|v| v.replace(channel_selection));
+                        let mut active = self.active.lock().await;
+                        *active = channel_selection;
                     }
                 }
             }
@@ -148,33 +149,37 @@ where
         join(handle_activation_request, handle_internal_messages).await;
     }
 
-    fn send(&self, message: Self::TxMessage) {
-        self.active.lock(|selection| match selection.get() {
-            TransportSelection::Usb => self.usb_transport.send(message),
-            TransportSelection::Ble => self.ble_transport.send(message),
-        })
+    async fn send(&self, message: Self::TxMessage) {
+        let active = self.active.lock().await;
+        match *active {
+            TransportSelection::Usb => self.usb_transport.send(message).await,
+            TransportSelection::Ble => self.ble_transport.send(message).await,
+        }
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
-        self.active.lock(|selection| match selection.get() {
-            TransportSelection::Usb => Box::pin(self.usb_transport.receive()),
-            TransportSelection::Ble => Box::pin(self.ble_transport.receive()),
-        })
+    async fn receive(&self) -> Self::RxMessage {
+        let active = self.active.lock().await;
+        match *active {
+            TransportSelection::Usb => self.usb_transport.receive().await,
+            TransportSelection::Ble => self.ble_transport.receive().await,
+        }
     }
 
-    fn set_active(&self, value: bool) -> bool {
+    async fn set_active(&self, value: bool) -> bool {
         if value && self.deactivate_unused_transport {
-            let active = self.active.lock(|v| v.get());
+            let active = self.active.lock().await;
             let usb_supported = self
                 .usb_transport
-                .set_active(active == TransportSelection::Usb);
+                .set_active(*active == TransportSelection::Usb)
+                .await;
             let ble_supported = self
                 .ble_transport
-                .set_active(active == TransportSelection::Ble);
+                .set_active(*active == TransportSelection::Ble)
+                .await;
             usb_supported || ble_supported
         } else {
-            let usb_supported = self.usb_transport.set_active(value);
-            let ble_supported = self.ble_transport.set_active(value);
+            let usb_supported = self.usb_transport.set_active(value).await;
+            let ble_supported = self.ble_transport.set_active(value).await;
             usb_supported || ble_supported
         }
     }
@@ -185,8 +190,8 @@ where
         usb_is_active || ble_is_active
     }
 
-    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async { self.activation_request.wait().await })
+    async fn wait_for_activation_request(&self) {
+        self.activation_request.wait().await
     }
 }
 
@@ -201,7 +206,7 @@ pub struct TransportConfig {
     pub serial_number: Option<&'static str>,
     pub self_powered: bool,
     pub num_ble_profiles: u8,
-    pub appearance: BluetoothUuid16,
+    pub appearance: &'static BluetoothUuid16,
     pub deactivate_unused_transport: bool,
 }
 
@@ -218,7 +223,7 @@ impl Default for TransportConfig {
             serial_number: None,
             self_powered: false,
             num_ble_profiles: 4,
-            appearance: appearance::UNKNOWN,
+            appearance: &appearance::UNKNOWN,
             deactivate_unused_transport: true,
         }
     }

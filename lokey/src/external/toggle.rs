@@ -1,11 +1,10 @@
 use crate::util::debug;
 use crate::{Address, external, internal};
-use alloc::boxed::Box;
-use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
+use generic_array::GenericArray;
 use portable_atomic::AtomicBool;
 
 static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
@@ -29,23 +28,23 @@ impl Message {
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 7];
+    type Size = typenum::U7;
 
     const TAG: [u8; 4] = [0x16, 0xb3, 0x17, 0x8e];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
-        match bytes {
-            [0, address_bytes @ ..] => Some(Self::Activate(Address(*address_bytes))),
-            [1, address_bytes @ ..] => Some(Self::Deactivate(Address(*address_bytes))),
-            [2, address_bytes @ ..] => Some(Self::Toggle(Address(*address_bytes))),
+        match bytes.into_array::<7>() {
+            [0, address_bytes @ ..] => Some(Self::Activate(Address(address_bytes))),
+            [1, address_bytes @ ..] => Some(Self::Deactivate(Address(address_bytes))),
+            [2, address_bytes @ ..] => Some(Self::Toggle(Address(address_bytes))),
             _ => None,
         }
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         let (first_byte, address) = match self {
             Self::Activate(address) => (0, address),
             Self::Deactivate(address) => (1, address),
@@ -56,7 +55,7 @@ impl internal::Message for Message {
         for (i, byte) in address.0.iter().enumerate() {
             value[i + 1] = *byte;
         }
-        value
+        value.into()
     }
 }
 
@@ -112,7 +111,7 @@ where
     ) -> Self {
         let transport = T::create(config.transport, mcu, address, internal_channel).await;
         ACTIVE.store(config.active, Ordering::Release);
-        transport.set_active(config.active);
+        transport.set_active(config.active).await;
 
         Transport {
             transport,
@@ -142,7 +141,7 @@ where
                     }
                     Message::Toggle(_) => !ACTIVE.fetch_not(Ordering::AcqRel),
                 };
-                self.transport.set_active(is_activated);
+                self.transport.set_active(is_activated).await;
             }
         };
 
@@ -153,7 +152,7 @@ where
                 loop {
                     self.transport.wait_for_activation_request().await;
                     ACTIVE.store(true, Ordering::Release);
-                    self.transport.set_active(true);
+                    self.transport.set_active(true).await;
                     ACTIVATION_REQUEST.signal(());
                 }
             };
@@ -161,32 +160,30 @@ where
         }
     }
 
-    fn send(&self, message: Self::TxMessage) {
+    async fn send(&self, message: Self::TxMessage) {
         if ACTIVE.load(Ordering::Acquire) {
-            self.transport.send(message);
+            self.transport.send(message).await;
         }
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
-        Box::pin(self.transport.receive())
+    async fn receive(&self) -> Self::RxMessage {
+        self.transport.receive().await
     }
 
-    fn set_active(&self, value: bool) -> bool {
-        self.transport.set_active(value)
+    async fn set_active(&self, value: bool) -> bool {
+        self.transport.set_active(value).await
     }
 
     fn is_active(&self) -> bool {
         self.transport.is_active()
     }
 
-    fn wait_for_activation_request(&self) -> Pin<Box<dyn Future<Output = ()> + '_>> {
-        Box::pin(async {
-            loop {
-                ACTIVATION_REQUEST.wait().await;
-                if ACTIVE.load(Ordering::Acquire) {
-                    break;
-                }
+    async fn wait_for_activation_request(&self) {
+        loop {
+            ACTIVATION_REQUEST.wait().await;
+            if ACTIVE.load(Ordering::Acquire) {
+                break;
             }
-        })
+        }
     }
 }

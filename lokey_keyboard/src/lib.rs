@@ -4,9 +4,7 @@
 //!
 
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
-
-extern crate alloc;
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod action;
 #[cfg(feature = "external-ble")]
@@ -19,20 +17,20 @@ mod matrix;
 #[cfg(feature = "external-usb")]
 pub mod usb;
 
-pub use action::{Action, DynAction};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use action::InvalidChildActionIndex;
+pub use action::{Action, ActionContainer};
 use core::future::Future;
-use core::pin::Pin;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
-use embassy_futures::join::join;
-use embassy_futures::select::{Either, select};
-use futures_util::future::select_all;
+#[doc(hidden)]
+pub use generic_array;
+use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
-pub use key_override::KeyOverride;
-use lokey::util::{debug, error};
-use lokey::{Component, DynContext, external, internal};
+pub use key_override::{KeyOverride, KeyOverrideEntry};
+use lokey::util::{debug, error, unwrap};
+use lokey::{
+    Component, Context, Device, DynContext, StateContainer, Transports, external, internal,
+};
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -40,16 +38,10 @@ use lokey::{Component, DynContext, external, internal};
 /// the other arrays. The symbol `Transparent` means that the action at the same position from the
 /// previous layer is used or [`NoOp`](action::NoOp) if it is the first layer.
 ///
-/// This macro requires the nightly feature `impl_trait_in_assoc_type`.
-///
 /// # Example
 ///
 /// ```no_run
-#[doc = include_str!("../../doctest_setup_with_allocator")]
-/// # mod a {
-/// #![feature(impl_trait_in_assoc_type)]
-/// # }
-///
+#[doc = include_str!("../../doctest_setup")]
 /// # fn with_macro() {
 /// use lokey_common::layer::LayerId;
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
@@ -72,96 +64,91 @@ use lokey::{Component, DynContext, external, internal};
 /// # }
 ///
 ///
-/// # fn without_macro() {
 /// // The layout built with the macro is equivalent to this layout:
 ///
+/// # fn without_macro() {
 /// use lokey_common::layer::LayerId;
-/// use lokey_keyboard::{DynAction, Key, Layout};
+/// use lokey_keyboard::{Key, Layout};
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer, PerLayer};
-/// use static_cell::StaticCell;
 ///
-/// let layout = {
-///     static LAYOUT: StaticCell<Layout<3>> = StaticCell::new();
-///     LAYOUT.init(Layout::new([
-///         {
-///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
-///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
-///                 {
-///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
-///                     (LayerId(0), DynAction::from_ref(ACTION.init(KeyCode::new(Key::A))))
-///                 },
-///                 {
-///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
-///                     (LayerId(1), DynAction::from_ref(ACTION.init(KeyCode::new(Key::C))))
-///                 },
-///             ])))
-///         },
-///         {
-///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
-///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
-///                 {
-///                     static ACTION: StaticCell<HoldTap<KeyCode, KeyCode>> = StaticCell::new();
-///                     (LayerId(0), DynAction::from_ref(ACTION.init(HoldTap::new(
-///                         KeyCode::new(Key::LControl),
-///                         KeyCode::new(Key::B),
-///                     ))))
-///                 },
-///                 {
-///                     static ACTION: StaticCell<KeyCode> = StaticCell::new();
-///                     (LayerId(1), DynAction::from_ref(ACTION.init(KeyCode::new(Key::D))))
-///                 },
-///             ])))
-///         },
-///         {
-///             static PER_LAYER_ACTION: StaticCell<PerLayer<2>> = StaticCell::new();
-///             DynAction::from_ref(PER_LAYER_ACTION.init(PerLayer::new([
-///                 {
-///                     static ACTION: StaticCell<Layer> = StaticCell::new();
-///                     (LayerId(0), DynAction::from_ref(ACTION.init(Layer::new(LayerId(1)))))
-///                 },
-///                 {
-///                     static ACTION: StaticCell<Layer> = StaticCell::new();
-///                     (LayerId(1), DynAction::from_ref(ACTION.init(Layer::new(LayerId(1)))))
-///                 },
-///             ])))
-///         },
-///     ]))
-/// };
+/// let layout = Layout::new((
+///     PerLayer::new(
+///         (KeyCode::new(Key::A), KeyCode::new(Key::C)),
+///         [LayerId(0), LayerId(1)].into()
+///     ),
+///     PerLayer::new(
+///         (HoldTap::new(KeyCode::new(Key::LControl), KeyCode::new(Key::B)), KeyCode::new(Key::D)),
+///         [LayerId(0), LayerId(1)].into()
+///     ),
+///     PerLayer::new(
+///         (Layer::new(LayerId(1)), Layer::new(LayerId(1))),
+///         [LayerId(0), LayerId(1)].into()
+///     ),
+/// ));
 /// # }
 /// ```
 #[cfg(feature = "macros")]
 pub use lokey_keyboard_macros::layout;
-#[cfg(feature = "macros")]
-pub use lokey_keyboard_macros::static_layout;
 pub use matrix::{Matrix, MatrixConfig};
 
 /// The layout of the keys.
-pub struct Layout<const NUM_KEYS: usize> {
-    actions: [&'static DynAction; NUM_KEYS],
+pub struct Layout<A: ActionContainer> {
+    actions: A,
 }
 
-impl<const NUM_KEYS: usize> Layout<NUM_KEYS> {
-    pub const fn new(actions: [&'static DynAction; NUM_KEYS]) -> Self {
+impl<A: ActionContainer> Component for Layout<A> {}
+
+impl<A: ActionContainer> Layout<A> {
+    pub const fn new(actions: A) -> Self {
         Self { actions }
+    }
+
+    pub async fn run<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        let mut receiver = unwrap!(context.internal_channel.receiver::<Message>());
+        loop {
+            let message = receiver.next().await;
+            debug!("Received keys message: {}", message);
+            match message {
+                Message::Press { key_index } => {
+                    match self
+                        .actions
+                        .child_on_press(key_index as usize, context)
+                        .await
+                    {
+                        Ok(()) => (),
+                        Err(InvalidChildActionIndex { .. }) => {
+                            error!("Layout has no action at key index {}", key_index);
+                        }
+                    }
+                }
+                Message::Release { key_index } => {
+                    match self
+                        .actions
+                        .child_on_release(key_index as usize, context)
+                        .await
+                    {
+                        Ok(()) => (),
+                        Err(InvalidChildActionIndex { .. }) => {
+                            error!("Layout has no action at key index {}", key_index);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-/// The keys component.
 #[derive(Default)]
-pub struct Keys<C, const NUM_KEYS: usize> {
-    /// The layout of the keys.
-    ///
-    /// This only needs to be `Some` for central devices. For devices that are never directly
-    /// connected to the host, this field can be set to `None`.
-    pub layout: Option<&'static Layout<NUM_KEYS>>,
-    /// The configuration for a [`Scanner`].
-    pub scanner_config: C,
+pub struct Scanner<C, const NUM_KEYS: usize> {
+    config: C,
 }
 
-impl<C, const NUM_KEYS: usize> Component for Keys<C, NUM_KEYS> {}
-
-impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
-    /// Creates a new [`Keys`] component without a layout and with a default scanner configuration.
+impl<C, const NUM_KEYS: usize> Scanner<C, NUM_KEYS> {
     pub fn new() -> Self
     where
         C: Default,
@@ -169,78 +156,23 @@ impl<C, const NUM_KEYS: usize> Keys<C, NUM_KEYS> {
         Self::default()
     }
 
-    /// Sets the layout.
-    pub fn layout(mut self, value: &'static Layout<NUM_KEYS>) -> Self {
-        self.layout = Some(value);
-        self
+    pub const fn with_config(config: C) -> Self {
+        Self { config }
     }
 
-    /// Sets the scanner configuration.
-    pub fn scanner_config(mut self, value: C) -> Self {
-        self.scanner_config = value;
-        self
-    }
-
-    /// Initializes the component.
-    pub async fn run<S: Scanner<Config = C>>(self, scanner: S, context: DynContext) {
-        let scanner_future = scanner.run(self.scanner_config, context);
-
-        match self.layout {
-            None => scanner_future.await,
-            Some(layout) => {
-                let layout_future = async {
-                    let mut receiver = context.internal_channel.receiver::<Message>();
-                    let mut action_futures = Vec::<Pin<Box<dyn Future<Output = ()>>>>::new();
-                    loop {
-                        let fut1 = async {
-                            let message = receiver.next().await;
-                            debug!("Received keys message: {}", message);
-                            match message {
-                                Message::Press { key_index } => match layout
-                                    .actions
-                                    .get(key_index as usize)
-                                {
-                                    Some(action) => Some(action.on_press(context)),
-                                    None => {
-                                        error!("Layout has no action at key index {}", key_index);
-                                        None
-                                    }
-                                },
-                                Message::Release { key_index } => match layout
-                                    .actions
-                                    .get(key_index as usize)
-                                {
-                                    Some(action) => Some(action.on_release(context)),
-                                    None => {
-                                        error!("Layout has no action at key index {}", key_index);
-                                        None
-                                    }
-                                },
-                            }
-                        };
-                        let fut2 = select_all(action_futures.drain(..));
-                        match select(fut1, fut2).await {
-                            Either::First(Some(action_future)) => {
-                                action_futures.push(action_future)
-                            }
-                            Either::First(None) => {}
-                            Either::Second((_, i, remaining_action_futures)) => {
-                                drop(action_futures.remove(i));
-                                action_futures = remaining_action_futures;
-                            }
-                        }
-                    }
-                };
-                join(scanner_future, layout_future).await;
-            }
-        }
+    pub async fn run<S: ScannerDriver<NUM_KEYS, Config = C>>(
+        self,
+        scanner: S,
+        context: DynContext,
+    ) {
+        scanner.run(self.config, context).await;
     }
 }
 
+impl<C, const NUM_KEYS: usize> Component for Scanner<C, NUM_KEYS> {}
+
 /// Trait for detecting key presses by scanning pins.
-pub trait Scanner {
-    /// The number of keys that will be scanned.
-    const NUM_KEYS: usize;
+pub trait ScannerDriver<const NUM_KEYS: usize> {
     /// The configuration for this scanner.
     type Config;
     /// Runs the scanner.
@@ -260,29 +192,29 @@ pub enum Message {
 }
 
 impl internal::Message for Message {
-    type Bytes = [u8; 3];
+    type Size = typenum::U3;
 
     const TAG: [u8; 4] = [0x7f, 0xc4, 0xf7, 0xc7];
 
-    fn from_bytes(bytes: &Self::Bytes) -> Option<Self>
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
     where
         Self: Sized,
     {
-        match bytes[0] {
-            0 => Some(Message::Press {
-                key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
+        match bytes.into_array::<3>() {
+            [0, bytes @ ..] => Some(Message::Press {
+                key_index: u16::from_be_bytes(bytes),
             }),
-            1 => Some(Message::Release {
-                key_index: u16::from_be_bytes([bytes[1], bytes[2]]),
+            [1, bytes @ ..] => Some(Message::Release {
+                key_index: u16::from_be_bytes(bytes),
             }),
             v => {
-                error!("unknown tag byte: {}", v);
+                error!("Unknown tag byte: {}", v);
                 None
             }
         }
     }
 
-    fn to_bytes(&self) -> Self::Bytes {
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
         match self {
             Message::Press { key_index } => {
                 let bytes = key_index.to_be_bytes();
@@ -293,6 +225,7 @@ impl internal::Message for Message {
                 [1, bytes[0], bytes[1]]
             }
         }
+        .into()
     }
 }
 
@@ -302,7 +235,15 @@ pub enum ExternalMessage {
     KeyRelease(Key),
 }
 
-impl external::Message for ExternalMessage {}
+impl external::Message for ExternalMessage {
+    fn has_inner_message<M: external::Message>() -> bool {
+        false
+    }
+
+    fn inner_message<M: external::Message>(&self) -> Option<&M> {
+        None
+    }
+}
 
 impl ExternalMessage {
     #[cfg(any(feature = "external-usb", feature = "external-ble"))]

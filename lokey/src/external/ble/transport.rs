@@ -1,20 +1,15 @@
 use super::{Event, Message, TransportConfig};
-use crate::external::MessageServiceRegistry;
-use crate::external::ble::{
-    self, InitMessageService, RxMessageService, ServiceUuid, TxMessageService,
-};
+use crate::external::ble::{self, InitMessageService, RxMessageService, TxMessageService};
 use crate::mcu::{self, McuBle, McuStorage, storage};
-use crate::util::channel::Channel;
 use crate::util::{debug, error, info, unwrap, warn};
 use crate::{Address, external, internal};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use core::num::NonZeroU8;
-use core::pin::Pin;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
+use embassy_sync::channel::Channel;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
@@ -30,15 +25,18 @@ use trouble_host::prelude::{
 };
 use trouble_host::{BleHostError, BondInformation};
 
+// TODO: Don't hardcode maximum number of bond infos
+const MAX_NUM_BOND_INFOS: usize = 10;
+
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
 
 pub struct Transport<Mcu: 'static, TxMessages, RxMessages, const CONN_MAX: usize = 1> {
-    tx_channel: Channel<CriticalSectionRawMutex, TxMessages>,
-    rx_channel: Channel<CriticalSectionRawMutex, RxMessages>,
+    tx_channel: Channel<CriticalSectionRawMutex, TxMessages, 1>,
+    rx_channel: Channel<CriticalSectionRawMutex, RxMessages, 1>,
     name: &'static str,
     num_profiles: u8,
-    appearance: BluetoothUuid16,
+    appearance: &'static BluetoothUuid16,
     mcu: &'static Mcu,
     internal_channel: internal::DynChannelRef<'static>,
 }
@@ -77,32 +75,27 @@ where
         const ATT_MAX: usize = 50;
         const CCCD_MAX: usize = 50;
 
-        let mut table = AttributeTable::<'static, NoopRawMutex, ATT_MAX>::new();
+        let mut table = AttributeTable::<'_, NoopRawMutex, ATT_MAX>::new();
 
         let gap_config = GapConfig::Peripheral(PeripheralConfig {
             name: self.name,
-            appearance: Box::leak(Box::new(self.appearance)),
+            appearance: self.appearance,
         });
         if let Err(e) = gap_config.build(&mut table) {
             error!("Failed to set GAP config for BLE transport: {}", e);
         }
 
-        let mut message_service_registry = MessageServiceRegistry::new();
-        TxMessage::MessageService::init(&mut message_service_registry, &mut table);
-        RxMessage::MessageService::init(&mut message_service_registry, &mut table);
-        let tx_message_service =
-            unwrap!(message_service_registry.get::<TxMessage::MessageService>());
-        let rx_message_service =
-            unwrap!(message_service_registry.get::<RxMessage::MessageService>());
+        let tx_message_service = TxMessage::MessageService::init(&mut table);
+        let rx_message_service = RxMessage::MessageService::init(&mut table);
 
-        let server = Box::leak(Box::new(AttributeServer::<
-            'static,
+        let server = AttributeServer::<
+            '_,
             NoopRawMutex,
             DefaultPacketPool,
             ATT_MAX,
             CCCD_MAX,
             CONN_MAX,
-        >::new(table)));
+        >::new(table);
 
         let Some(num_profiles) = NonZeroU8::new(self.num_profiles) else {
             return;
@@ -127,24 +120,19 @@ where
         // const APPEARANCE_ADV_TYPE: u8 = 0x19;
         // const KEYBOARD_APPEARANCE: &[u8] = &[0xC1, 0x03];
 
-        let mut adv_service_uuids_16 = Vec::new();
-        let mut adv_service_uuids_128 = Vec::new();
-        for service_uuid in TxMessage::service_uuids()
-            .into_iter()
-            .chain(RxMessage::service_uuids())
-        {
-            match service_uuid {
-                ServiceUuid::Uuid16(v) => adv_service_uuids_16.push(v),
-                ServiceUuid::Uuid128(v) => adv_service_uuids_128.push(v),
-            }
-        }
+        let adv_service_uuids_16_tx = TxMessage::service_uuids_16();
+        let adv_service_uuids_128_tx = TxMessage::service_uuids_128();
+        let adv_service_uuids_16_rx = RxMessage::service_uuids_16();
+        let adv_service_uuids_128_rx = RxMessage::service_uuids_128();
 
         unwrap!(AdStructure::encode_slice(
             &[
                 AdStructure::CompleteLocalName(self.name.as_bytes()),
                 AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-                AdStructure::ServiceUuids16(&adv_service_uuids_16),
-                AdStructure::ServiceUuids128(&adv_service_uuids_128),
+                AdStructure::ServiceUuids16(&adv_service_uuids_16_tx),
+                AdStructure::ServiceUuids16(&adv_service_uuids_16_rx),
+                AdStructure::ServiceUuids128(&adv_service_uuids_128_tx),
+                AdStructure::ServiceUuids128(&adv_service_uuids_128_rx),
                 // AdStructure::Unknown {
                 //     ty: APPEARANCE_ADV_TYPE,
                 //     data: KEYBOARD_APPEARANCE,
@@ -156,7 +144,7 @@ where
         // TODO: add services to scan data
         let scan_data = [0; 31];
 
-        let mut bond_infos = Vec::new();
+        let mut bond_infos = ArrayVec::<_, MAX_NUM_BOND_INFOS>::new();
         for _ in 0..num_profiles.get() {
             // match mcu.storage().fetch::<BondInformation>(i).await {
             //     Ok(v) => bond_infos.push(v),
@@ -169,12 +157,15 @@ where
             // }
             bond_infos.push(None::<BondInformation>);
         }
-        info!("Stored bond infos: {}", bond_infos);
+        #[cfg(feature = "defmt")]
+        info!("Stored bond infos: {}", defmt::Debug2Format(&bond_infos));
+        #[cfg(not(feature = "defmt"))]
+        info!("Stored bond infos: {:?}", bond_infos);
         let bond_infos = Mutex::<CriticalSectionRawMutex, _>::new(bond_infos);
 
         let connection = RwLock::<
             CriticalSectionRawMutex,
-            Option<GattConnection<'static, 'static, DefaultPacketPool>>,
+            Option<GattConnection<'_, '_, DefaultPacketPool>>,
         >::new(None);
 
         let cancel_activation_wait = Signal::<CriticalSectionRawMutex, ()>::new();
@@ -218,7 +209,8 @@ where
 
                 info!("Starting BLE advertisement");
                 self.internal_channel
-                    .send(Event::StartedAdvertising { scannable });
+                    .send(Event::StartedAdvertising { scannable })
+                    .await;
 
                 let advertiser = match select(
                     host.peripheral.advertise(&adv_params, adv),
@@ -237,13 +229,15 @@ where
                             }
                         }
                         self.internal_channel
-                            .send(Event::StoppedAdvertising { scannable });
+                            .send(Event::StoppedAdvertising { scannable })
+                            .await;
                         continue;
                     }
                     Either::Second(()) => {
                         debug!("Cancelling advertisement");
                         self.internal_channel
-                            .send(Event::StoppedAdvertising { scannable });
+                            .send(Event::StoppedAdvertising { scannable })
+                            .await;
                         continue;
                     }
                 };
@@ -254,20 +248,23 @@ where
                         Either::First(Err(e)) => {
                             error!("Failed to accept connection: {}", e);
                             self.internal_channel
-                                .send(Event::StoppedAdvertising { scannable });
+                                .send(Event::StoppedAdvertising { scannable })
+                                .await;
                             continue;
                         }
                         Either::Second(()) => {
                             debug!("Cancelling advertisement");
                             self.internal_channel
-                                .send(Event::StoppedAdvertising { scannable });
+                                .send(Event::StoppedAdvertising { scannable })
+                                .await;
                             continue;
                         }
                     };
                 self.internal_channel
-                    .send(Event::StoppedAdvertising { scannable });
+                    .send(Event::StoppedAdvertising { scannable })
+                    .await;
                 let device_address = Address(new_connection.peer_address().into_inner());
-                let new_connection = match new_connection.with_attribute_server(server) {
+                let new_connection = match new_connection.with_attribute_server(&server) {
                     Ok(v) => v,
                     Err(e) => {
                         error!("Failed to add attribute server: {}", e);
@@ -278,7 +275,8 @@ where
 
                 info!("BLE connected");
                 self.internal_channel
-                    .send(Event::Connected { device_address });
+                    .send(Event::Connected { device_address })
+                    .await;
 
                 loop {
                     let connection = connection.read().await;
@@ -286,14 +284,16 @@ where
                     if !connection.raw().is_connected() {
                         debug!("BLE is not connected");
                         self.internal_channel
-                            .send(Event::Disconnected { device_address });
+                            .send(Event::Disconnected { device_address })
+                            .await;
                         break;
                     }
                     match connection.next().await {
                         GattConnectionEvent::Disconnected { reason } => {
                             info!("BLE disconnected (reason: {})", reason);
                             self.internal_channel
-                                .send(Event::Disconnected { device_address });
+                                .send(Event::Disconnected { device_address })
+                                .await;
                             break;
                         }
                         // TODO
@@ -344,7 +344,7 @@ where
                                     && let Some(message) =
                                         rx_message_service.receive(write_event).await
                                 {
-                                    self.rx_channel.send(message);
+                                    self.rx_channel.send(message).await;
                                 }
                                 event.accept()
                             } else {
@@ -367,7 +367,8 @@ where
                     }
                 }
                 self.internal_channel
-                    .send(Event::Disconnected { device_address });
+                    .send(Event::Disconnected { device_address })
+                    .await;
             }
         };
 
@@ -405,10 +406,12 @@ where
                                 }
                                 cancel_advertisement.signal(());
                             }
-                            self.internal_channel.send(Event::SwitchedProfile {
-                                profile_index: index,
-                                changed: is_different_profile,
-                            });
+                            self.internal_channel
+                                .send(Event::SwitchedProfile {
+                                    profile_index: index,
+                                    changed: is_different_profile,
+                                })
+                                .await;
                         }
                     }
                     Message::SelectNextProfile => {
@@ -424,10 +427,12 @@ where
                             connection.raw().disconnect();
                         }
                         cancel_advertisement.signal(());
-                        self.internal_channel.send(Event::SwitchedProfile {
-                            profile_index: new_profile_index,
-                            changed: num_profiles.get() > 1,
-                        });
+                        self.internal_channel
+                            .send(Event::SwitchedProfile {
+                                profile_index: new_profile_index,
+                                changed: num_profiles.get() > 1,
+                            })
+                            .await;
                     }
                     Message::SelectPreviousProfile => {
                         let active = active_profile_index.load(Ordering::SeqCst);
@@ -442,10 +447,12 @@ where
                             connection.raw().disconnect();
                         }
                         cancel_advertisement.signal(());
-                        self.internal_channel.send(Event::SwitchedProfile {
-                            profile_index: new_profile_index,
-                            changed: num_profiles.get() > 1,
-                        });
+                        self.internal_channel
+                            .send(Event::SwitchedProfile {
+                                profile_index: new_profile_index,
+                                changed: num_profiles.get() > 1,
+                            })
+                            .await;
                     }
                     Message::DisconnectActive => {
                         if let Some(connection) = &*connection.read().await {
@@ -538,15 +545,15 @@ where
         .await;
     }
 
-    fn send(&self, message: Self::TxMessage) {
-        self.tx_channel.send(message);
+    async fn send(&self, message: Self::TxMessage) {
+        self.tx_channel.send(message).await;
     }
 
-    fn receive(&self) -> Pin<Box<dyn Future<Output = Self::RxMessage> + '_>> {
-        Box::pin(async { self.rx_channel.receive().await })
+    async fn receive(&self) -> Self::RxMessage {
+        self.rx_channel.receive().await
     }
 
-    fn set_active(&self, value: bool) -> bool {
+    async fn set_active(&self, value: bool) -> bool {
         info!(
             "Setting active status of external BLE transport to {}",
             value

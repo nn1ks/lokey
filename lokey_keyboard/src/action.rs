@@ -1,63 +1,138 @@
 use super::{ExternalMessage, Key};
-use alloc::boxed::Box;
-use core::mem::transmute;
-use core::pin::Pin;
+use core::future::Future;
 use core::sync::atomic::Ordering;
+use derive_more::{Display, Error};
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
+use generic_array::{ArrayLength, GenericArray};
 use lokey::external::toggle;
-use lokey::util::warn;
-use lokey::{Address, DynContext};
+use lokey::util::{unwrap, warn};
+use lokey::{Address, Context, Device, StateContainer, Transports};
 use lokey_common::layer::{LayerId, LayerManager, LayerManagerEntry};
 use portable_atomic::AtomicBool;
+use seq_macro::seq;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[display("The action container does not have a child at the specified index")]
+pub struct InvalidChildActionIndex {
+    pub index: usize,
+}
+
+pub trait ActionContainer: Send + Sync + 'static {
+    type NumChildren: ArrayLength;
+
+    fn child_on_press<D, T, S>(
+        &self,
+        child_index: usize,
+        context: Context<D, T, S>,
+    ) -> impl Future<Output = Result<(), InvalidChildActionIndex>>
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer;
+
+    fn child_on_release<D, T, S>(
+        &self,
+        child_index: usize,
+        context: Context<D, T, S>,
+    ) -> impl Future<Output = Result<(), InvalidChildActionIndex>>
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer;
+}
+
+macro_rules! impl_action_container_for_tuples {
+    ($num:literal) => {
+        seq!(N in 0..=$num {
+            #(impl_action_container_for_tuples!(@ N);)*
+        });
+    };
+    (@ $num:literal) => {
+        seq!(N in 0..$num {
+            impl<#(A~N,)*> ActionContainer for (#(A~N,)*)
+            where
+                #(A~N: Action,)*
+            {
+                type NumChildren = seq!(M in $num..=$num { typenum::U~M });
+
+                async fn child_on_press<D, T, S>(
+                    &self,
+                    child_index: usize,
+                    #[allow(unused_variables)]
+                    context: Context<D, T, S>,
+                ) -> Result<(), InvalidChildActionIndex>
+                where
+                    D: Device,
+                    T: Transports<D::Mcu>,
+                    S: StateContainer,
+                {
+                    match child_index {
+                        #(N => Ok(self.N.on_press(context).await),)*
+                        _ => Err(InvalidChildActionIndex { index: child_index }),
+                    }
+                }
+
+                async fn child_on_release<D, T, S>(
+                    &self,
+                    child_index: usize,
+                    #[allow(unused_variables)]
+                    context: Context<D, T, S>,
+                ) -> Result<(), InvalidChildActionIndex>
+                where
+                    D: Device,
+                    T: Transports<D::Mcu>,
+                    S: StateContainer,
+                {
+                    match child_index {
+                        #(N => Ok(self.N.on_release(context).await),)*
+                        _ => Err(InvalidChildActionIndex { index: child_index }),
+                    }
+                }
+            }
+        });
+    };
+}
+
+impl_action_container_for_tuples!(128);
 
 pub trait Action: Send + Sync + 'static {
-    fn on_press(&'static self, context: DynContext) -> impl Future<Output = ()>;
-    fn on_release(&'static self, context: DynContext) -> impl Future<Output = ()>;
-}
+    fn on_press<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer;
 
-trait DynActionTrait: Send + Sync + 'static {
-    fn on_press(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>>;
-    fn on_release(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>>;
-}
-
-impl<T: Action> DynActionTrait for T {
-    fn on_press(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
-        Box::pin(Action::on_press(self, context))
-    }
-
-    fn on_release(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
-        Box::pin(Action::on_release(self, context))
-    }
-}
-
-#[repr(transparent)]
-pub struct DynAction(dyn DynActionTrait);
-
-impl DynAction {
-    pub const fn from_ref<T: Action>(value: &T) -> &Self {
-        let value: &dyn DynActionTrait = value;
-        unsafe { transmute(value) }
-    }
-
-    pub fn on_press(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
-        self.0.on_press(context)
-    }
-
-    pub fn on_release(&'static self, context: DynContext) -> Pin<Box<dyn Future<Output = ()>>> {
-        self.0.on_release(context)
-    }
+    fn on_release<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer;
 }
 
 #[derive(Clone, Copy)]
 pub struct NoOp;
 
 impl Action for NoOp {
-    async fn on_press(&'static self, _context: DynContext) {}
-    async fn on_release(&'static self, _context: DynContext) {}
+    async fn on_press<D, T, S>(&self, _: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+    }
+
+    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+    }
 }
 
 pub struct KeyCode {
@@ -71,16 +146,28 @@ impl KeyCode {
 }
 
 impl Action for KeyCode {
-    async fn on_press(&'static self, context: DynContext) {
-        context
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        let _ = context
             .external_channel
-            .try_send(ExternalMessage::KeyPress(self.key));
+            .try_send(ExternalMessage::KeyPress(self.key))
+            .await;
     }
 
-    async fn on_release(&'static self, context: DynContext) {
-        context
+    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        let _ = context
             .external_channel
-            .try_send(ExternalMessage::KeyRelease(self.key));
+            .try_send(ExternalMessage::KeyRelease(self.key))
+            .await;
     }
 }
 
@@ -99,7 +186,12 @@ impl Layer {
 }
 
 impl Action for Layer {
-    async fn on_press(&'static self, context: DynContext) {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         if let Some(entry) = self.layer_manager_entry.lock().await.take() {
             warn!(
                 "on_press was called again without calling on_release first for layer {}",
@@ -115,7 +207,12 @@ impl Action for Layer {
         }
     }
 
-    async fn on_release(&'static self, context: DynContext) {
+    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         if let Some(entry) = self.layer_manager_entry.lock().await.take()
             && let Some(layer_manager) = context.state.try_get::<LayerManager>()
         {
@@ -124,38 +221,50 @@ impl Action for Layer {
     }
 }
 
-pub struct PerLayer<const N: usize> {
-    actions: [(LayerId, &'static DynAction); N],
-    active_action: Mutex<CriticalSectionRawMutex, Option<&'static DynAction>>,
+pub struct PerLayer<A: ActionContainer> {
+    actions: A,
+    layer_ids: GenericArray<LayerId, A::NumChildren>,
+    active_action_index: Mutex<CriticalSectionRawMutex, Option<usize>>,
 }
 
-impl<const N: usize> PerLayer<N> {
-    pub const fn new(actions: [(LayerId, &'static DynAction); N]) -> Self {
+impl<A: ActionContainer> PerLayer<A> {
+    pub const fn new(actions: A, layer_ids: GenericArray<LayerId, A::NumChildren>) -> Self {
         Self {
             actions,
-            active_action: Mutex::new(None),
+            layer_ids,
+            active_action_index: Mutex::new(None),
         }
     }
 }
 
-impl<const N: usize> Action for PerLayer<N> {
-    async fn on_press(&'static self, context: DynContext) {
+impl<A: ActionContainer> Action for PerLayer<A> {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
             let active_layer_id = layer_manager.active().await;
-            if let Some((_, action)) = self
-                .actions
+            if let Some(index) = self
+                .layer_ids
                 .iter()
-                .find(|(layer_id, _)| *layer_id == active_layer_id)
+                .position(|layer_id| *layer_id == active_layer_id)
             {
-                action.on_press(context).await;
-                *self.active_action.lock().await = Some(*action);
+                unwrap!(self.actions.child_on_press(index, context).await);
+                *self.active_action_index.lock().await = Some(index);
             }
         }
     }
 
-    async fn on_release(&'static self, context: DynContext) {
-        if let Some(action) = &*self.active_action.lock().await {
-            action.on_release(context).await;
+    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        if let Some(index) = *self.active_action_index.lock().await {
+            unwrap!(self.actions.child_on_release(index, context).await);
         }
     }
 }
@@ -175,7 +284,12 @@ impl<A: Action> Toggle<A> {
 }
 
 impl<A: Action> Action for Toggle<A> {
-    async fn on_press(&'static self, context: DynContext) {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         let active = self.active.load(Ordering::SeqCst);
         if active {
             self.action.on_release(context).await;
@@ -185,7 +299,13 @@ impl<A: Action> Action for Toggle<A> {
         self.active.store(!active, Ordering::SeqCst);
     }
 
-    async fn on_release(&'static self, _context: DynContext) {}
+    async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+    }
 }
 
 pub struct Sticky<A> {
@@ -226,11 +346,14 @@ impl<A: Action> Sticky<A> {
 }
 
 impl<A: Action> Action for Sticky<A> {
-    async fn on_press(&'static self, context: DynContext) {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         self.is_held.store(true, Ordering::SeqCst);
-        let mut receiver = context
-            .external_channel
-            .try_send_listener::<ExternalMessage>();
+        let mut receiver = unwrap!(context.external_channel.try_observer::<ExternalMessage>());
         if !self.lazy {
             self.action.on_press(context).await;
         }
@@ -261,7 +384,12 @@ impl<A: Action> Action for Sticky<A> {
         }
     }
 
-    async fn on_release(&'static self, context: DynContext) {
+    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         self.is_held.store(false, Ordering::SeqCst);
         if !self.was_released.load(Ordering::SeqCst) {
             self.action.on_release(context).await;
@@ -269,16 +397,16 @@ impl<A: Action> Action for Sticky<A> {
     }
 }
 
-pub struct HoldTap<H, T> {
-    hold_action: H,
-    tap_action: T,
+pub struct HoldTap<Hold, Tap> {
+    hold_action: Hold,
+    tap_action: Tap,
     tapping_term: Duration,
     activated_hold: AtomicBool,
     activated_tap: Signal<CriticalSectionRawMutex, ()>,
 }
 
-impl<H: Action, T: Action> HoldTap<H, T> {
-    pub const fn new(hold_action: H, tap_action: T) -> Self {
+impl<Hold: Action, Tap: Action> HoldTap<Hold, Tap> {
+    pub const fn new(hold_action: Hold, tap_action: Tap) -> Self {
         Self {
             hold_action,
             tap_action,
@@ -295,8 +423,13 @@ impl<H: Action, T: Action> HoldTap<H, T> {
     }
 }
 
-impl<H: Action, T: Action> Action for HoldTap<H, T> {
-    async fn on_press(&'static self, context: DynContext) {
+impl<Hold: Action, Tap: Action> Action for HoldTap<Hold, Tap> {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         self.activated_hold.store(false, Ordering::SeqCst);
         self.activated_tap.reset();
         if let Either::First(_) =
@@ -307,7 +440,12 @@ impl<H: Action, T: Action> Action for HoldTap<H, T> {
         }
     }
 
-    async fn on_release(&'static self, context: DynContext) {
+    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         if self.activated_hold.load(Ordering::SeqCst) {
             self.hold_action.on_release(context).await;
         } else {
@@ -322,37 +460,73 @@ impl<H: Action, T: Action> Action for HoldTap<H, T> {
 pub struct ToggleExternalTransport(pub Address);
 
 impl Action for ToggleExternalTransport {
-    async fn on_press(&'static self, context: DynContext) {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         context
             .internal_channel
-            .send(toggle::Message::Toggle(self.0));
+            .send(toggle::Message::Toggle(self.0))
+            .await;
     }
 
-    async fn on_release(&'static self, _: DynContext) {}
+    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+    }
 }
 
 pub struct ActivateExternalTransport(pub Address);
 
 impl Action for ActivateExternalTransport {
-    async fn on_press(&'static self, context: DynContext) {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         context
             .internal_channel
-            .send(toggle::Message::Activate(self.0));
+            .send(toggle::Message::Activate(self.0))
+            .await;
     }
 
-    async fn on_release(&'static self, _: DynContext) {}
+    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+    }
 }
 
 pub struct DeactivateExternalTransport(pub Address);
 
 impl Action for DeactivateExternalTransport {
-    async fn on_press(&'static self, context: DynContext) {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
         context
             .internal_channel
-            .send(toggle::Message::Deactivate(self.0));
+            .send(toggle::Message::Deactivate(self.0))
+            .await;
     }
 
-    async fn on_release(&'static self, _: DynContext) {}
+    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+    }
 }
 
 #[cfg(feature = "external-ble")]
@@ -369,77 +543,165 @@ mod ble {
     pub struct BleDisconnectActive;
 
     impl Action for BleDisconnectActive {
-        async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::DisconnectActive);
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+            context
+                .internal_channel
+                .send(Message::DisconnectActive)
+                .await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 
     pub struct BleClear(pub u8);
 
     impl Action for BleClear {
-        async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::Clear {
-                profile_index: self.0,
-            });
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+            context
+                .internal_channel
+                .send(Message::Clear {
+                    profile_index: self.0,
+                })
+                .await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 
     pub struct BleClearActive;
 
     impl Action for BleClearActive {
-        async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::ClearActive);
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+            context.internal_channel.send(Message::ClearActive).await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 
     pub struct BleClearAll;
 
     impl Action for BleClearAll {
-        async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::ClearAll);
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+            context.internal_channel.send(Message::ClearAll).await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 
     pub struct BleSelectProfile(pub u8);
 
     impl Action for BleSelectProfile {
-        async fn on_press(&'static self, context: DynContext) {
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
             context
                 .internal_channel
-                .send(Message::SelectProfile { index: self.0 });
+                .send(Message::SelectProfile { index: self.0 })
+                .await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 
     pub struct BleNextProfile;
 
     impl Action for BleNextProfile {
-        async fn on_press(&'static self, context: DynContext) {
-            context.internal_channel.send(Message::SelectNextProfile);
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+            context
+                .internal_channel
+                .send(Message::SelectNextProfile)
+                .await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 
     pub struct BlePreviousProfile;
 
     impl Action for BlePreviousProfile {
-        async fn on_press(&'static self, context: DynContext) {
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
             context
                 .internal_channel
-                .send(Message::SelectPreviousProfile);
+                .send(Message::SelectPreviousProfile)
+                .await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 }
 
@@ -458,13 +720,25 @@ mod usb_ble {
     pub struct SwitchToUsb;
 
     impl Action for SwitchToUsb {
-        async fn on_press(&'static self, context: DynContext) {
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
             context
                 .internal_channel
-                .send(Message::SetActive(TransportSelection::Usb));
+                .send(Message::SetActive(TransportSelection::Usb))
+                .await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 
     /// Switches the active output to BLE.
@@ -474,12 +748,24 @@ mod usb_ble {
     pub struct SwitchToBle;
 
     impl Action for SwitchToBle {
-        async fn on_press(&'static self, context: DynContext) {
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
             context
                 .internal_channel
-                .send(Message::SetActive(TransportSelection::Ble));
+                .send(Message::SetActive(TransportSelection::Ble))
+                .await;
         }
 
-        async fn on_release(&'static self, _context: DynContext) {}
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: StateContainer,
+        {
+        }
     }
 }
