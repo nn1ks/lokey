@@ -27,6 +27,7 @@
           libusb1
           libusb1.dev
           libclang
+          nodejs
         ];
       in {
         # `nix develop`
