@@ -15,11 +15,11 @@ use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
     internal,
 };
-use lokey_common::blink::Blink;
-use lokey_common::layer::LayerManager;
+use lokey_blink::Blink;
 use lokey_keyboard::{
     ActionContainer, DirectPins, DirectPinsConfig, Layout, Matrix, MatrixConfig, Scanner,
 };
+use lokey_layer::LayerManager;
 use lokey_led_array::nrf52840::Pwm;
 use lokey_led_array::pwm::{Pwm as _, PwmChannel};
 use lokey_led_array::{HookBundle, LedArray};

@@ -69,40 +69,6 @@ jobs:
             cargo test -p lokey --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
-  lokey_common:
-    runs-on: ubuntu-latest
-    if: always()
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
-    env:
-      FEATURE_COMBINATIONS: ";defmt;layer blink;defmt layer blink"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.target }}"
-      - name: Print rust version
-        run: |
-          rustc --version
-          cargo --version
-      - name: Build
-        run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo build -p lokey_common --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
-      - name: Run clippy
-        run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_common --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
   lokey_keyboard:
     runs-on: ubuntu-latest
     if: always()
@@ -144,6 +110,40 @@ jobs:
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
             cargo test -p lokey_keyboard --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+  lokey_layer:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";defmt"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.target }}"
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
   examples:

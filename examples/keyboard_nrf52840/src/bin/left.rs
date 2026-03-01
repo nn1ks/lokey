@@ -7,13 +7,13 @@ use core::future::join;
 use embassy_executor::Spawner;
 use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::{Context, Device};
-use lokey_common::blink::Blink;
-use lokey_common::layer::LayerId;
+use lokey_blink::Blink;
 use lokey_keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
     ToggleExternalTransport,
 };
 use lokey_keyboard::{Key, KeyOverride, KeyOverrideEntry, MatrixConfig, Scanner, layout};
+use lokey_layer::LayerId;
 use lokey_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, LedArray};
 
 fn key_override() -> KeyOverride<2, 1> {

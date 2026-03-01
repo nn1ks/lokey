@@ -11,7 +11,7 @@ use generic_array::{ArrayLength, GenericArray};
 use lokey::external::toggle;
 use lokey::util::{unwrap, warn};
 use lokey::{Address, Context, Device, StateContainer, Transports};
-use lokey_common::layer::{LayerId, LayerManager, LayerManagerEntry};
+use lokey_layer::{LayerId, LayerManager, LayerManagerEntry};
 use portable_atomic::AtomicBool;
 use seq_macro::seq;
 

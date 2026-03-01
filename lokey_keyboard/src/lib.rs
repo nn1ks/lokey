@@ -23,7 +23,7 @@ use core::future::Future;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 #[doc(hidden)]
-pub use generic_array;
+pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
 pub use key_override::{KeyOverride, KeyOverrideEntry};
@@ -43,9 +43,9 @@ use lokey::{
 /// ```no_run
 #[doc = include_str!("../../doctest_setup")]
 /// # fn with_macro() {
-/// use lokey_common::layer::LayerId;
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
 /// use lokey_keyboard::{Key, layout};
+/// use lokey_layer::LayerId;
 ///
 /// let layout = layout!(
 ///     // Layer 0
@@ -67,9 +67,9 @@ use lokey::{
 /// // The layout built with the macro is equivalent to this layout:
 ///
 /// # fn without_macro() {
-/// use lokey_common::layer::LayerId;
 /// use lokey_keyboard::{Key, Layout};
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer, PerLayer};
+/// use lokey_layer::LayerId;
 ///
 /// let layout = Layout::new((
 ///     PerLayer::new(
@@ -89,6 +89,8 @@ use lokey::{
 /// ```
 #[cfg(feature = "macros")]
 pub use lokey_keyboard_macros::layout;
+#[doc(hidden)]
+pub use lokey_layer; // Re-exported for use in the `layout!` macro.
 pub use matrix::{Matrix, MatrixConfig};
 
 /// The layout of the keys.

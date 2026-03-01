@@ -57,7 +57,7 @@ pub fn layout(item: TokenStream) -> TokenStream {
                 .collect::<Vec<_>>();
             let layer_ids = quote! {
                 ::lokey_keyboard::generic_array::GenericArray::from_array(
-                    [#(::lokey_common::layer::LayerId(#layer_indices),)*]
+                    [#(::lokey_keyboard::lokey_layer::LayerId(#layer_indices),)*]
                 )
             };
             let actions = quote! { (#(#actions,)*) };

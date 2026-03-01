@@ -1,28 +1,14 @@
 [package]
-name = "lokey_common"
+name = "lokey_blink"
 version = "0.0.0"
 edition = "2024"
 authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
-description = "Common components for the lokey framework"
+description = "LED blink component for the lokey framework"
 readme = "../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
-
-[features]
-## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
-defmt = [
-    "dep:defmt",
-    "embassy-time/defmt",
-    "lokey/defmt",
-]
-
-## Enables types for managing layers.
-layer = []
-
-## Enables the `Blink` component.
-blink = []
 
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
@@ -31,7 +17,4 @@ document-features = "0.2.11"
 embassy-sync = "0.7.2"
 embassy-time = "0.5.0"
 embedded-hal = "1.0.0"
-lokey = { path = "../lokey" }
-
-[package.metadata.docs.rs]
-features = ["defmt", "layer", "blink", "status-led-array", "external-ble"]
+lokey = { path = "../../lokey" }

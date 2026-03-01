@@ -15,12 +15,12 @@ use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
-use lokey_common::blink::Blink;
-use lokey_common::layer::LayerManager;
+use lokey_blink::Blink;
 use lokey_keyboard::action::KeyCode;
 use lokey_keyboard::{
     ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
 };
+use lokey_layer::LayerManager;
 use panic_probe as _;
 use switch_hal::IntoSwitch;
 

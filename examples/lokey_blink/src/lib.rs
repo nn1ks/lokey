@@ -1,3 +1,6 @@
+#![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 use embassy_time::{Duration, Timer};
 use embedded_hal::digital::OutputPin;
 use lokey::Component;
