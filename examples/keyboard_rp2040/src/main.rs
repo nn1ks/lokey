@@ -100,15 +100,8 @@ impl<S: StateContainer, A: ActionContainer<NumChildren = NumKeys>> ComponentSupp
     }
 }
 
-#[global_allocator]
-static HEAP: embedded_alloc::LlffHeap = embedded_alloc::LlffHeap::empty();
-
 #[lokey::device]
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
-    unsafe {
-        embedded_alloc::init!(HEAP, 1024);
-    }
-
     let layout = layout!(
         // Layer 0
         [KeyCode::new(Key::A)],

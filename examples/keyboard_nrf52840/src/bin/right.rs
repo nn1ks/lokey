@@ -10,15 +10,8 @@ use lokey::Context;
 use lokey_common::blink::Blink;
 use lokey_keyboard::{DirectPinsConfig, Scanner};
 
-#[global_allocator]
-static HEAP: embedded_alloc::LlffHeap = embedded_alloc::LlffHeap::empty();
-
 #[lokey::device]
 async fn main(context: Context<KeyboardRight, Peripheral, DefaultState>, _spawner: Spawner) {
-    unsafe {
-        embedded_alloc::init!(HEAP, 1024);
-    }
-
     let scanner_future = context.enable(Scanner::<DirectPinsConfig, NUM_KEYS>::new());
 
     let blink_future = context.enable(Blink::new());

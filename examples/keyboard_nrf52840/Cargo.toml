@@ -21,7 +21,6 @@ embassy-executor = { version = "0.9.1", features = ["arch-cortex-m", "executor-t
 embassy-nrf = { version = "0.8.0", features = ["nrf52840"] }
 embassy-sync = "0.7.2"
 embassy-time = "0.5.0"
-embedded-alloc = "0.7.0"
 lokey = { path = "../../lokey", features = ["nrf52840", "external-usb", "external-ble", "internal-ble"] }
 lokey_common = { path = "../../lokey_common", features = ["layer", "blink"] }
 lokey_keyboard = { path = "../../lokey_keyboard", features = ["external-usb", "external-ble"] }

@@ -20,15 +20,8 @@ fn key_override() -> KeyOverride<2, 1> {
     KeyOverride::new([KeyOverrideEntry::new([Key::LShift, Key::A], Key::E)])
 }
 
-#[global_allocator]
-static HEAP: embedded_alloc::LlffHeap = embedded_alloc::LlffHeap::empty();
-
 #[lokey::device(message_override = key_override())]
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
-    unsafe {
-        embedded_alloc::init!(HEAP, 1024);
-    }
-
     context
         .state
         .layer_manager

@@ -227,7 +227,7 @@ impl<S: StateContainer, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for K
         // frequency = base clock of NRF52840 / prescaler * max_duty
         // frequency = 16MHz / 1 * 1_000 = 16kHz
         let max_duty = 1_000;
-        let pwm = Pwm::<4>::new(simple_pwm, max_duty);
+        let mut pwm = Pwm::<4>::new(simple_pwm, max_duty);
         let mut channels = pwm.split();
         let channels = channels
             .each_mut()
