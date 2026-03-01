@@ -1,10 +1,12 @@
 pub trait Pwm<const N: usize> {
-    type Channel: PwmChannel;
+    type Channel<'a>: PwmChannel
+    where
+        Self: 'a;
 
     fn max_duty(&self) -> u16;
     fn enable(&mut self);
     fn disable(&mut self);
-    fn split(self) -> [Self::Channel; N];
+    fn split<'a>(&'a mut self) -> [Self::Channel<'a>; N];
 }
 
 pub trait PwmChannel {

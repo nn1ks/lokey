@@ -2,63 +2,68 @@ use core::cell::RefCell;
 use embassy_nrf::pwm::{self, Prescaler};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use portable_atomic_util::Arc;
 
 pub struct Pwm<'d, const N: usize> {
-    pwm: pwm::SimplePwm<'d>,
+    pwm: Mutex<CriticalSectionRawMutex, RefCell<pwm::SimplePwm<'d>>>,
+    max_duty: u16,
 }
 
 impl<'d, const N: usize> Pwm<'d, N> {
     pub fn new(pwm: pwm::SimplePwm<'d>, max_duty: u16) -> Self {
         pwm.set_prescaler(Prescaler::Div1);
         pwm.set_max_duty(max_duty);
-        Self { pwm }
+        Self {
+            pwm: Mutex::new(RefCell::new(pwm)),
+            max_duty,
+        }
     }
 }
 
 impl<'d, const N: usize> crate::pwm::Pwm<N> for Pwm<'d, N> {
-    type Channel = PwmChannel<'d>;
+    type Channel<'a>
+        = PwmChannel<'a, 'd>
+    where
+        Self: 'a;
 
     fn max_duty(&self) -> u16 {
-        pwm::SimplePwm::max_duty(&self.pwm)
+        self.max_duty
     }
 
     fn enable(&mut self) {
-        self.pwm.enable();
+        self.pwm.lock(|v| v.borrow_mut().enable());
     }
 
     fn disable(&mut self) {
-        self.pwm.disable();
+        self.pwm.lock(|v| v.borrow_mut().disable());
     }
 
-    fn split(self) -> [Self::Channel; N] {
+    fn split<'a>(&'a mut self) -> [Self::Channel<'a>; N] {
         let max_duty = self.max_duty();
-        let pwm = Arc::new(Mutex::new(RefCell::new(self.pwm)));
         core::array::from_fn(|i| PwmChannel {
-            pwm: Arc::clone(&pwm),
+            pwm: &self.pwm,
             channel_index: i,
             max_duty,
         })
     }
 }
 
-pub struct PwmChannel<'d> {
-    pwm: Arc<Mutex<CriticalSectionRawMutex, RefCell<pwm::SimplePwm<'d>>>>,
+pub struct PwmChannel<'a, 'd> {
+    pwm: &'a Mutex<CriticalSectionRawMutex, RefCell<pwm::SimplePwm<'d>>>,
     channel_index: usize,
     max_duty: u16,
 }
 
-impl<'d> crate::pwm::PwmChannel for PwmChannel<'d> {
+impl<'a, 'd> crate::pwm::PwmChannel for PwmChannel<'a, 'd> {
     fn max_duty(&self) -> u16 {
         self.max_duty
     }
 
     fn enable(&mut self) {
-        self.pwm.lock(|v| v.borrow().enable());
+        self.pwm.lock(|v| v.borrow_mut().enable());
     }
 
     fn disable(&mut self) {
-        self.pwm.lock(|v| v.borrow().disable());
+        self.pwm.lock(|v| v.borrow_mut().disable());
     }
 
     fn set_duty(&mut self, duty: u16) {
