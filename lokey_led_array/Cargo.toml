@@ -28,6 +28,7 @@ nrf52840 = [
 ]
 
 [dependencies]
+arrayvec = { version = "0.7.6", default-features = false }
 defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 embassy-futures = "0.1.1"

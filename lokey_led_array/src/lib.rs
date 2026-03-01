@@ -10,9 +10,7 @@
 pub mod nrf52840;
 pub mod pwm;
 
-extern crate alloc;
-
-use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
@@ -23,6 +21,9 @@ use lokey::{Address, Component, DynContext, internal};
 use portable_atomic::AtomicU32;
 use pwm::PwmChannel;
 use seq_macro::seq;
+
+// TODO: Make configurable
+const ACTION_SLOTS: usize = 8;
 
 static ACTION_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -143,14 +144,14 @@ fn deactivate_pwm_channels(pwm_channels: &mut [&mut dyn PwmChannel]) {
 }
 
 struct ActionHandler<'a, 'b, const N: usize> {
-    actions: &'a mut Vec<(ActionId, Action, Option<Instant>)>,
+    actions: &'a mut ArrayVec<(ActionId, Action, Option<Instant>), ACTION_SLOTS>,
     pwm_channels: &'a mut [&'b mut dyn PwmChannel; N],
     gamma_correction: fn(f32) -> f32,
 }
 
 impl<'a, 'b, const N: usize> ActionHandler<'a, 'b, N> {
     fn new(
-        actions: &'a mut Vec<(ActionId, Action, Option<Instant>)>,
+        actions: &'a mut ArrayVec<(ActionId, Action, Option<Instant>), ACTION_SLOTS>,
         pwm_channels: &'a mut [&'b mut dyn PwmChannel; N],
         gamma_correction: fn(f32) -> f32,
     ) -> Self {
@@ -382,7 +383,7 @@ impl<const NUM_LEDS: usize, Hooks: HookBundle> LedArray<NUM_LEDS, Hooks> {
 
     pub async fn run(self, mut pwm_channels: [&mut dyn PwmChannel; NUM_LEDS]) {
         let mut receiver = self.context.internal_channel.receiver::<Message>();
-        let mut actions = Vec::<(ActionId, Action, Option<Instant>)>::new();
+        let mut actions = ArrayVec::<(ActionId, Action, Option<Instant>), ACTION_SLOTS>::new();
         deactivate_pwm_channels(&mut pwm_channels);
         let handle_messages = async {
             loop {
