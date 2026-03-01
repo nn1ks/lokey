@@ -7,7 +7,7 @@ hero:
   text: "A firmware framework for input devices"
   tagline: "Easily create modular firmware for keyboards, mice, MIDI controllers, and more."
   image:
-    src: /logo-with-border.svg
+    src: /logo.svg
   actions:
     - theme: brand
       text: Get Started
