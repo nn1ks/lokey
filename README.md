@@ -20,21 +20,9 @@ Lokey is a firmware framework for input devices written in Rust.
 
 Refer to the website for more information: https://lokey.rs
 
-## Test
+## Contributing
 
-Run these commands to check the doc tests:
-
-```
-cargo test --doc -p lokey --features "nrf52840 defmt external-usb external-ble internal-ble" --target thumbv7em-none-eabihf
-```
-
-```
-cargo test --doc -p lokey --features "rp2040 defmt external-usb external-ble internal-ble" --target thumbv6m-none-eabi
-```
-
-```
-cargo test --doc -p lokey_keyboard --features "defmt external-usb external-ble" --target thumbv7em-none-eabihf
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute.
 
 ## License
 
