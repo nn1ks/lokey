@@ -146,6 +146,56 @@ jobs:
             cargo clippy -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
+  lokey_led_array:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        mcu: [no_mcu, nrf52840]
+        include:
+          - mcu: no_mcu
+            target: x86_64-unknown-linux-gnu
+            mcu_features: ""
+          - mcu: nrf52840
+            target: thumbv7em-none-eabihf
+            mcu_features: "nrf52840"
+    env:
+      FEATURE_COMBINATIONS: ";defmt;external-ble;defmt external-ble"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.mcu }}"
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo build -p lokey_led_array --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo clippy -p lokey_led_array --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        if: matrix.mcu != 'no_mcu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo test -p lokey_led_array --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
   examples:
     runs-on: ubuntu-latest
     if: always()
