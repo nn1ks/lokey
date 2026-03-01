@@ -156,10 +156,26 @@
   font-weight: 400;
 }
 
-/* Make image smaller when on mobile */
-@media (max-width: 960px) {
-  .image-src {
-    padding: 20px;
+/* Make image smaller */
+.VPHero .image-src {
+  padding: 36px;
+}
+
+@media (min-width: 960px) {
+  .VPHero .image-src {
+    padding: 54px;
+  }
+}
+
+/* Make image align to the right when on desktop */
+@media (min-width: 960px) {
+
+  .VPHero .image-bg,
+  .VPHero .image-src {
+    top: unset;
+    left: unset;
+    transform: unset;
+    right: 0;
   }
 }
 
