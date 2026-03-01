@@ -189,6 +189,7 @@
   font-family: "Junicode";
   font-style: normal;
   font-weight: 400;
+  font-display: swap;
   src: local("Junicode"),
     url("/fonts/Junicode/junicode-regular.otf") format("opentype");
 }
@@ -197,6 +198,7 @@
   font-family: "Junicode";
   font-style: normal;
   font-weight: 700;
+  font-display: swap;
   src: local("Junicode Bold"),
     url("/fonts/Junicode/junicode-bold.otf") format("opentype");
 }
