@@ -20,7 +20,8 @@ defmt-rtt = { version = "1.1.0", optional = true }
 embassy-executor = { version = "0.9.1", features = ["arch-cortex-m", "executor-thread", "nightly"] }
 embassy-rp = "0.8.0"
 embassy-time = "0.5.0"
-lokey = { path = "../../lokey", features = ["rp2040", "external-usb"] }
+lokey = { path = "../../lokey", features = ["external-usb"] }
+lokey_rp = { path = "../../lokey_rp", features = ["usb", "rp2040"] }
 lokey_layer = { path = "../../lokey_layer" }
 lokey_keyboard = { path = "../../lokey_keyboard", features = ["external-usb"] }
 lokey_blink = { path = "../lokey_blink" }

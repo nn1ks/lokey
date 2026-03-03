@@ -11,7 +11,6 @@ use embassy_rp::gpio::{AnyPin, Input, Level, Output, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::external::{self, NoMessage, usb};
-use lokey::mcu::{Rp2040, rp2040};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
@@ -21,6 +20,7 @@ use lokey_keyboard::{
     ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
 };
 use lokey_layer::LayerManager;
+use lokey_rp::Rp2040;
 use panic_probe as _;
 use switch_hal::IntoSwitch;
 
@@ -56,8 +56,8 @@ impl Device for KeyboardLeft {
 
     type Mcu = Rp2040;
 
-    fn mcu_config() -> rp2040::Config {
-        rp2040::Config::default()
+    fn mcu_config() -> lokey_rp::Config {
+        lokey_rp::Config::default()
     }
 }
 
