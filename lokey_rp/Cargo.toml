@@ -1,0 +1,47 @@
+[package]
+name = "lokey_rp"
+version = "0.0.0"
+edition = "2024"
+authors = ["Niklas Sauter <niklas@n1ks.net>"]
+repository = "https://github.com/nn1ks/lokey"
+license = "Apache-2.0 OR MIT"
+description = "A firmware framework for input devices"
+readme = "../README.md"
+categories = ["embedded", "no-std"]
+keywords = ["firmware"]
+
+[features]
+## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
+defmt = [
+  "dep:defmt",
+  "embassy-rp?/defmt",
+  "embassy-usb/defmt",
+]
+
+#! #### Transports
+
+## Enables support for USB.
+usb = [
+  "dep:embassy-usb",
+  "lokey/external-usb",
+]
+
+#! #### Microcontrollers
+
+## Enables support for the RP2040 microcontroller.
+rp2040 = [
+  "embassy-rp/rp2040",
+]
+
+
+
+[dependencies]
+defmt = { version = "1.0.1", optional = true }
+document-features = "0.2.11"
+embassy-rp = { version = "0.8.0", features = ["critical-section-impl", "time-driver"] }
+embassy-usb = { version = "0.5.1", features = ["usbd-hid"], optional = true }
+lokey = { path = "../lokey" }
+typenum = "1.17.0"
+
+[package.metadata.docs.rs]
+features = ["defmt", "usb", "rp2040"]

@@ -1,13 +1,9 @@
-#[cfg(feature = "rp2040")]
-pub mod rp2040;
 pub mod storage;
 
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::any::Any;
 use embedded_storage_async::nor_flash::MultiwriteNorFlash;
 use generic_array::ArrayLength;
-#[cfg(feature = "rp2040")]
-pub use rp2040::Rp2040;
 pub use storage::Storage;
 
 pub trait Mcu: Any {}

@@ -46,13 +46,6 @@ external-ble = ["dep:trouble-host"]
 ## Enables the internal Bluetooth Low Energy (BLE) transport.
 internal-ble = ["dep:trouble-host"]
 
-#! #### Microcontrollers
-
-## Enables support for the RP2040 microcontroller.
-rp2040 = [
-  "dep:embassy-rp",
-  "embassy-rp/rp2040",
-]
 
 max-internal-message-size-8 = []
 max-internal-message-size-16 = []
@@ -96,7 +89,6 @@ defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 dyn-clone = "1.0.20"
 embassy-futures = "0.1.1"
-embassy-rp = { version = "0.8.0", features = ["critical-section-impl", "time-driver"], optional = true }
 embassy-sync = "0.7.2"
 embassy-time = "0.5.0"
 embassy-usb = { version = "0.5.1", features = ["usbd-hid"], optional = true }
