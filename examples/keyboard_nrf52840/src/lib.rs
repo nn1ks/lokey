@@ -9,7 +9,7 @@ use embassy_nrf::peripherals::{
 use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
-use lokey::external::{NoMessage};
+use lokey::external::NoMessage;
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
     internal,
@@ -37,7 +37,8 @@ pub struct DefaultState {
 pub struct Central;
 
 impl Transports<Nrf> for Central {
-    type ExternalTransport = lokey_usb::external::Transport<Nrf, lokey_keyboard::ExternalMessage, NoMessage>;
+    type ExternalTransport =
+        lokey_usb::external::Transport<Nrf, lokey_keyboard::ExternalMessage, NoMessage>;
     // type ExternalTransportConfig =
     //     external::toggle::TransportConfig<external::ble::TransportConfig>;
     // type ExternalTransportConfig = external::usb_ble::TransportConfig;

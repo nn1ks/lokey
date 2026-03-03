@@ -32,7 +32,8 @@ struct DefaultState {
 struct Central;
 
 impl Transports<Rp2040> for Central {
-    type ExternalTransport = lokey_usb::external::Transport<Rp2040, lokey_keyboard::ExternalMessage, NoMessage>;
+    type ExternalTransport =
+        lokey_usb::external::Transport<Rp2040, lokey_keyboard::ExternalMessage, NoMessage>;
     type InternalTransport = internal::empty::Transport<Rp2040>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
