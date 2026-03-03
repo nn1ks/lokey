@@ -14,8 +14,8 @@ keywords = ["firmware"]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
-  "embassy-rp?/defmt",
-  "embassy-usb/defmt",
+  "embassy-rp/defmt",
+  "embassy-usb?/defmt",
 ]
 
 #! #### Transports
@@ -32,7 +32,6 @@ usb = [
 rp2040 = [
   "embassy-rp/rp2040",
 ]
-
 
 
 [dependencies]
