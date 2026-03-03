@@ -1,12 +1,11 @@
-use super::{ble, usb};
-use crate::util::{error, info};
-use crate::{Address, external, internal, mcu};
 use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use generic_array::GenericArray;
+use lokey::util::{error, info};
+use lokey::{Address, external, internal, mcu};
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -62,13 +61,13 @@ pub struct Transport<Usb, Ble> {
 impl<Usb, Ble, Mcu, TxMessage, RxMessage> external::Transport for Transport<Usb, Ble>
 where
     Usb: external::Transport<
-            Config = usb::TransportConfig,
+            Config = lokey_usb::external::TransportConfig,
             Mcu = Mcu,
             TxMessage = TxMessage,
             RxMessage = RxMessage,
         >,
     Ble: external::Transport<
-            Config = ble::TransportConfig,
+            Config = crate::external::TransportConfig,
             Mcu = Mcu,
             TxMessage = TxMessage,
             RxMessage = RxMessage,
@@ -230,8 +229,8 @@ impl Default for TransportConfig {
 }
 
 impl TransportConfig {
-    fn to_usb_config(&self) -> external::usb::TransportConfig {
-        external::usb::TransportConfig {
+    fn to_usb_config(&self) -> lokey_usb::external::TransportConfig {
+        lokey_usb::external::TransportConfig {
             vendor_id: self.vendor_id,
             product_id: self.product_id,
             manufacturer: self.manufacturer,
@@ -241,8 +240,8 @@ impl TransportConfig {
         }
     }
 
-    fn to_ble_config(&self) -> external::ble::TransportConfig {
-        external::ble::TransportConfig {
+    fn to_ble_config(&self) -> crate::external::TransportConfig {
+        crate::external::TransportConfig {
             name: self.name,
             vendor_id: self.vendor_id,
             product_id: self.product_id,

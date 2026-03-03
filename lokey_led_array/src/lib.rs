@@ -470,18 +470,18 @@ pub use ble::{BleAdvertisementHook, BleProfileHook};
 #[cfg(feature = "external-ble")]
 mod ble {
     use super::*;
-    use lokey::external;
+    use lokey_ble::external;
 
     pub struct BleAdvertisementHook;
 
     impl Hook for BleAdvertisementHook {
         async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
-            let mut receiver = context.internal_channel.receiver::<external::ble::Event>();
+            let mut receiver = context.internal_channel.receiver::<external::Event>();
             let mut current_action_id = None;
             loop {
                 let message = receiver.next().await;
                 match message {
-                    external::ble::Event::StartedAdvertising { scannable: true } => {
+                    external::Event::StartedAdvertising { scannable: true } => {
                         let action_id = ActionId::new(context.address);
                         let action = Action::SlideForwards {
                             duration_ms: 800,
@@ -493,7 +493,7 @@ mod ble {
                             .await;
                         current_action_id = Some(action_id);
                     }
-                    external::ble::Event::StoppedAdvertising { scannable: true } => {
+                    external::Event::StoppedAdvertising { scannable: true } => {
                         if let Some(action_id) = current_action_id.take() {
                             let new_action_id = ActionId::new(context.address);
                             let action = Action::Stop { action_id };
@@ -513,10 +513,10 @@ mod ble {
 
     impl Hook for BleProfileHook {
         async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
-            let mut receiver = context.internal_channel.receiver::<external::ble::Event>();
+            let mut receiver = context.internal_channel.receiver::<external::Event>();
             loop {
                 let message = receiver.next().await;
-                if let external::ble::Event::SwitchedProfile {
+                if let external::Event::SwitchedProfile {
                     profile_index,
                     changed: _,
                 } = message

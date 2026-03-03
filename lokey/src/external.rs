@@ -1,13 +1,7 @@
-#[cfg(feature = "external-ble")]
-pub mod ble;
 mod channel;
 pub mod empty;
 mod r#override;
 pub mod toggle;
-#[cfg(feature = "external-usb")]
-pub mod usb;
-#[cfg(all(feature = "external-usb", feature = "external-ble"))]
-pub mod usb_ble;
 
 use crate::mcu::Mcu;
 use crate::util::declare_const_for_feature_group;

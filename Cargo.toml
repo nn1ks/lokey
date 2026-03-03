@@ -2,8 +2,10 @@
 members = [
     "lokey",
     "lokey_macros",
-    "lokey_nrf",
-    "lokey_rp",
+    "lokey_usb",
+    "lokey_ble",
+    # "lokey_nrf",
+    # "lokey_rp",
     "lokey_keyboard",
     "lokey_keyboard_macros",
     "lokey_layer",

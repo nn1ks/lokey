@@ -1,6 +1,6 @@
-use crate::external::{Message, NoMessage};
 use core::any::Any;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use lokey::external::{Message, NoMessage};
 use trouble_host::gatt::{GattConnection, WriteEvent};
 use trouble_host::prelude::{AttributeTable, DefaultPacketPool};
 

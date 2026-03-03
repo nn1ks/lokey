@@ -5,7 +5,7 @@ edition = "2024"
 authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
-description = "A firmware framework for input devices"
+description = "Raspberry Pi RP2040 and RP235x microcontroller support for the lokey framework"
 readme = "../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
@@ -14,6 +14,7 @@ keywords = ["firmware"]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
+  "lokey/defmt",
   "embassy-rp/defmt",
   "embassy-usb?/defmt",
 ]
@@ -23,7 +24,7 @@ defmt = [
 ## Enables support for USB.
 usb = [
   "dep:embassy-usb",
-  "lokey/external-usb",
+  "dep:lokey_usb",
 ]
 
 #! #### Microcontrollers
@@ -40,6 +41,7 @@ document-features = "0.2.11"
 embassy-rp = { version = "0.8.0", features = ["critical-section-impl", "time-driver"] }
 embassy-usb = { version = "0.5.1", features = ["usbd-hid"], optional = true }
 lokey = { path = "../lokey" }
+lokey_usb = { path = "../lokey_usb", optional = true }
 typenum = "1.17.0"
 
 [package.metadata.docs.rs]

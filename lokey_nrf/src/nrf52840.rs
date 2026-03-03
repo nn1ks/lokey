@@ -146,9 +146,9 @@ mod usb {
     use embassy_nrf::interrupt::{InterruptExt, Priority};
     use embassy_nrf::peripherals::USBD;
     use embassy_nrf::usb::vbus_detect::HardwareVbusDetect;
-    use lokey::external::usb;
+    use lokey_usb::CreateDriver;
 
-    impl usb::CreateDriver for Nrf {
+    impl CreateDriver for Nrf {
         type Driver<'d> = impl embassy_usb::driver::Driver<'d>;
 
         fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
@@ -169,7 +169,7 @@ mod ble {
     use embassy_nrf::mode::Async;
     use embassy_nrf::rng::Rng;
     use lokey::Address;
-    use lokey::mcu::McuBle;
+    use lokey_ble::BleStack;
     use nrf_mpsl::MultiprotocolServiceLayer;
     use nrf_sdc::SoftdeviceController;
     use trouble_host::Stack;
@@ -200,7 +200,7 @@ mod ble {
         }
     }
 
-    impl McuBle for Nrf {
+    impl BleStack for Nrf {
         type Controller = SoftdeviceController<'static>;
 
         fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {

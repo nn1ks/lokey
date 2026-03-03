@@ -1,7 +1,4 @@
-use crate::internal::MAX_MESSAGE_SIZE_WITH_TAG;
-use crate::mcu::{self, Mcu, McuBle};
-use crate::util::{debug, error, info, unwrap};
-use crate::{Address, internal};
+use crate::BleStack;
 use arrayvec::ArrayVec;
 use core::mem::transmute;
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -10,6 +7,10 @@ use embassy_futures::select::{select, select3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::Timer;
+use lokey::internal::MAX_MESSAGE_SIZE_WITH_TAG;
+use lokey::mcu::{self, Mcu};
+use lokey::util::{debug, error, info, unwrap};
+use lokey::{Address, internal};
 use trouble_host::gatt::{GattClient, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
     AddrKind, Advertisement, AdvertisementParameters, AsGatt, BdAddr, Characteristic,
@@ -98,7 +99,7 @@ pub struct Transport<Mcu: 'static> {
     mcu: &'static Mcu,
 }
 
-impl<Mcu: mcu::Mcu + McuBle> internal::Transport for Transport<Mcu> {
+impl<Mcu: mcu::Mcu + BleStack> internal::Transport for Transport<Mcu> {
     type Config = TransportConfig;
     type Mcu = Mcu;
 
@@ -139,7 +140,7 @@ impl<Mcu: mcu::Mcu + McuBle> internal::Transport for Transport<Mcu> {
     }
 }
 
-async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'static [Address]) {
+async fn central<M: Mcu + BleStack>(mcu: &'static M, peripheral_addresses: &'static [Address]) {
     let ble_stack = mcu.ble_stack();
     let mut host = ble_stack.build();
 
@@ -313,7 +314,7 @@ async fn central<M: Mcu + McuBle>(mcu: &'static M, peripheral_addresses: &'stati
     join(run, connect).await;
 }
 
-async fn peripheral<M: Mcu + McuBle>(mcu: &'static M, central_address: Address) {
+async fn peripheral<M: Mcu + BleStack>(mcu: &'static M, central_address: Address) {
     let ble_stack = mcu.ble_stack();
     let mut host = ble_stack.build();
 

@@ -37,14 +37,6 @@ pub trait McuStorage {
     fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize>;
 }
 
-#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
-pub trait McuBle {
-    type Controller: trouble_host::Controller;
-    fn ble_stack(
-        &self,
-    ) -> &trouble_host::Stack<'static, Self::Controller, trouble_host::prelude::DefaultPacketPool>;
-}
-
 // This is only used for doc tests
 #[doc(hidden)]
 pub use dummy::DummyMcu;

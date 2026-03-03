@@ -1,8 +1,6 @@
 use super::{Event, Message, TransportConfig};
-use crate::external::ble::{self, InitMessageService, RxMessageService, TxMessageService};
-use crate::mcu::{self, McuBle, McuStorage, storage};
-use crate::util::{debug, error, info, unwrap, warn};
-use crate::{Address, external, internal};
+use crate::BleStack;
+use crate::external::{InitMessageService, RxMessageService, TxMessageService};
 use arrayvec::ArrayVec;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
@@ -15,6 +13,9 @@ use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
 use embassy_time::Timer;
 use generic_array::GenericArray;
+use lokey::mcu::{self, McuStorage, storage};
+use lokey::util::{debug, error, info, unwrap, warn};
+use lokey::{Address, external, internal};
 use portable_atomic::{AtomicBool, AtomicU8};
 use trouble_host::att::AttErrorCode;
 use trouble_host::gap::{GapConfig, PeripheralConfig};
@@ -44,9 +45,9 @@ pub struct Transport<Mcu: 'static, TxMessages, RxMessages, const CONN_MAX: usize
 impl<Mcu, TxMessage, RxMessage, const CONN_MAX: usize> external::Transport
     for Transport<Mcu, TxMessage, RxMessage, CONN_MAX>
 where
-    Mcu: mcu::Mcu + McuBle + McuStorage,
-    TxMessage: ble::TxMessage,
-    RxMessage: ble::RxMessage,
+    Mcu: mcu::Mcu + BleStack + McuStorage,
+    TxMessage: crate::external::TxMessage,
+    RxMessage: crate::external::RxMessage,
 {
     type Config = TransportConfig;
     type Mcu = Mcu;
@@ -155,7 +156,7 @@ where
             //         bond_infos.push(None);
             //     }
             // }
-            bond_infos.push(None::<BondInformation>);
+            bond_infos.push(None::<BondInformationWrapper>);
         }
         #[cfg(feature = "defmt")]
         info!("Stored bond infos: {}", defmt::Debug2Format(&bond_infos));
@@ -470,7 +471,7 @@ where
                             if let Err(e) = self
                                 .mcu
                                 .storage()
-                                .remove::<BondInformation>(profile_index)
+                                .remove::<BondInformationWrapper>(profile_index)
                                 .await
                             {
                                 #[cfg(feature = "defmt")]
@@ -492,7 +493,7 @@ where
                         if let Err(e) = self
                             .mcu
                             .storage()
-                            .remove::<BondInformation>(profile_index)
+                            .remove::<BondInformationWrapper>(profile_index)
                             .await
                         {
                             #[cfg(feature = "defmt")]
@@ -508,7 +509,9 @@ where
                     Message::ClearAll => {
                         debug!("Removing all bond infos");
                         for i in 0..num_profiles.get() {
-                            if let Err(e) = self.mcu.storage().remove::<BondInformation>(i).await {
+                            if let Err(e) =
+                                self.mcu.storage().remove::<BondInformationWrapper>(i).await
+                            {
                                 #[cfg(feature = "defmt")]
                                 let e = defmt::Debug2Format(&e);
                                 error!("Failed to remove bond info: {}", e);
@@ -568,7 +571,11 @@ where
     }
 }
 
-impl storage::Entry for BondInformation {
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // TODO: remove
+struct BondInformationWrapper(BondInformation);
+
+impl storage::Entry for BondInformationWrapper {
     type Size = typenum::U22;
     type TagParams = u8;
 

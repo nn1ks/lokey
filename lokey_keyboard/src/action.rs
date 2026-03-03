@@ -538,7 +538,7 @@ pub use ble::{
 #[cfg(feature = "external-ble")]
 mod ble {
     use super::*;
-    use crate::external::ble::Message;
+    use lokey_ble::external::Message;
 
     pub struct BleDisconnectActive;
 
@@ -711,7 +711,7 @@ pub use usb_ble::{SwitchToBle, SwitchToUsb};
 #[cfg(all(feature = "external-usb", feature = "external-ble"))]
 mod usb_ble {
     use super::*;
-    use crate::external::usb_ble::{Message, TransportSelection};
+    use lokey_ble::external::usb_ble::{Message, TransportSelection};
 
     /// Switches the active output to USB.
     ///

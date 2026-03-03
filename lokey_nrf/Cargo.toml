@@ -15,6 +15,8 @@ keywords = ["firmware"]
 defmt = [
   "dep:defmt",
   "lokey/defmt",
+  "lokey_ble?/defmt",
+  "lokey_usb?/defmt",
   "embassy-nrf/defmt",
   "embassy-usb?/defmt",
   "nrf-mpsl?/defmt",
@@ -25,15 +27,14 @@ defmt = [
 ## Enables support for USB.
 usb = [
   "dep:embassy-usb",
-  "lokey/external-usb",
+  "dep:lokey_usb",
 ]
 
 ## Enables support for Bluetooth Low Energy (BLE).
 ble = [
+  "dep:lokey_ble",
   "dep:trouble-host",
   "dep:rand_chacha",
-  "lokey/external-ble",
-  "lokey/internal-ble",
 ]
 
 #! #### Microcontrollers
@@ -53,6 +54,8 @@ document-features = "0.2.11"
 embassy-nrf = { version = "0.8.0", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"] }
 embassy-usb = { version = "0.5.1", optional = true }
 lokey = { path = "../lokey" }
+lokey_ble = { path = "../lokey_ble", optional = true }
+lokey_usb = { path = "../lokey_usb", optional = true }
 nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c3653af73b511133c2f8231f33eb0696f4", features = ["critical-section-impl"], optional = true }
 nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c3653af73b511133c2f8231f33eb0696f4", features = ["central", "peripheral"], optional = true }
 rand_chacha = { version = "0.3.1", default-features = false, optional = true }

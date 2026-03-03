@@ -61,9 +61,9 @@ impl McuStorage for Rp2040 {
 mod usb {
     use super::Rp2040;
     use embassy_rp::bind_interrupts;
-    use lokey::external::usb;
+    use lokey_usb::CreateDriver;
 
-    impl usb::CreateDriver for Rp2040 {
+    impl CreateDriver for Rp2040 {
         type Driver<'d> = impl embassy_usb::driver::Driver<'d>;
 
         fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
