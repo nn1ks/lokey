@@ -1,3 +1,5 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "lokey_rp"
 version = "0.0.0"
@@ -9,6 +11,8 @@ description = "Raspberry Pi RP2040 and RP235x microcontroller support for the lo
 readme = "../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+
+default-target = "thumbv6m-none-eabi"
 
 [features]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).

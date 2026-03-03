@@ -1,3 +1,5 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "lokey_nrf"
 version = "0.0.0"
@@ -9,6 +11,8 @@ description = "nRF microcontroller support for the lokey framework"
 readme = "../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+
+default-target = "thumbv7em-none-eabihf"
 
 [features]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
