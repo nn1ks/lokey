@@ -22,7 +22,6 @@ macros = [
 defmt = [
   "dep:defmt",
   "embassy-futures/defmt",
-  "embassy-rp?/defmt",
   "embassy-sync/defmt",
   "embassy-time/defmt",
   "embassy-usb/defmt",
