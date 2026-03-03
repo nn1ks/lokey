@@ -1,7 +1,11 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "keyboard_rp2040"
 version = "0.0.0"
 edition = "2024"
+
+default-target = "thumbv6m-none-eabi"
 
 [features]
 defmt = [
