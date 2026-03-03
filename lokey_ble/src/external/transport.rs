@@ -159,7 +159,7 @@ where
             bond_infos.push(None::<BondInformationWrapper>);
         }
         #[cfg(feature = "defmt")]
-        info!("Stored bond infos: {}", bond_infos);
+        info!("Stored bond infos: {}", defmt::Debug2Format(&bond_infos));
         #[cfg(not(feature = "defmt"))]
         info!("Stored bond infos: {:?}", bond_infos);
         let bond_infos = Mutex::<CriticalSectionRawMutex, _>::new(bond_infos);
