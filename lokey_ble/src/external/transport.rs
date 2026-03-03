@@ -159,7 +159,7 @@ where
             bond_infos.push(None::<BondInformationWrapper>);
         }
         #[cfg(feature = "defmt")]
-        info!("Stored bond infos: {}", defmt::Debug2Format(&bond_infos));
+        info!("Stored bond infos: {}", bond_infos);
         #[cfg(not(feature = "defmt"))]
         info!("Stored bond infos: {:?}", bond_infos);
         let bond_infos = Mutex::<CriticalSectionRawMutex, _>::new(bond_infos);
@@ -191,7 +191,10 @@ where
                 // }
                 let scannable = match &bond_infos.lock().await[profile_index as usize] {
                     Some(bond_info) => {
+                        #[cfg(feature = "defmt")]
                         debug!("Adding existing bond info: {}", bond_info);
+                        #[cfg(not(feature = "defmt"))]
+                        debug!("Adding existing bond info: {:?}", bond_info);
                         // if let Err(e) = ble_stack.add_bond_information(bond_info.clone()) {
                         //     error!("Failed to add bond info: {}", e);
                         // }
@@ -572,6 +575,7 @@ where
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[allow(dead_code)] // TODO: remove
 struct BondInformationWrapper(BondInformation);
 
