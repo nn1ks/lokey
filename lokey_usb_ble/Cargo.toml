@@ -17,7 +17,6 @@ defmt = [
   "lokey/defmt",
   "embassy-futures/defmt",
   "embassy-sync/defmt",
-  "embassy-usb/defmt",
 ]
 
 
@@ -26,12 +25,10 @@ defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 embassy-futures = "0.1.1"
 embassy-sync = "0.7.2"
-embassy-usb = { version = "0.5.1", features = ["usbd-hid"] }
-generic-array = "1.3.5"
+generic-array = "1.3.4"
 lokey = { path = "../lokey", version = "0.0.1" }
 lokey_ble = { path = "../lokey_ble" }
 lokey_usb = { path = "../lokey_usb" }
-portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 trouble-host = { version = "0.5", features = ["security"] }
 typenum = "1.19.0"
 
