@@ -372,7 +372,7 @@ jobs:
             target: thumbv7em-none-eabihf
             mcu_features: "nrf52840"
     env:
-      FEATURE_COMBINATIONS: ";defmt;external-ble;defmt external-ble"
+      FEATURE_COMBINATIONS: ";defmt;ble;defmt ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2

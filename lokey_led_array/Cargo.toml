@@ -19,7 +19,7 @@ defmt = [
 ]
 
 ## Enables hooks for the external Bluetooth Low Energy (BLE) transport.
-external-ble = ["dep:lokey_ble"]
+ble = ["dep:lokey_ble"]
 
 ## Enables support for PWM of the nRF52840 microcontroller.
 nrf52840 = [

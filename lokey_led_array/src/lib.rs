@@ -464,10 +464,10 @@ impl Hook for BootHook {
     }
 }
 
-#[cfg(feature = "external-ble")]
+#[cfg(feature = "ble")]
 pub use ble::{BleAdvertisementHook, BleProfileHook};
 
-#[cfg(feature = "external-ble")]
+#[cfg(feature = "ble")]
 mod ble {
     use super::*;
     use lokey_ble::external;

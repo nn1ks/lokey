@@ -34,7 +34,7 @@ lokey_ble = { path = "../../lokey_ble" }
 lokey_blink = { path = "../lokey_blink" }
 lokey_keyboard = { path = "../../lokey_keyboard", features = ["usb", "ble"] }
 lokey_layer = { path = "../../lokey_layer" }
-lokey_led_array = { path = "../../lokey_led_array", features = ["external-ble", "nrf52840"] }
+lokey_led_array = { path = "../../lokey_led_array", features = ["ble", "nrf52840"] }
 lokey_nrf = { path = "../../lokey_nrf", features = ["nrf52840", "usb", "ble"] }
 lokey_usb = { path = "../../lokey_usb" }
 lokey_usb_ble = { path = "../../lokey_usb_ble" }
