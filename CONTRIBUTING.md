@@ -54,6 +54,10 @@ Picture was generated with the command:
 
 ![Dependency Graph](dependency_graph.png)
 
+- Solid line: required dependency
+- Dotted line: optional dependency
+- Green: build dependency
+
 ## Formatting and linting
 
 Format before submitting:
