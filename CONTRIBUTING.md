@@ -32,6 +32,11 @@ nix develop
 
 - `lokey/` – core crate
 - `lokey_macros/` – macro crate for `lokey`
+- `lokey_usb/` – feature crate for USB transports
+- `lokey_ble/` – feature crate for BLE transports
+- `lokey_usb_ble/` – feature crate for a combined USB and BLE transport
+- `lokey_nrf/` – feature crate for nRF microcontroller support
+- `lokey_rp/` – feature crate for Raspberry Pi RP2040 and RP235x microcontroller support
 - `lokey_keyboard/` – feature crate for keyboard-related functionality
 - `lokey_keyboard_macros/` – macro crate for `lokey_keyboard`
 - `lokey_layer/` – feature crate for managing layers
@@ -60,11 +65,15 @@ cargo fmt
 Run clippy and make sure no warnings or errors are produced:
 
 ```sh
-cargo clippy -p lokey --features "macros defmt external-usb external-ble internal-ble nrf52840" --target thumbv7em-none-eabihf
-cargo clippy -p lokey --features "macros defmt external-usb external-ble internal-ble rp2040" --target thumbv6m-none-eabi
+cargo clippy -p lokey --all-features
+cargo clippy -p lokey_usb --all-features
+cargo clippy -p lokey_ble --all-features
+cargo clippy -p lokey_usb_ble --all-features
+cargo clippy -p lokey_nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
+cargo clippy -p lokey_rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
 cargo clippy -p lokey_keyboard --all-features
 cargo clippy -p lokey_layer --all-features
-cargo clippy -p lokey_led_array --features "defmt external-ble nrf52840"
+cargo clippy -p lokey_led_array --all-features
 ```
 
 > [!NOTE]
@@ -75,9 +84,8 @@ cargo clippy -p lokey_led_array --features "defmt external-ble nrf52840"
 At the moment, only doc tests exist. You can run them with the following commands:
 
 ```sh
-cargo test --doc -p lokey --features "defmt external-usb external-ble internal-ble nrf52840" --target thumbv7em-none-eabihf
-cargo test --doc -p lokey --features "defmt external-usb external-ble internal-ble rp2040" --target thumbv6m-none-eabi
-cargo test --doc -p lokey_keyboard --features "defmt external-usb external-ble" --target thumbv7em-none-eabihf
+cargo test --doc -p lokey --all-features --target thumbv7em-none-eabihf
+cargo test --doc -p lokey_keyboard --all-features --target thumbv7em-none-eabihf
 ```
 
 > [!NOTE]
