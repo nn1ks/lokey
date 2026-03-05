@@ -705,13 +705,13 @@ mod ble {
     }
 }
 
-#[cfg(all(feature = "external-usb", feature = "external-ble"))]
+#[cfg(feature = "external-usb-ble")]
 pub use usb_ble::{SwitchToBle, SwitchToUsb};
 
-#[cfg(all(feature = "external-usb", feature = "external-ble"))]
+#[cfg(feature = "external-usb-ble")]
 mod usb_ble {
     use super::*;
-    use lokey_ble::external::usb_ble::{Message, TransportSelection};
+    use lokey_usb_ble::external::{Message, TransportSelection};
 
     /// Switches the active output to USB.
     ///

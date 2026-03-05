@@ -30,10 +30,13 @@ defmt = [
 ]
 
 ## Enables the external USB transport for key messages.
-external-usb = ["dep:embassy-usb", "dep:usbd-hid", "dep:ssmarshal", "dep:lokey_usb", "lokey_ble?/external-usb-ble"]
+external-usb = ["dep:embassy-usb", "dep:usbd-hid", "dep:ssmarshal", "dep:lokey_usb"]
 
 ## Enables the external Bluetooth Low Energy (BLE) transport for key messages.
 external-ble = ["dep:trouble-host", "dep:usbd-hid", "dep:ssmarshal", "dep:lokey_ble"]
+
+## Enables the external combined USB and BLE transport for key messages.
+external-usb-ble = ["dep:lokey_usb_ble"]
 
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
@@ -52,6 +55,7 @@ lokey_ble = { path = "../lokey_ble", optional = true }
 lokey_keyboard_macros = { path = "../lokey_keyboard_macros", optional = true }
 lokey_layer = { path = "../lokey_layer" }
 lokey_usb = { path = "../lokey_usb", optional = true }
+lokey_usb_ble = { path = "../lokey_usb_ble", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 seq-macro = "0.3.6"
 ssmarshal = { version = "1.0.0", default-features = false, optional = true }

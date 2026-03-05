@@ -67,7 +67,7 @@ where
             RxMessage = RxMessage,
         >,
     Ble: external::Transport<
-            Config = crate::external::TransportConfig,
+            Config = lokey_ble::external::TransportConfig,
             Mcu = Mcu,
             TxMessage = TxMessage,
             RxMessage = RxMessage,
@@ -240,8 +240,8 @@ impl TransportConfig {
         }
     }
 
-    fn to_ble_config(&self) -> crate::external::TransportConfig {
-        crate::external::TransportConfig {
+    fn to_ble_config(&self) -> lokey_ble::external::TransportConfig {
+        lokey_ble::external::TransportConfig {
             name: self.name,
             vendor_id: self.vendor_id,
             product_id: self.product_id,

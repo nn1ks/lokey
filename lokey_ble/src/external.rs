@@ -1,7 +1,5 @@
 mod message_service;
 mod transport;
-#[cfg(feature = "external-usb-ble")]
-pub mod usb_ble;
 
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::NoMessage;
