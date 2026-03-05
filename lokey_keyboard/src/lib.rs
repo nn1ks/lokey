@@ -7,14 +7,14 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod action;
-#[cfg(feature = "external-ble")]
+#[cfg(feature = "ble")]
 pub mod ble;
 mod debounce;
 mod direct_pins;
 mod key;
 mod key_override;
 mod matrix;
-#[cfg(feature = "external-usb")]
+#[cfg(feature = "usb")]
 pub mod usb;
 
 use action::InvalidChildActionIndex;
@@ -248,7 +248,7 @@ impl external::Message for ExternalMessage {
 }
 
 impl ExternalMessage {
-    #[cfg(any(feature = "external-usb", feature = "external-ble"))]
+    #[cfg(any(feature = "usb", feature = "ble"))]
     pub fn update_keyboard_report(
         &self,
         report: &mut usbd_hid::descriptor::KeyboardReport,

@@ -1,15 +1,23 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "keyboard_nrf52840"
 version = "0.0.0"
 edition = "2024"
+
+default-target = "thumbv7em-none-eabihf"
 
 [features]
 defmt = [
     "dep:defmt",
     "dep:defmt-rtt",
     "lokey/defmt",
-    "lokey_layer/defmt",
+    "lokey_ble/defmt",
     "lokey_keyboard/defmt",
+    "lokey_layer/defmt",
+    "lokey_led_array/defmt",
+    "lokey_nrf/defmt",
+    "lokey_usb/defmt",
     "panic-probe/print-defmt",
 ]
 
@@ -21,11 +29,15 @@ embassy-executor = { version = "0.9.1", features = ["arch-cortex-m", "executor-t
 embassy-nrf = { version = "0.8.0", features = ["nrf52840"] }
 embassy-sync = "0.7.2"
 embassy-time = "0.5.0"
-lokey = { path = "../../lokey", features = ["nrf52840", "external-usb", "external-ble", "internal-ble"] }
-lokey_layer = { path = "../../lokey_layer" }
-lokey_keyboard = { path = "../../lokey_keyboard", features = ["external-usb", "external-ble"] }
-lokey_led_array = { path = "../../lokey_led_array", features = ["external-ble", "nrf52840"] }
+lokey = { path = "../../lokey" }
+lokey_ble = { path = "../../lokey_ble" }
 lokey_blink = { path = "../lokey_blink" }
+lokey_keyboard = { path = "../../lokey_keyboard", features = ["usb", "ble"] }
+lokey_layer = { path = "../../lokey_layer" }
+lokey_led_array = { path = "../../lokey_led_array", features = ["ble", "nrf52840"] }
+lokey_nrf = { path = "../../lokey_nrf", features = ["nrf52840", "usb", "ble"] }
+lokey_usb = { path = "../../lokey_usb" }
+lokey_usb_ble = { path = "../../lokey_usb_ble" }
 panic-probe = "1.0.0"
 switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
 typenum = { version = "1.19.0", features = ["const-generics"] }

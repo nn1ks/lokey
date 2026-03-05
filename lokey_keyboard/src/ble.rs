@@ -2,8 +2,8 @@ use super::ExternalMessage;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::mutex::Mutex;
 use generic_array::GenericArray;
-use lokey::external::ble::{InitMessageService, TxMessage, TxMessageService};
 use lokey::util::error;
+use lokey_ble::external::{InitMessageService, TxMessage, TxMessageService};
 use trouble_host::prelude::*;
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 

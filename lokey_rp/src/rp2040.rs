@@ -1,11 +1,8 @@
-#[cfg(feature = "external-usb")]
-pub mod usb;
-
-use super::{Mcu, McuInit, McuStorage, Storage};
-use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
 use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
+use lokey::mcu::{Mcu, McuInit, McuStorage, Storage};
+use lokey::{Address, Context, Device, StateContainer, Transports};
 
 pub struct Config {
     pub storage_flash_range: Range<u32>,
@@ -57,5 +54,26 @@ impl McuStorage for Rp2040 {
 
     fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
         &self.storage
+    }
+}
+
+#[cfg(feature = "usb")]
+mod usb {
+    use super::Rp2040;
+    use embassy_rp::bind_interrupts;
+    use lokey_usb::CreateDriver;
+
+    impl CreateDriver for Rp2040 {
+        type Driver<'d> = impl embassy_usb::driver::Driver<'d>;
+
+        fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
+            bind_interrupts!(struct Irqs {
+                USBCTRL_IRQ => embassy_rp::usb::InterruptHandler<embassy_rp::peripherals::USB>;
+            });
+
+            let usbd = unsafe { embassy_rp::peripherals::USB::steal() };
+
+            embassy_rp::usb::Driver::new(usbd, Irqs)
+        }
     }
 }

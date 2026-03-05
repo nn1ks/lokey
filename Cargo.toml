@@ -1,5 +1,17 @@
 [workspace]
-members = ["lokey", "lokey_layer", "lokey_keyboard", "lokey_keyboard_macros", "lokey_led_array", "lokey_macros"]
+members = [
+    "lokey",
+    "lokey_macros",
+    "lokey_usb",
+    "lokey_ble",
+    "lokey_usb_ble",
+    "lokey_nrf",
+    "lokey_rp",
+    "lokey_keyboard",
+    "lokey_keyboard_macros",
+    "lokey_layer",
+    "lokey_led_array",
+]
 exclude = ["examples/keyboard_nrf52840", "examples/keyboard_rp2040"]
 resolver = "2"
 

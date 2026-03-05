@@ -1,10 +1,10 @@
 mod message_service;
 mod transport;
 
-use crate::external::NoMessage;
-use crate::util::error;
-use crate::{Address, external, internal};
 use generic_array::{ArrayLength, GenericArray};
+use lokey::external::NoMessage;
+use lokey::util::error;
+use lokey::{Address, external, internal};
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 pub use transport::Transport;
 use trouble_host::prelude::{BluetoothUuid16, appearance};

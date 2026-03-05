@@ -4,8 +4,8 @@ use embassy_sync::mutex::Mutex;
 use embassy_usb::Builder;
 use embassy_usb::class::hid::{HidWriter, State as HidState};
 use embassy_usb::driver::Driver;
-use lokey::external::usb::{InitMessageService, TxMessage, TxMessageService};
 use lokey::util::error;
+use lokey_usb::external::{InitMessageService, TxMessage, TxMessageService};
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 
 impl TxMessage for ExternalMessage {

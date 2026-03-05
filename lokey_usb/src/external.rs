@@ -1,13 +1,12 @@
 mod message_service;
 mod transport;
 
-use crate::external::{self, NoMessage};
-use crate::mcu::Mcu;
-use crate::util::{debug, info};
 use core::sync::atomic::Ordering;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_usb::driver::Driver;
+use lokey::external::{self, NoMessage};
+use lokey::util::{debug, info};
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 use portable_atomic::AtomicBool;
 pub use transport::Transport;
@@ -44,11 +43,6 @@ impl From<TransportConfig> for embassy_usb::Config<'static> {
         config.self_powered = value.self_powered;
         config
     }
-}
-
-pub trait CreateDriver: Mcu {
-    type Driver<'d>: Driver<'d>;
-    fn create_driver<'d>(&'static self) -> Self::Driver<'d>;
 }
 
 struct DeviceHandlerContext {

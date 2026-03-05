@@ -1,5 +1,3 @@
-#[cfg(feature = "internal-ble")]
-pub mod ble;
 mod channel;
 pub mod empty;
 
@@ -40,7 +38,7 @@ declare_const_for_feature_group!(
     ]
 );
 
-const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + 4;
+pub const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + 4;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

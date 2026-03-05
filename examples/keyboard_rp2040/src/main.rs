@@ -10,8 +10,7 @@ use embassy_executor::Spawner;
 use embassy_rp::gpio::{AnyPin, Input, Level, Output, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
-use lokey::external::{self, NoMessage, usb};
-use lokey::mcu::{Rp2040, rp2040};
+use lokey::external::{self, NoMessage};
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
@@ -21,6 +20,7 @@ use lokey_keyboard::{
     ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
 };
 use lokey_layer::LayerManager;
+use lokey_rp::Rp2040;
 use panic_probe as _;
 use switch_hal::IntoSwitch;
 
@@ -32,11 +32,12 @@ struct DefaultState {
 struct Central;
 
 impl Transports<Rp2040> for Central {
-    type ExternalTransport = usb::Transport<Rp2040, lokey_keyboard::ExternalMessage, NoMessage>;
+    type ExternalTransport =
+        lokey_usb::external::Transport<Rp2040, lokey_keyboard::ExternalMessage, NoMessage>;
     type InternalTransport = internal::empty::Transport<Rp2040>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
-        external::usb::TransportConfig {
+        lokey_usb::external::TransportConfig {
             manufacturer: Some("n1ks"),
             product: Some("keyboard_rp2040"),
             self_powered: true,
@@ -56,8 +57,8 @@ impl Device for KeyboardLeft {
 
     type Mcu = Rp2040;
 
-    fn mcu_config() -> rp2040::Config {
-        rp2040::Config::default()
+    fn mcu_config() -> lokey_rp::Config {
+        lokey_rp::Config::default()
     }
 }
 

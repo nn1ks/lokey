@@ -9,8 +9,7 @@ use embassy_nrf::peripherals::{
 use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
-use lokey::external::{NoMessage, usb};
-use lokey::mcu::{Nrf52840, nrf52840};
+use lokey::external::NoMessage;
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
     internal,
@@ -23,6 +22,7 @@ use lokey_layer::LayerManager;
 use lokey_led_array::nrf52840::Pwm;
 use lokey_led_array::pwm::{Pwm as _, PwmChannel};
 use lokey_led_array::{HookBundle, LedArray};
+use lokey_nrf::Nrf;
 use panic_probe as _;
 use switch_hal::IntoSwitch;
 
@@ -36,16 +36,17 @@ pub struct DefaultState {
 
 pub struct Central;
 
-impl Transports<Nrf52840> for Central {
-    type ExternalTransport = usb::Transport<Nrf52840, lokey_keyboard::ExternalMessage, NoMessage>;
+impl Transports<Nrf> for Central {
+    type ExternalTransport =
+        lokey_usb::external::Transport<Nrf, lokey_keyboard::ExternalMessage, NoMessage>;
     // type ExternalTransportConfig =
     //     external::toggle::TransportConfig<external::ble::TransportConfig>;
     // type ExternalTransportConfig = external::usb_ble::TransportConfig;
-    type InternalTransport = internal::empty::Transport<Nrf52840>;
-    // type InternalTransport = internal::ble::Transport<Nrf52840>;
+    type InternalTransport = internal::empty::Transport<Nrf>;
+    // type InternalTransport = internal::ble::Transport<Nrf>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
-        external::usb::TransportConfig {
+        lokey_usb::external::TransportConfig {
             manufacturer: Some("n1ks"),
             product: Some("keyboard_nrf52840"),
             self_powered: true,
@@ -76,10 +77,10 @@ impl Transports<Nrf52840> for Central {
 
 pub struct Peripheral;
 
-impl Transports<Nrf52840> for Peripheral {
-    type ExternalTransport = external::empty::Transport<Nrf52840>;
-    type InternalTransport = internal::empty::Transport<Nrf52840>;
-    // type InternalTransport = internal::ble::Transport<Nrf52840>;
+impl Transports<Nrf> for Peripheral {
+    type ExternalTransport = external::empty::Transport<Nrf>;
+    type InternalTransport = internal::empty::Transport<Nrf>;
+    // type InternalTransport = internal::ble::Transport<Nrf>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         external::empty::TransportConfig
@@ -98,10 +99,10 @@ pub struct KeyboardLeft;
 impl Device for KeyboardLeft {
     const DEFAULT_ADDRESS: Address = Address([0x8b, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
 
-    type Mcu = Nrf52840;
+    type Mcu = Nrf;
 
-    fn mcu_config() -> nrf52840::Config {
-        nrf52840::Config {
+    fn mcu_config() -> lokey_nrf::Config {
+        lokey_nrf::Config {
             ble_gap_device_name: Some("keyboard"),
             ..Default::default()
         }
@@ -241,10 +242,10 @@ pub struct KeyboardRight;
 impl Device for KeyboardRight {
     const DEFAULT_ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
 
-    type Mcu = Nrf52840;
+    type Mcu = Nrf;
 
-    fn mcu_config() -> nrf52840::Config {
-        nrf52840::Config::default()
+    fn mcu_config() -> lokey_nrf::Config {
+        lokey_nrf::Config::default()
     }
 }
 

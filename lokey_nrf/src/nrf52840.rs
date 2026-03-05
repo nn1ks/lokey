@@ -1,26 +1,20 @@
-#[cfg(feature = "external-usb")]
-mod usb;
-
-use super::{Mcu, McuInit, McuStorage, Storage};
-use crate::util::unwrap;
-use crate::{Address, Context, Device, StateContainer, Transports};
 use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
-#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
-use embassy_nrf::mode::Async;
 use embassy_nrf::peripherals::RNG;
+use lokey::mcu::{Mcu, McuInit, McuStorage, Storage};
+use lokey::util::unwrap;
+use lokey::{Address, Context, Device, StateContainer, Transports};
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
-#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
+#[cfg(feature = "ble")]
 use {
-    crate::mcu::McuBle,
+    embassy_nrf::mode::Async,
     embassy_nrf::rng::Rng,
     nrf_sdc::SoftdeviceController,
     rand_chacha::ChaCha12Rng,
     rand_chacha::rand_core::SeedableRng,
     trouble_host::prelude::DefaultPacketPool,
-    trouble_host::prelude::{AddrKind, BdAddr},
     trouble_host::{HostResources, Stack},
 };
 
@@ -51,56 +45,20 @@ bind_interrupts!(struct Irqs {
     USBD => embassy_nrf::usb::InterruptHandler<embassy_nrf::peripherals::USBD>;
 });
 
-#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
-fn build_sdc<'d, const N: usize>(
-    p: nrf_sdc::Peripherals<'d>,
-    rng: &'d mut Rng<Async>,
-    mpsl: &'d MultiprotocolServiceLayer,
-    mem: &'d mut nrf_sdc::Mem<N>,
-) -> Result<SoftdeviceController<'d>, nrf_sdc::Error> {
-    // TODO
-    nrf_sdc::Builder::new()?
-        .support_adv()?
-        .support_scan()?
-        .support_central()?
-        .support_peripheral()?
-        .central_count(1)?
-        .peripheral_count(1)?
-        .buffer_cfg(72, 72, 3, 3)?
-        .build(p, rng, mpsl, mem)
-}
-
-#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
-fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
-    trouble_host::Address {
-        kind: AddrKind::RANDOM,
-        addr: BdAddr::new(address.0),
-    }
-}
-
-pub struct Nrf52840 {
+pub struct Nrf {
     storage: Storage<Flash<'static>, WordSize, EraseSize>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
-    #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
+    #[cfg(feature = "ble")]
     ble_stack: Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
 }
 
-impl Mcu for Nrf52840 {}
+impl Mcu for Nrf {}
 
-#[cfg(any(feature = "external-ble", feature = "internal-ble"))]
-impl McuBle for Nrf52840 {
-    type Controller = SoftdeviceController<'static>;
-
-    fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {
-        &self.ble_stack
-    }
-}
-
-impl McuInit for Nrf52840 {
+impl McuInit for Nrf {
     type Config = Config;
 
     async fn create(config: Self::Config, address: Address) -> Self {
-        #[cfg(not(any(feature = "external-ble", feature = "internal-ble")))]
+        #[cfg(not(feature = "ble"))]
         let _ = address;
 
         let mut nrf_config = embassy_nrf::config::Config::default();
@@ -130,7 +88,7 @@ impl McuInit for Nrf52840 {
         let flash = Flash::take(mpsl, p.NVMC);
         let storage = Storage::new(flash, config.storage_flash_range);
 
-        #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
+        #[cfg(feature = "ble")]
         let ble_stack = {
             let sdc_p = nrf_sdc::Peripherals::new(
                 p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
@@ -144,20 +102,20 @@ impl McuInit for Nrf52840 {
 
             static SDC_MEM: StaticCell<nrf_sdc::Mem<3848>> = StaticCell::new();
             let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
-            let sdc = unwrap!(build_sdc(sdc_p, rng, mpsl, sdc_mem));
+            let sdc = unwrap!(ble::build_sdc(sdc_p, rng, mpsl, sdc_mem));
 
             static RESOURCES: StaticCell<HostResources<DefaultPacketPool, 2, 4, 72>> =
                 StaticCell::new();
             let resources = RESOURCES.init(HostResources::new());
             trouble_host::new(sdc, resources)
-                .set_random_address(device_address_to_ble_address(&address))
+                .set_random_address(ble::device_address_to_ble_address(&address))
                 .set_random_generator_seed(&mut rng2)
         };
 
         Self {
             storage,
             mpsl,
-            #[cfg(any(feature = "external-ble", feature = "internal-ble"))]
+            #[cfg(feature = "ble")]
             ble_stack,
         }
     }
@@ -172,12 +130,81 @@ impl McuInit for Nrf52840 {
     }
 }
 
-impl McuStorage for Nrf52840 {
+impl McuStorage for Nrf {
     type Flash = Flash<'static>;
     type WordSize = WordSize;
     type EraseSize = EraseSize;
 
     fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
         &self.storage
+    }
+}
+
+#[cfg(feature = "usb")]
+mod usb {
+    use super::Nrf;
+    use embassy_nrf::interrupt::{InterruptExt, Priority};
+    use embassy_nrf::peripherals::USBD;
+    use embassy_nrf::usb::vbus_detect::HardwareVbusDetect;
+    use lokey_usb::CreateDriver;
+
+    impl CreateDriver for Nrf {
+        type Driver<'d> = impl embassy_usb::driver::Driver<'d>;
+
+        fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
+            embassy_nrf::interrupt::USBD.set_priority(Priority::P2);
+            embassy_nrf::interrupt::CLOCK_POWER.set_priority(Priority::P2);
+
+            let usbd = unsafe { USBD::steal() };
+
+            let vbus_detect = HardwareVbusDetect::new(super::Irqs);
+            embassy_nrf::usb::Driver::new(usbd, super::Irqs, vbus_detect)
+        }
+    }
+}
+
+#[cfg(feature = "ble")]
+mod ble {
+    use super::Nrf;
+    use embassy_nrf::mode::Async;
+    use embassy_nrf::rng::Rng;
+    use lokey::Address;
+    use lokey_ble::BleStack;
+    use nrf_mpsl::MultiprotocolServiceLayer;
+    use nrf_sdc::SoftdeviceController;
+    use trouble_host::Stack;
+    use trouble_host::prelude::{AddrKind, BdAddr, DefaultPacketPool};
+
+    pub fn build_sdc<'d, const N: usize>(
+        p: nrf_sdc::Peripherals<'d>,
+        rng: &'d mut Rng<Async>,
+        mpsl: &'d MultiprotocolServiceLayer,
+        mem: &'d mut nrf_sdc::Mem<N>,
+    ) -> Result<SoftdeviceController<'d>, nrf_sdc::Error> {
+        // TODO
+        nrf_sdc::Builder::new()?
+            .support_adv()?
+            .support_scan()?
+            .support_central()?
+            .support_peripheral()?
+            .central_count(1)?
+            .peripheral_count(1)?
+            .buffer_cfg(72, 72, 3, 3)?
+            .build(p, rng, mpsl, mem)
+    }
+
+    pub fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
+        trouble_host::Address {
+            kind: AddrKind::RANDOM,
+            addr: BdAddr::new(address.0),
+        }
+    }
+
+    impl BleStack for Nrf {
+        type Controller = SoftdeviceController<'static>;
+
+        fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {
+            &self.ble_stack
+        }
     }
 }

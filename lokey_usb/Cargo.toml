@@ -1,11 +1,11 @@
 [package]
-name = "lokey_layer"
+name = "lokey_usb"
 version = "0.0.0"
 edition = "2024"
 authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
-description = "Layer management for the lokey framework"
+description = "USB transport support for the lokey framework"
 readme = "../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
@@ -13,16 +13,22 @@ keywords = ["firmware"]
 [features]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
-    "dep:defmt",
-    "lokey/defmt",
+  "dep:defmt",
+  "lokey/defmt",
+  "embassy-futures/defmt",
+  "embassy-sync/defmt",
+  "embassy-usb/defmt",
 ]
 
+
 [dependencies]
-arrayvec = { version = "0.7.6", default-features = false }
 defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
+embassy-futures = "0.1.1"
 embassy-sync = "0.7.2"
-lokey = { path = "../lokey" }
+embassy-usb = { version = "0.5.1", features = ["usbd-hid"] }
+lokey = { path = "../lokey", version = "0.0.1" }
+portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 
 [package.metadata.docs.rs]
 features = ["defmt"]

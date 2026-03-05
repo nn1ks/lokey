@@ -1,0 +1,71 @@
+cargo-features = ["per-package-target"]
+
+[package]
+name = "lokey_nrf"
+version = "0.0.0"
+edition = "2024"
+authors = ["Niklas Sauter <niklas@n1ks.net>"]
+repository = "https://github.com/nn1ks/lokey"
+license = "Apache-2.0 OR MIT"
+description = "nRF microcontroller support for the lokey framework"
+readme = "../README.md"
+categories = ["embedded", "no-std"]
+keywords = ["firmware"]
+
+default-target = "thumbv7em-none-eabihf"
+
+[features]
+## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
+defmt = [
+  "dep:defmt",
+  "lokey/defmt",
+  "lokey_ble?/defmt",
+  "lokey_usb?/defmt",
+  "embassy-nrf/defmt",
+  "embassy-usb?/defmt",
+  "nrf-mpsl?/defmt",
+  "nrf-sdc?/defmt",
+  "trouble-host?/defmt",
+]
+
+## Enables support for USB.
+usb = [
+  "dep:embassy-usb",
+  "dep:lokey_usb",
+]
+
+## Enables support for Bluetooth Low Energy (BLE).
+ble = [
+  "dep:lokey_ble",
+  "dep:trouble-host",
+  "dep:rand_chacha",
+]
+
+#! #### Microcontrollers
+
+## Enables support for the nRF52840 microcontroller.
+nrf52840 = [
+  "embassy-nrf/nrf52840",
+  "dep:nrf-mpsl",
+  "dep:nrf-sdc",
+  "nrf-mpsl?/nrf52840",
+  "nrf-sdc?/nrf52840",
+]
+
+[dependencies]
+defmt = { version = "1.0.1", optional = true }
+document-features = "0.2.11"
+embassy-nrf = { version = "0.8.0", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"] }
+embassy-usb = { version = "0.5.1", optional = true }
+lokey = { path = "../lokey" }
+lokey_ble = { path = "../lokey_ble", optional = true }
+lokey_usb = { path = "../lokey_usb", optional = true }
+nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c3653af73b511133c2f8231f33eb0696f4", features = ["critical-section-impl"], optional = true }
+nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc", rev = "11d5c3c3653af73b511133c2f8231f33eb0696f4", features = ["central", "peripheral"], optional = true }
+rand_chacha = { version = "0.3.1", default-features = false, optional = true }
+static_cell = "2.1.0"
+trouble-host = { version = "0.5", features = ["security"], optional = true }
+typenum = "1.19.0"
+
+[package.metadata.docs.rs]
+features = ["defmt", "usb", "ble", "nrf52840"]

@@ -22,19 +22,185 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mcu: [no_mcu, nrf52840, rp2040]
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";macros;defmt;macros defmt"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.target }}"
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo test -p lokey --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+  lokey_usb:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";defmt"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.target }}"
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey_usb --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey_usb --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo test -p lokey_usb --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+  lokey_ble:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";defmt"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.target }}"
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo test -p lokey_ble --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+  lokey_usb_ble:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";defmt"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.target }}"
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey_usb_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey_usb_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo test -p lokey_usb_ble --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+  lokey_nrf:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        mcu: [nrf52840]
         include:
-          - mcu: no_mcu
-            target: x86_64-unknown-linux-gnu
-            mcu_features: ""
           - mcu: nrf52840
             target: thumbv7em-none-eabihf
             mcu_features: "nrf52840"
-          - mcu: rp2040
-            target: thumbv6m-none-eabi
-            mcu_features: "rp2040"
     env:
-      FEATURE_COMBINATIONS: ";macros;defmt;external-usb;external-usb;external-ble;internal-ble;external-usb external-ble internal-ble;macros defmt external-usb external-ble internal-ble"
+      FEATURE_COMBINATIONS: ";defmt;defmt usb ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
@@ -49,7 +215,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo build -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo build -p lokey_nrf --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -57,16 +223,61 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo clippy -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo clippy -p lokey_nrf --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run doc tests
-        if: matrix.mcu != 'no_mcu'
         run: |
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo test -p lokey --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo test -p lokey_nrf --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+  lokey_rp:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        mcu: [rp2040]
+        include:
+          - mcu: rp2040
+            target: thumbv6m-none-eabi
+            mcu_features: "rp2040"
+    env:
+      FEATURE_COMBINATIONS: ";defmt;defmt usb"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: "${{ matrix.mcu }}"
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo build -p lokey_rp --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo clippy -p lokey_rp --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            echo "::endgroup::"
+          done
+      - name: Run doc tests
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
+            cargo test -p lokey_rp --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
   lokey_keyboard:
@@ -77,7 +288,7 @@ jobs:
       matrix:
         target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
     env:
-      FEATURE_COMBINATIONS: ";macros;defmt;external-usb;defmt external-usb;external-ble;defmt external-ble;external-usb external-ble;macros defmt external-usb external-ble"
+      FEATURE_COMBINATIONS: ";macros;defmt;usb;defmt usb;ble;defmt ble;usb ble;usb-ble;macros defmt usb ble usb-ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
@@ -161,7 +372,7 @@ jobs:
             target: thumbv7em-none-eabihf
             mcu_features: "nrf52840"
     env:
-      FEATURE_COMBINATIONS: ";defmt;external-ble;defmt external-ble"
+      FEATURE_COMBINATIONS: ";defmt;ble;defmt ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2

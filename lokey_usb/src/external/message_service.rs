@@ -1,7 +1,7 @@
-use crate::external::{Message, NoMessage};
 use embassy_usb::Builder;
 use embassy_usb::class::hid::State as HidState;
 use embassy_usb::driver::Driver;
+use lokey::external::{Message, NoMessage};
 
 pub trait InitMessageService<'d, D: Driver<'d>> {
     // TODO: Remove hid_state parameter as it is not needed for non-HID USB transports. The
