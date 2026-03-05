@@ -529,13 +529,13 @@ impl Action for DeactivateExternalTransport {
     }
 }
 
-#[cfg(feature = "external-ble")]
+#[cfg(feature = "ble")]
 pub use ble::{
     BleClear, BleClearActive, BleClearAll, BleDisconnectActive, BleNextProfile, BlePreviousProfile,
     BleSelectProfile,
 };
 
-#[cfg(feature = "external-ble")]
+#[cfg(feature = "ble")]
 mod ble {
     use super::*;
     use lokey_ble::external::Message;
@@ -705,17 +705,17 @@ mod ble {
     }
 }
 
-#[cfg(feature = "external-usb-ble")]
+#[cfg(feature = "usb-ble")]
 pub use usb_ble::{SwitchToBle, SwitchToUsb};
 
-#[cfg(feature = "external-usb-ble")]
+#[cfg(feature = "usb-ble")]
 mod usb_ble {
     use super::*;
     use lokey_usb_ble::external::{Message, TransportSelection};
 
     /// Switches the active output to USB.
     ///
-    /// Only has an effect if [`external::usb_ble::Transport`](crate::external::usb_ble::Transport)
+    /// Only has an effect if [`lokey_usb_ble::external::Transport`](lokey_usb_ble::external::Transport)
     /// is used as the external transport.
     pub struct SwitchToUsb;
 
@@ -743,7 +743,7 @@ mod usb_ble {
 
     /// Switches the active output to BLE.
     ///
-    /// Only has an effect if [`external::usb_ble::Transport`](crate::external::usb_ble::Transport)
+    /// Only has an effect if [`lokey_usb_ble::external::Transport`](lokey_usb_ble::external::Transport)
     /// is used as the external transport.
     pub struct SwitchToBle;
 

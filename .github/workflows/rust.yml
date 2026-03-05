@@ -288,7 +288,7 @@ jobs:
       matrix:
         target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
     env:
-      FEATURE_COMBINATIONS: ";macros;defmt;external-usb;defmt external-usb;external-ble;defmt external-ble;external-usb external-ble;external-usb-ble;macros defmt external-usb external-ble external-usb-ble"
+      FEATURE_COMBINATIONS: ";macros;defmt;usb;defmt usb;ble;defmt ble;usb ble;usb-ble;macros defmt usb ble usb-ble"
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2

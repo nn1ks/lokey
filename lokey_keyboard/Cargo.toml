@@ -29,14 +29,14 @@ defmt = [
   "embassy-futures/defmt",
 ]
 
-## Enables the external USB transport for key messages.
-external-usb = ["dep:embassy-usb", "dep:usbd-hid", "dep:ssmarshal", "dep:lokey_usb"]
+## Enables the external message service for the USB transport.
+usb = ["dep:embassy-usb", "dep:usbd-hid", "dep:ssmarshal", "dep:lokey_usb"]
 
-## Enables the external Bluetooth Low Energy (BLE) transport for key messages.
-external-ble = ["dep:trouble-host", "dep:usbd-hid", "dep:ssmarshal", "dep:lokey_ble"]
+## Enables the external message service for the BLE (Bluetooth Low Energy) transport.
+ble = ["dep:trouble-host", "dep:usbd-hid", "dep:ssmarshal", "dep:lokey_ble"]
 
-## Enables the external combined USB and BLE transport for key messages.
-external-usb-ble = ["dep:lokey_usb_ble"]
+## Enables actions to switch between USB and BLE output when using the external transport from [`lokey_usb_ble`].
+usb-ble = ["dep:lokey_usb_ble"]
 
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
@@ -66,4 +66,4 @@ typenum = "1.19.0"
 usbd-hid = { version = "0.8.2", optional = true }
 
 [package.metadata.docs.rs]
-features = ["macros", "defmt", "external-usb", "external-ble"]
+features = ["macros", "defmt", "usb", "ble", "usb-ble"]
