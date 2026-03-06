@@ -18,7 +18,7 @@
 //!     <code>256</code>,
 //!     <code>512</code>,
 //!     <code>1024</code>.
-//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
 //! </li>
 //! <li>
 //!     <span class="stab portability"><code>internal-receiver-slots-*</code></span>
@@ -31,7 +31,7 @@
 //!     <code>48</code>,
 //!     <code>56</code>,
 //!     <code>64</code>.
-//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
 //! </li>
 //! <li>
 //!     <span class="stab portability"><code>external-receiver-slots-*</code></span>
@@ -44,7 +44,7 @@
 //!     <code>48</code>,
 //!     <code>56</code>,
 //!     <code>64</code>.
-//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
 //! </li>
 //! <li>
 //!     <span class="stab portability"><code>external-observer-slots-*</code></span>
@@ -57,7 +57,7 @@
 //!     <code>48</code>,
 //!     <code>56</code>,
 //!     <code>64</code>.
-//!     If multiple instances of this feature are enabled, the the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
 //! </li>
 //! </ul>
 //!
