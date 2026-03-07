@@ -22,13 +22,20 @@
           pkg-config
           rustToolchain
           rust-analyzer
-          cargo-expand
-          cargo-depgraph
-          graphviz
           probe-rs-tools
           libusb1
           libusb1.dev
           libclang
+
+          # Tools
+          cargo-release
+          cargo-expand
+          cargo-binutils
+          cargo-bloat
+          cargo-depgraph
+          graphviz
+
+          # Docs website
           nodejs
         ];
       in {
