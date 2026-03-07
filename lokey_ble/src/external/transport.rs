@@ -13,7 +13,7 @@ use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
 use embassy_time::Timer;
 use generic_array::GenericArray;
-use lokey::mcu::{self, McuStorage, storage};
+use lokey::mcu::{McuStorage, storage};
 use lokey::util::{debug, error, info, unwrap, warn};
 use lokey::{Address, external, internal};
 use portable_atomic::{AtomicBool, AtomicU8};
@@ -45,7 +45,7 @@ pub struct Transport<Mcu: 'static, TxMessages, RxMessages, const CONN_MAX: usize
 impl<Mcu, TxMessage, RxMessage, const CONN_MAX: usize> external::Transport
     for Transport<Mcu, TxMessage, RxMessage, CONN_MAX>
 where
-    Mcu: mcu::Mcu + BleStack + McuStorage,
+    Mcu: BleStack + McuStorage + 'static,
     TxMessage: crate::external::TxMessage,
     RxMessage: crate::external::RxMessage,
 {

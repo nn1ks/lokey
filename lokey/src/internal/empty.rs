@@ -1,4 +1,4 @@
-use crate::{Address, internal, mcu};
+use crate::{Address, internal};
 use core::marker::PhantomData;
 
 pub struct TransportConfig;
@@ -7,7 +7,7 @@ pub struct Transport<Mcu> {
     phantom: PhantomData<Mcu>,
 }
 
-impl<Mcu: mcu::Mcu> internal::Transport for Transport<Mcu> {
+impl<Mcu: 'static> internal::Transport for Transport<Mcu> {
     type Config = TransportConfig;
     type Mcu = Mcu;
 

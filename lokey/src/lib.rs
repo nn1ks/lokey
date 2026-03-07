@@ -143,6 +143,7 @@ pub mod mcu;
 mod state;
 pub mod util;
 
+use core::any::Any;
 use core::future::Future;
 #[cfg(feature = "macros")]
 pub use lokey_macros::{State, device};
@@ -212,7 +213,7 @@ where
 #[derive(Clone, Copy)]
 pub struct DynContext {
     pub address: Address,
-    pub mcu: &'static dyn mcu::Mcu,
+    pub mcu: &'static dyn Any,
     pub internal_channel: internal::DynChannelRef<'static>,
     pub external_channel: external::DynChannelRef<'static>,
     pub state: &'static DynState,
@@ -225,11 +226,11 @@ pub struct Address(pub [u8; 6]);
 
 pub trait Device: Sized {
     const DEFAULT_ADDRESS: Address;
-    type Mcu: mcu::Mcu + mcu::McuInit;
-    fn mcu_config() -> <Self::Mcu as mcu::McuInit>::Config;
+    type Mcu: mcu::Mcu;
+    fn mcu_config() -> <Self::Mcu as mcu::Mcu>::Config;
 }
 
-pub trait Transports<M: mcu::Mcu> {
+pub trait Transports<M> {
     type ExternalTransport: external::Transport<Mcu = M>;
     type InternalTransport: internal::Transport<Mcu = M>;
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config;

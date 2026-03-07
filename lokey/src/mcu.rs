@@ -6,9 +6,7 @@ use embedded_storage_async::nor_flash::MultiwriteNorFlash;
 use generic_array::ArrayLength;
 pub use storage::Storage;
 
-pub trait Mcu: Any {}
-
-pub trait McuInit: Mcu {
+pub trait Mcu: Any {
     /// The configuration for this MCU.
     type Config;
 
@@ -46,9 +44,7 @@ mod dummy {
 
     pub struct DummyMcu;
 
-    impl Mcu for DummyMcu {}
-
-    impl McuInit for DummyMcu {
+    impl Mcu for DummyMcu {
         type Config = ();
 
         async fn create(_config: Self::Config, _address: Address) -> Self {

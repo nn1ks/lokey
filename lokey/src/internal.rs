@@ -1,7 +1,6 @@
 mod channel;
 pub mod empty;
 
-use crate::mcu::Mcu;
 use crate::util::declare_const_for_feature_group;
 use crate::{Address, Device, Transports};
 pub use channel::{Channel, DynChannelRef, Receiver};
@@ -61,7 +60,7 @@ pub trait Message: Send + 'static {
 
 pub trait Transport: Any {
     type Config;
-    type Mcu: Mcu;
+    type Mcu: 'static;
 
     fn create(
         config: Self::Config,

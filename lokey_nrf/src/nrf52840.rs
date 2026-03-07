@@ -2,7 +2,7 @@ use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
-use lokey::mcu::{Mcu, McuInit, McuStorage, Storage};
+use lokey::mcu::{Mcu, McuStorage, Storage};
 use lokey::util::unwrap;
 use lokey::{Address, Context, Device, StateContainer, Transports};
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
@@ -52,9 +52,7 @@ pub struct Nrf {
     ble_stack: Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
 }
 
-impl Mcu for Nrf {}
-
-impl McuInit for Nrf {
+impl Mcu for Nrf {
     type Config = Config;
 
     async fn create(config: Self::Config, address: Address) -> Self {

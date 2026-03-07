@@ -3,7 +3,6 @@ pub mod empty;
 mod r#override;
 pub mod toggle;
 
-use crate::mcu::Mcu;
 use crate::util::declare_const_for_feature_group;
 use crate::{Address, Device, Transports, internal};
 pub use channel::{Channel, DynChannelRef, Receiver};
@@ -112,7 +111,7 @@ impl Message for NoMessage {
 
 pub trait Transport: Any {
     type Config;
-    type Mcu: Mcu;
+    type Mcu: 'static;
     type TxMessage: Message + Clone;
     type RxMessage: Message + Clone;
 

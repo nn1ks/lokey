@@ -11,9 +11,8 @@
 pub mod external;
 
 use embassy_usb::driver::Driver;
-use lokey::mcu::Mcu;
 
-pub trait CreateDriver: Mcu {
+pub trait CreateDriver: 'static {
     type Driver<'d>: Driver<'d>;
     fn create_driver<'d>(&'static self) -> Self::Driver<'d>;
 }

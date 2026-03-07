@@ -9,7 +9,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
 use lokey::util::{error, info};
-use lokey::{Address, external, internal, mcu};
+use lokey::{Address, external, internal};
 
 pub struct Transport<Mcu: 'static, TxMessage, RxMessage> {
     tx_channel: Channel<CriticalSectionRawMutex, TxMessage, 1>,
@@ -21,7 +21,7 @@ pub struct Transport<Mcu: 'static, TxMessage, RxMessage> {
 
 impl<Mcu, TxMessage, RxMessage> external::Transport for Transport<Mcu, TxMessage, RxMessage>
 where
-    Mcu: mcu::Mcu + CreateDriver,
+    Mcu: CreateDriver + 'static,
     TxMessage: crate::external::TxMessage,
     RxMessage: crate::external::RxMessage,
 {

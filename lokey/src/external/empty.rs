@@ -1,5 +1,5 @@
 use crate::external::NoMessage;
-use crate::{Address, external, internal, mcu};
+use crate::{Address, external, internal};
 use core::marker::PhantomData;
 
 pub struct TransportConfig;
@@ -8,7 +8,7 @@ pub struct Transport<Mcu> {
     phantom: PhantomData<Mcu>,
 }
 
-impl<Mcu: mcu::Mcu> external::Transport for Transport<Mcu> {
+impl<Mcu: 'static> external::Transport for Transport<Mcu> {
     type Config = TransportConfig;
     type Mcu = Mcu;
     type TxMessage = NoMessage;

@@ -94,7 +94,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         #[::embassy_executor::main]
         async fn main(spawner: ::embassy_executor::Spawner) {
             fn __modify_mcu_config(
-                __config: &mut <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::Config
+                __config: &mut <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::Mcu>::Config
             ) {
                 #modify_mcu_config
             }
@@ -129,7 +129,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             let mcu = {
                 static MCU: ::lokey::static_cell::StaticCell<<#device_type_path as ::lokey::Device>::Mcu> = ::lokey::static_cell::StaticCell::new();
                 MCU.init(
-                    <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::McuInit>::create(mcu_config, address).await
+                    <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::Mcu>::create(mcu_config, address).await
                 )
             };
 
@@ -186,7 +186,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             #[::embassy_executor::task]
             async fn __run_mcu(mcu: &'static <#device_type_path as ::lokey::Device>::Mcu, context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>) {
-                ::lokey::mcu::McuInit::run(mcu, context).await;
+                ::lokey::mcu::Mcu::run(mcu, context).await;
             }
             spawner.must_spawn(__run_mcu(mcu, context));
 

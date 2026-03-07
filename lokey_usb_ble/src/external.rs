@@ -5,7 +5,7 @@ use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use generic_array::GenericArray;
 use lokey::util::{error, info};
-use lokey::{Address, external, internal, mcu};
+use lokey::{Address, external, internal};
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -72,7 +72,7 @@ where
             TxMessage = TxMessage,
             RxMessage = RxMessage,
         >,
-    Mcu: mcu::Mcu,
+    Mcu: 'static,
     TxMessage: external::Message,
     RxMessage: external::Message,
 {

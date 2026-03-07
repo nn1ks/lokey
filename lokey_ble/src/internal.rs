@@ -8,7 +8,6 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::Timer;
 use lokey::internal::MAX_MESSAGE_SIZE_WITH_TAG;
-use lokey::mcu::{self, Mcu};
 use lokey::util::{debug, error, info, unwrap};
 use lokey::{Address, internal};
 use trouble_host::gatt::{GattClient, GattConnectionEvent, GattEvent};
@@ -99,7 +98,7 @@ pub struct Transport<Mcu: 'static> {
     mcu: &'static Mcu,
 }
 
-impl<Mcu: mcu::Mcu + BleStack> internal::Transport for Transport<Mcu> {
+impl<Mcu: BleStack + 'static> internal::Transport for Transport<Mcu> {
     type Config = TransportConfig;
     type Mcu = Mcu;
 
@@ -140,7 +139,7 @@ impl<Mcu: mcu::Mcu + BleStack> internal::Transport for Transport<Mcu> {
     }
 }
 
-async fn central<M: Mcu + BleStack>(mcu: &'static M, peripheral_addresses: &'static [Address]) {
+async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &'static [Address]) {
     let ble_stack = mcu.ble_stack();
     let mut host = ble_stack.build();
 
@@ -314,7 +313,7 @@ async fn central<M: Mcu + BleStack>(mcu: &'static M, peripheral_addresses: &'sta
     join(run, connect).await;
 }
 
-async fn peripheral<M: Mcu + BleStack>(mcu: &'static M, central_address: Address) {
+async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Address) {
     let ble_stack = mcu.ble_stack();
     let mut host = ble_stack.build();
 

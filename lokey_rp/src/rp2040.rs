@@ -1,7 +1,7 @@
 use core::ops::Range;
 use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
-use lokey::mcu::{Mcu, McuInit, McuStorage, Storage};
+use lokey::mcu::{Mcu, McuStorage, Storage};
 use lokey::{Address, Context, Device, StateContainer, Transports};
 
 pub struct Config {
@@ -25,9 +25,7 @@ pub struct Rp2040 {
     storage: Storage<Flash, WordSize, EraseSize>,
 }
 
-impl Mcu for Rp2040 {}
-
-impl McuInit for Rp2040 {
+impl Mcu for Rp2040 {
     type Config = Config;
 
     async fn create(config: Self::Config, _address: Address) -> Self {
