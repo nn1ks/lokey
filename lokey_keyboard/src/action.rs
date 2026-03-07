@@ -185,6 +185,70 @@ impl Action for NoOp {
     }
 }
 
+pub struct Concurrent<A> {
+    action_container: A,
+}
+
+impl<A> Concurrent<A> {
+    pub const fn new(action_container: A) -> Self {
+        Self { action_container }
+    }
+}
+
+impl<A: ConcurrentActionContainer> Action for Concurrent<A> {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        self.action_container.all_on_press(context).await;
+    }
+
+    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        self.action_container.all_on_release(context).await;
+    }
+}
+
+pub struct Sequence<A> {
+    action_container: A,
+}
+
+impl<A> Sequence<A> {
+    pub const fn new(action_container: A) -> Self {
+        Self { action_container }
+    }
+}
+
+impl<A: ActionContainer> Action for Sequence<A> {
+    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        for i in 0..A::NumChildren::USIZE {
+            let _ = self.action_container.child_on_press(i, context).await;
+        }
+    }
+
+    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        for i in (0..A::NumChildren::USIZE).rev() {
+            let _ = self.action_container.child_on_release(i, context).await;
+        }
+    }
+}
+
 pub struct KeyCode {
     pub key: Key,
 }
