@@ -18,9 +18,10 @@ default-target = "thumbv6m-none-eabi"
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
-  "lokey/defmt",
   "embassy-rp/defmt",
   "embassy-usb?/defmt",
+  "lokey/defmt",
+  "lokey_usb?/defmt",
 ]
 
 #! #### Transports

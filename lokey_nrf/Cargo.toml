@@ -18,11 +18,11 @@ default-target = "thumbv7em-none-eabihf"
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
+  "embassy-nrf/defmt",
+  "embassy-usb?/defmt",
   "lokey/defmt",
   "lokey_ble?/defmt",
   "lokey_usb?/defmt",
-  "embassy-nrf/defmt",
-  "embassy-usb?/defmt",
   "nrf-mpsl?/defmt",
   "nrf-sdc?/defmt",
   "trouble-host?/defmt",
@@ -45,9 +45,9 @@ ble = [
 
 ## Enables support for the nRF52840 microcontroller.
 nrf52840 = [
-  "embassy-nrf/nrf52840",
   "dep:nrf-mpsl",
   "dep:nrf-sdc",
+  "embassy-nrf/nrf52840",
   "nrf-mpsl?/nrf52840",
   "nrf-sdc?/nrf52840",
 ]

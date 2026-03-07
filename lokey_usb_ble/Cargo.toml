@@ -14,9 +14,12 @@ keywords = ["firmware"]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
-  "lokey/defmt",
   "embassy-futures/defmt",
   "embassy-sync/defmt",
+  "lokey/defmt",
+  "lokey_ble/defmt",
+  "lokey_usb/defmt",
+  "trouble-host?/defmt",
 ]
 
 

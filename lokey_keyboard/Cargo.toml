@@ -21,12 +21,17 @@ macros = [
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
+  "embassy-futures/defmt",
+  "embassy-sync/defmt",
+  "embassy-time/defmt",
+  "embassy-usb/defmt",
   "lokey/defmt",
   "lokey_ble?/defmt",
   "lokey_layer/defmt",
   "lokey_usb?/defmt",
   "lokey_usb_ble?/defmt",
-  "embassy-futures/defmt",
+  "trouble-host?/defmt",
+  "usbd-hid?/defmt",
 ]
 
 ## Enables the external message service for the USB transport.

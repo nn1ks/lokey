@@ -8,12 +8,20 @@ edition = "2024"
 default-target = "thumbv6m-none-eabi"
 
 [features]
+default = ["defmt"]
+
 defmt = [
     "dep:defmt",
     "dep:defmt-rtt",
+    "embassy-executor/defmt",
+    "embassy-rp/defmt",
+    "embassy-time/defmt",
     "lokey/defmt",
-    "lokey_layer/defmt",
+    "lokey_blink/defmt",
     "lokey_keyboard/defmt",
+    "lokey_layer/defmt",
+    "lokey_rp/defmt",
+    "lokey_usb/defmt",
     "panic-probe/print-defmt",
 ]
 

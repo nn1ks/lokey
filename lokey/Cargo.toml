@@ -21,6 +21,7 @@ macros = [
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
+  "embassy-executor/defmt",
   "embassy-futures/defmt",
   "embassy-sync/defmt",
   "sequential-storage/defmt-03",

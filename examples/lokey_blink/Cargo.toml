@@ -6,9 +6,16 @@ authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
 description = "LED blink component for the lokey framework"
-readme = "../README.md"
 categories = ["embedded", "no-std"]
-keywords = ["firmware"]
+
+[features]
+defmt = [
+    "dep:defmt",
+    "embassy-sync/defmt",
+    "embassy-time/defmt",
+    "embedded-hal/defmt-03",
+    "lokey/defmt",
+]
 
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
