@@ -16,6 +16,17 @@ env:
   DEFMT_LOG: trace
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Check formatting
+        run: cargo fmt --verbose --check
   lokey:
     runs-on: ubuntu-latest
     if: always()
@@ -416,14 +427,3 @@ jobs:
             echo "::endgroup::"
           done
         working-directory: examples/${{ matrix.example }}
-  format:
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - uses: actions/checkout@v4
-      - name: Print rust version
-        run: |
-          rustc --version
-          cargo --version
-      - name: Check formatting
-        run: cargo fmt --verbose --check
