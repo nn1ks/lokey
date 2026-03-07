@@ -43,7 +43,7 @@ rp2040 = [
 [dependencies]
 defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
-embassy-rp = { version = "0.8.0", features = ["critical-section-impl", "time-driver"] }
+embassy-rp = { version = "0.9.0", features = ["critical-section-impl", "time-driver"] }
 embassy-usb = { version = "0.5.1", features = ["usbd-hid"], optional = true }
 lokey = { path = "../lokey" }
 lokey_usb = { path = "../lokey_usb", optional = true }

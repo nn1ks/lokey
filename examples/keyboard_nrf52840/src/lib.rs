@@ -224,7 +224,14 @@ impl<S: StateContainer, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for K
         let ch1 = unsafe { embassy_nrf::peripherals::P0_05::steal().into::<AnyPin>() };
         let ch2 = unsafe { embassy_nrf::peripherals::P0_04::steal().into::<AnyPin>() };
         let ch3 = unsafe { embassy_nrf::peripherals::P0_29::steal().into::<AnyPin>() };
-        let simple_pwm = SimplePwm::new_4ch(pwm1, ch0, ch1, ch2, ch3);
+        let simple_pwm = SimplePwm::new_4ch(
+            pwm1,
+            ch0,
+            ch1,
+            ch2,
+            ch3,
+            &embassy_nrf::pwm::SimpleConfig::default(),
+        );
         // frequency = base clock of NRF52840 / prescaler * max_duty
         // frequency = 16MHz / 1 * 1_000 = 16kHz
         let max_duty = 1_000;

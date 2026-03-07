@@ -402,9 +402,8 @@ async fn peripheral<M: Mcu + BleStack>(mcu: &'static M, central_address: Address
                                         };
                                     }
                                 }
-                                GattEvent::Other(_) => {
-                                    debug!("GATT other event")
-                                }
+                                GattEvent::NotAllowed(_) => debug!("GATT not allowed event"),
+                                GattEvent::Other(_) => debug!("GATT other event"),
                             }
                             match event.accept() {
                                 Ok(reply) => reply.send().await,

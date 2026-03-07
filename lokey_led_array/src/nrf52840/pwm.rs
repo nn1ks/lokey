@@ -1,5 +1,5 @@
 use core::cell::RefCell;
-use embassy_nrf::pwm::{self, Prescaler};
+use embassy_nrf::pwm::{self, DutyCycle, Prescaler};
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
@@ -67,7 +67,9 @@ impl<'a, 'd> crate::pwm::PwmChannel for PwmChannel<'a, 'd> {
     }
 
     fn set_duty(&mut self, duty: u16) {
-        self.pwm
-            .lock(|v| v.borrow_mut().set_duty(self.channel_index, duty));
+        self.pwm.lock(|v| {
+            v.borrow_mut()
+                .set_duty(self.channel_index, DutyCycle::normal(duty))
+        });
     }
 }

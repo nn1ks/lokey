@@ -33,7 +33,7 @@ generic-array = "1.3.4"
 lokey = { path = "../lokey", version = "0.0.1" }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 static_cell = "2.1.0"
-trouble-host = { version = "0.5", features = ["security"] }
+trouble-host = { version = "0.6.0", features = ["security"] }
 typenum = "1.17.0"
 
 [package.metadata.docs.rs]

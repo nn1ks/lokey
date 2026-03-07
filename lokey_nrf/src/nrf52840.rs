@@ -183,10 +183,10 @@ mod ble {
     ) -> Result<SoftdeviceController<'d>, nrf_sdc::Error> {
         // TODO
         nrf_sdc::Builder::new()?
-            .support_adv()?
-            .support_scan()?
-            .support_central()?
-            .support_peripheral()?
+            .support_adv()
+            .support_scan()
+            .support_central()
+            .support_peripheral()
             .central_count(1)?
             .peripheral_count(1)?
             .buffer_cfg(72, 72, 3, 3)?
