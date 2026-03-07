@@ -92,6 +92,8 @@ pub use lokey_keyboard_macros::layout;
 #[doc(hidden)]
 pub use lokey_layer; // Re-exported for use in the `layout!` macro.
 pub use matrix::{Matrix, MatrixConfig};
+#[doc(hidden)]
+pub use typenum; // Re-exported for use in the `layout!` macro.
 
 /// The layout of the keys.
 pub struct Layout<A: ActionContainer> {
