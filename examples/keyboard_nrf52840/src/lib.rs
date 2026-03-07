@@ -260,19 +260,6 @@ impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardRight {
     }
 }
 
-impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, 1>, S> for KeyboardRight {
-    async fn enable<T>(component: Scanner<DirectPinsConfig, 1>, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
-        let direct_pins = DirectPins::new::<1>([
-            Input::new(unsafe { P1_11::steal() }, Pull::Up).into_active_low_switch()
-        ])
-        .continuous::<0>();
-        component.run(direct_pins, context.as_dyn()).await;
-    }
-}
-
 impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
     async fn enable<T>(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
     where
