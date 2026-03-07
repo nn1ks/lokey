@@ -27,9 +27,6 @@ jobs:
       FEATURE_COMBINATIONS: ";macros;defmt;macros defmt"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.target }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -70,9 +67,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.target }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -113,9 +107,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.target }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -156,9 +147,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.target }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -203,9 +191,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt;defmt usb ble"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.mcu }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -249,9 +234,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt;defmt usb"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.mcu }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -291,9 +273,6 @@ jobs:
       FEATURE_COMBINATIONS: ";macros;defmt;usb;defmt usb;ble;defmt ble;usb ble;usb-ble;macros defmt usb ble usb-ble"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.target }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -334,9 +313,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.target }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -375,9 +351,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt;ble;defmt ble"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.mcu }}"
       - name: Print rust version
         run: |
           rustc --version
@@ -418,10 +391,6 @@ jobs:
       FEATURE_COMBINATIONS: ";defmt"
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: "${{ matrix.example }}"
-          workspaces: examples/${{ matrix.example }}
       - name: Print rust version
         run: |
           rustc --version
