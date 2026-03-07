@@ -32,6 +32,7 @@
           cargo-expand
           cargo-binutils
           cargo-bloat
+          cargo-outdated
           cargo-depgraph
           graphviz
 
