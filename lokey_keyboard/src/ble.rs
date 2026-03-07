@@ -1,3 +1,5 @@
+#![allow(clippy::needless_borrows_for_generic_args)] // Produced by the macros from trouble_host
+
 use super::ExternalMessage;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::mutex::Mutex;
