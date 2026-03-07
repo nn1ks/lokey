@@ -1,9 +1,9 @@
 use proc_macro::TokenStream;
 use proc_macro_error::abort;
 use quote::{ToTokens, quote};
-use syn::parse_macro_input;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::{Ident, parse_macro_input};
 
 fn layer_actions(
     arrays: Punctuated<syn::ExprArray, syn::token::Comma>,
@@ -67,8 +67,70 @@ pub fn layout(item: TokenStream) -> TokenStream {
         })
         .collect::<Vec<_>>();
 
-    quote! {
-        ::lokey_keyboard::Layout::new((#(#combined_actions,)*))
-    }
+    let struct_generics = (0..combined_actions.len())
+        .map(|i| Ident::new(&format!("A{}", i), proc_macro2::Span::call_site()))
+        .collect::<Vec<_>>();
+    let struct_definition = quote! {
+        struct __LayoutActionContainer<#(#struct_generics),*>(
+            #(#struct_generics,)*
+        );
+    };
+
+    let num_children_typenum = Ident::new(
+        &format!("U{}", combined_actions.len()),
+        proc_macro2::Span::call_site(),
+    );
+    let field_indices = (0..combined_actions.len())
+        .map(syn::Index::from)
+        .collect::<Vec<_>>();
+    let struct_impl = quote! {
+        impl<#(#struct_generics: ::lokey_keyboard::Action),*> ::lokey_keyboard::ActionContainer for __LayoutActionContainer<#(#struct_generics),*> {
+            type NumChildren = ::lokey_keyboard::typenum::#num_children_typenum;
+
+            async fn child_on_press<D, T, S>(
+                &self,
+                child_index: usize,
+                context: ::lokey::Context<D, T, S>,
+            ) -> ::core::result::Result<(), ::lokey_keyboard::action::InvalidChildActionIndex>
+            where
+                D: ::lokey::Device,
+                T: ::lokey::Transports<D::Mcu>,
+                S: ::lokey::StateContainer
+            {
+                match child_index {
+                    #(#field_indices => {
+                        self.#field_indices.on_press(context).await;
+                        ::core::result::Result::Ok(())
+                    })*
+                    _ => ::core::result::Result::Err(::lokey_keyboard::action::InvalidChildActionIndex { index: child_index })
+                }
+            }
+
+            async fn child_on_release<D, T, S>(
+                &self,
+                child_index: usize,
+                context: ::lokey::Context<D, T, S>,
+            ) -> ::core::result::Result<(), ::lokey_keyboard::action::InvalidChildActionIndex>
+            where
+                D: ::lokey::Device,
+                T: ::lokey::Transports<D::Mcu>,
+                S: ::lokey::StateContainer
+            {
+                match child_index {
+                    #(#field_indices => {
+                        self.#field_indices.on_release(context).await;
+                        ::core::result::Result::Ok(())
+                    })*
+                    _ => ::core::result::Result::Err(::lokey_keyboard::action::InvalidChildActionIndex { index: child_index })
+                }
+            }
+        }
+    };
+
+    quote! {{
+        #struct_definition
+        #struct_impl
+        ::lokey_keyboard::Layout::new(__LayoutActionContainer(#(#combined_actions,)*))
+    }}
     .into()
 }
