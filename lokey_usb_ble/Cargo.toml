@@ -19,7 +19,7 @@ defmt = [
   "lokey/defmt",
   "lokey_ble/defmt",
   "lokey_usb/defmt",
-  "trouble-host?/defmt",
+  "trouble-host/defmt",
 ]
 
 
