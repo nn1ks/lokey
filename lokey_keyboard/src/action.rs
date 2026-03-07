@@ -98,7 +98,7 @@ macro_rules! impl_action_container_for_tuples {
     };
 }
 
-impl_action_container_for_tuples!(128);
+impl_action_container_for_tuples!(16);
 
 pub trait Action: Send + Sync + 'static {
     fn on_press<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
