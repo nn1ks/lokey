@@ -68,7 +68,7 @@ impl FromGatt for Message {
 }
 
 mod peripheral {
-    #![allow(clippy::useless_conversion)] // Produced by the macros from trouble_host
+    #![allow(clippy::useless_conversion, clippy::needless_borrows_for_generic_args)] // Produced by the macros from trouble_host
 
     use super::{
         MESSAGE_TO_CENTRAL_CHARACTERISTIC_UUID, MESSAGE_TO_PERIPHERAL_CHARACTERISTIC_UUID, Message,
