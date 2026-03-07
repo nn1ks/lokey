@@ -14,6 +14,7 @@ use lokey::{Address, Context, Device, StateContainer, Transports};
 use lokey_layer::{LayerId, LayerManager, LayerManagerEntry};
 use portable_atomic::AtomicBool;
 use seq_macro::seq;
+use typenum::Unsigned;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Display, Error)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -40,6 +41,22 @@ pub trait ActionContainer: Send + Sync + 'static {
         child_index: usize,
         context: Context<D, T, S>,
     ) -> impl Future<Output = Result<(), InvalidChildActionIndex>>
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer;
+}
+
+pub trait ConcurrentActionContainer: Send + Sync + 'static {
+    type NumChildren: ArrayLength;
+
+    fn all_on_press<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer;
+
+    fn all_on_release<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
     where
         D: Device,
         T: Transports<D::Mcu>,
@@ -92,6 +109,39 @@ macro_rules! impl_action_container_for_tuples {
                         #(N => Ok(self.N.on_release(context).await),)*
                         _ => Err(InvalidChildActionIndex { index: child_index }),
                     }
+                }
+            }
+
+            impl<#(A~N,)*> ConcurrentActionContainer for (#(A~N,)*)
+            where
+                #(A~N: Action,)*
+            {
+                type NumChildren = seq!(M in $num..=$num { typenum::U~M });
+
+                async fn all_on_press<D, T, S>(
+                    &self,
+                    #[allow(unused_variables)]
+                    context: Context<D, T, S>
+                )
+                where
+                    D: Device,
+                    T: Transports<D::Mcu>,
+                    S: StateContainer,
+                {
+                    futures_util::join!( #(self.N.on_press(context),)* );
+                }
+
+                async fn all_on_release<D, T, S>(
+                    &self,
+                    #[allow(unused_variables)]
+                    context: Context<D, T, S>
+                )
+                where
+                    D: Device,
+                    T: Transports<D::Mcu>,
+                    S: StateContainer,
+                {
+                    futures_util::join!( #(self.N.on_release(context),)* );
                 }
             }
         });
