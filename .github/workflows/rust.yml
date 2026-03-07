@@ -397,9 +397,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        example: [keyboard_nrf52840, keyboard_rp2040]
-    env:
-      FEATURE_COMBINATIONS: ";defmt"
+        example: [lokey_blink, keyboard_nrf52840, keyboard_rp2040]
+        include:
+          - example: lokey_blink
+            feature_combinations: ";defmt"
+          - example: keyboard_nrf52840
+            feature_combinations: ";defmt"
+          - example: keyboard_rp2040
+            feature_combinations: ";defmt"
     steps:
       - uses: actions/checkout@v4
       - name: Print rust version
@@ -412,7 +417,7 @@ jobs:
       - name: Build
         run: |
           export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
+          for features in "${{ matrix.feature_combinations }}"; do
             echo "::group::Features: \"$features\""
             cargo build --verbose --no-default-features --features "$features"
             echo "::endgroup::"
@@ -421,7 +426,7 @@ jobs:
       - name: Run clippy
         run: |
           export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
+          for features in "${{ matrix.feature_combinations }}"; do
             echo "::group::Features: \"$features\""
             cargo clippy --verbose --no-default-features --features "$features"
             echo "::endgroup::"
