@@ -24,7 +24,7 @@ defmt = [
   "embassy-executor/defmt",
   "embassy-futures/defmt",
   "embassy-sync/defmt",
-  "sequential-storage/defmt-03",
+  "sequential-storage/defmt",
 ]
 
 
@@ -76,7 +76,7 @@ embedded-storage-async = "0.4.1"
 generic-array = "1.3.4"
 lokey_macros = { path = "../lokey_macros", version = "0.0.1", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
-sequential-storage = "5.0.1"
+sequential-storage = "7.1.0"
 static_cell = "2.1.0"
 typenum = "1.17.0"
 
