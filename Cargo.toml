@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "lokey",
     "lokey_macros",
@@ -12,8 +13,11 @@ members = [
     "lokey_layer",
     "lokey_led_array",
 ]
-exclude = ["examples/keyboard_nrf52840", "examples/keyboard_rp2040"]
-resolver = "2"
+exclude = [
+    "examples/lokey_blink",
+    "examples/keyboard_nrf52840",
+    "examples/keyboard_rp2040"
+]
 
 [profile.release]
 debug = 2
