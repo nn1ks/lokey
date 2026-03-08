@@ -103,12 +103,15 @@ where
     type TxMessage = TxMessage;
     type RxMessage = RxMessage;
 
-    async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
+    async fn create<U>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
         internal_channel: &'static internal::Channel<U>,
-    ) -> Self {
+    ) -> Self
+    where
+        U: internal::Transport<Mcu = Self::Mcu>,
+    {
         let transport = T::create(config.transport, mcu, address, internal_channel).await;
         ACTIVE.store(config.active, Ordering::Release);
         transport.set_active(config.active).await;
@@ -121,7 +124,10 @@ where
         }
     }
 
-    async fn run(&self) {
+    async fn run<Storage>(&self, _: &'static Storage)
+    where
+        Storage: crate::storage::Storage,
+    {
         let handle_internal_messages = async {
             let mut receiver = self.internal_channel.receiver::<Message>();
             loop {

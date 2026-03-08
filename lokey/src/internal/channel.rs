@@ -39,7 +39,10 @@ impl<Transport: internal::Transport> Channel<Transport> {
         }
     }
 
-    pub async fn run(&self) {
+    pub async fn run<Storage>(&self, storage: &'static Storage)
+    where
+        Storage: crate::storage::Storage,
+    {
         let handle_messages = async {
             let publisher = unwrap!(self.rx_channel.publisher());
             loop {
@@ -61,7 +64,7 @@ impl<Transport: internal::Transport> Channel<Transport> {
                 publisher.publish(message).await;
             }
         };
-        join3(handle_messages, send_messages, self.transport.run()).await;
+        join3(handle_messages, send_messages, self.transport.run(storage)).await;
     }
 
     /// Converts this channel into a dynamic one.

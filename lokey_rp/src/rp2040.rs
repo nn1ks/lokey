@@ -1,39 +1,28 @@
-use core::ops::Range;
+use crate::StorageConfig;
 use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
-use lokey::mcu::{Mcu, McuStorage, Storage};
+use lokey::mcu::Mcu;
+use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::{Address, Context, Device, StateContainer, Transports};
 
-pub struct Config {
-    pub storage_flash_range: Range<u32>,
-}
+pub struct Config {}
 
 impl Default for Config {
     fn default() -> Self {
-        Self {
-            storage_flash_range: 0..0x1_0000,
-        }
+        Self {}
     }
 }
 
-pub type Flash = flash::Flash<'static, FLASH, flash::Async, 0x200000>;
-
-type WordSize = typenum::U4;
-type EraseSize = typenum::U4096;
-
-pub struct Rp2040 {
-    storage: Storage<Flash, WordSize, EraseSize>,
-}
+#[non_exhaustive]
+pub struct Rp2040 {}
 
 impl Mcu for Rp2040 {
     type Config = Config;
 
-    async fn create(config: Self::Config, _address: Address) -> Self {
+    async fn create(_: Self::Config, _address: Address) -> Self {
         let rp_config = embassy_rp::config::Config::default();
         embassy_rp::init(rp_config);
-        let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() });
-        let storage = Storage::new(flash, config.storage_flash_range);
-        Self { storage }
+        Self {}
     }
 
     async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
@@ -45,13 +34,21 @@ impl Mcu for Rp2040 {
     }
 }
 
-impl McuStorage for Rp2040 {
-    type Flash = Flash;
-    type WordSize = WordSize;
-    type EraseSize = EraseSize;
+type Flash = flash::Flash<'static, FLASH, flash::Async, 0x200000>;
 
-    fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
-        &self.storage
+type WordSize = typenum::U4;
+type EraseSize = typenum::U4096;
+
+pub struct DefaultStorageDriver;
+
+impl StorageDriver for DefaultStorageDriver {
+    type Storage = DefaultStorage<Flash, WordSize, EraseSize>;
+    type Mcu = Rp2040;
+    type Config = StorageConfig;
+
+    fn create_storage(_: &'static Self::Mcu, config: Self::Config) -> Self::Storage {
+        let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() });
+        DefaultStorage::new(flash, config.flash_range)
     }
 }
 

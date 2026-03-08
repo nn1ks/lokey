@@ -9,6 +9,7 @@ use syn::spanned::Spanned;
 struct DeviceArgs {
     address: Option<syn::Expr>,
     mcu_config: Option<syn::Expr>,
+    storage_config: Option<syn::Expr>,
     internal_transport_config: Option<syn::Expr>,
     external_transport_config: Option<syn::Expr>,
     message_override: Option<syn::Expr>,
@@ -71,6 +72,10 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         Some(v) => quote! { #v(__config); },
         None => quote! {},
     };
+    let modify_storage_config = match args.storage_config {
+        Some(v) => quote! { #v(__config); },
+        None => quote! {},
+    };
     let modify_internal_transport_config = match args.internal_transport_config {
         Some(v) => quote! { #v(__config); },
         None => quote! {},
@@ -99,6 +104,12 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 #modify_mcu_config
             }
 
+            fn __modify_storage_config(
+                __config: &mut <<#device_type_path as ::lokey::Device>::StorageDriver as ::lokey::storage::StorageDriver>::Config
+            ) {
+                #modify_storage_config
+            }
+
             fn __modify_internal_transport_config(
                 __config: &mut <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::Config
             ) {
@@ -117,6 +128,10 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             let mut mcu_config = <#device_type_path as ::lokey::Device>::mcu_config();
             __modify_mcu_config(&mut mcu_config);
 
+            // Get storage config
+            let mut storage_config = <#device_type_path as ::lokey::Device>::storage_config();
+            __modify_storage_config(&mut storage_config);
+
             // Get internal transport config
             let mut internal_transport_config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::internal_transport_config();
             __modify_internal_transport_config(&mut internal_transport_config);
@@ -130,6 +145,14 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 static MCU: ::lokey::static_cell::StaticCell<<#device_type_path as ::lokey::Device>::Mcu> = ::lokey::static_cell::StaticCell::new();
                 MCU.init(
                     <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::mcu::Mcu>::create(mcu_config, address).await
+                )
+            };
+
+            // Create storage
+            let storage = {
+                static STORAGE: ::lokey::static_cell::StaticCell<<<#device_type_path as ::lokey::Device>::StorageDriver as ::lokey::storage::StorageDriver>::Storage> = ::lokey::static_cell::StaticCell::new();
+                STORAGE.init(
+                    <<#device_type_path as ::lokey::Device>::StorageDriver as ::lokey::storage::StorageDriver>::create_storage(mcu, storage_config)
                 )
             };
 
@@ -191,17 +214,23 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             spawner.must_spawn(__run_mcu(mcu, context));
 
             #[::embassy_executor::task]
-            async fn __run_internal_channel(channel: &'static ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>) {
-                channel.run().await;
+            async fn __run_internal_channel(
+                channel: &'static ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>,
+                storage: &'static <<#device_type_path as ::lokey::Device>::StorageDriver as ::lokey::storage::StorageDriver>::Storage,
+            ) {
+                channel.run(storage).await;
             }
-            spawner.must_spawn(__run_internal_channel(internal_channel));
+            spawner.must_spawn(__run_internal_channel(internal_channel, storage));
 
             #[::embassy_executor::task]
-            async fn __run_external_channel(channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>) {
+            async fn __run_external_channel(
+                channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>,
+                storage: &'static <<#device_type_path as ::lokey::Device>::StorageDriver as ::lokey::storage::StorageDriver>::Storage,
+            ) {
                 let message_override = #message_override;
-                channel.run(message_override).await;
+                channel.run(storage, message_override).await;
             }
-            spawner.must_spawn(__run_external_channel(external_channel));
+            spawner.must_spawn(__run_external_channel(external_channel, storage));
 
             #function
 

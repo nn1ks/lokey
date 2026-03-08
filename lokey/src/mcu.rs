@@ -1,10 +1,5 @@
-pub mod storage;
-
 use crate::{Address, Context, Device, StateContainer, Transports};
 use core::any::Any;
-use embedded_storage_async::nor_flash::MultiwriteNorFlash;
-use generic_array::ArrayLength;
-pub use storage::Storage;
 
 pub trait Mcu: Any {
     /// The configuration for this MCU.
@@ -26,13 +21,6 @@ pub trait Mcu: Any {
         T: Transports<Self>,
         S: StateContainer,
         Self: Sized;
-}
-
-pub trait McuStorage {
-    type Flash: MultiwriteNorFlash;
-    type WordSize: ArrayLength;
-    type EraseSize: ArrayLength;
-    fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize>;
 }
 
 // This is only used for doc tests

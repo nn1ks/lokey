@@ -5,7 +5,7 @@ use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use generic_array::GenericArray;
 use lokey::util::{error, info};
-use lokey::{Address, external, internal};
+use lokey::{Address, external, internal, storage};
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -81,12 +81,15 @@ where
     type TxMessage = TxMessage;
     type RxMessage = RxMessage;
 
-    async fn create<U: internal::Transport<Mcu = Self::Mcu>>(
+    async fn create<U>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
         internal_channel: &'static internal::Channel<U>,
-    ) -> Self {
+    ) -> Self
+    where
+        U: internal::Transport<Mcu = Self::Mcu>,
+    {
         let usb_transport =
             Usb::create(config.to_usb_config(), mcu, address, internal_channel).await;
         let ble_transport =
@@ -105,7 +108,10 @@ where
         }
     }
 
-    async fn run(&self) {
+    async fn run<Storage>(&self, _: &'static Storage)
+    where
+        Storage: storage::Storage,
+    {
         let handle_activation_request = async {
             loop {
                 let future1 = self.usb_transport.wait_for_activation_request();

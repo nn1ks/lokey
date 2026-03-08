@@ -68,7 +68,9 @@ pub trait Transport: Any {
         address: Address,
     ) -> impl Future<Output = Self>;
 
-    fn run(&self) -> impl Future<Output = ()>;
+    fn run<Storage>(&self, storage: &'static Storage) -> impl Future<Output = ()>
+    where
+        Storage: crate::storage::Storage;
 
     fn send(&self, message_bytes: &[u8]) -> impl Future<Output = ()>;
 

@@ -13,9 +13,8 @@ use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
 use embassy_time::Timer;
 use generic_array::GenericArray;
-use lokey::mcu::{McuStorage, storage};
 use lokey::util::{debug, error, info, unwrap, warn};
-use lokey::{Address, external, internal};
+use lokey::{Address, external, internal, storage};
 use portable_atomic::{AtomicBool, AtomicU8};
 use trouble_host::att::AttErrorCode;
 use trouble_host::gap::{GapConfig, PeripheralConfig};
@@ -45,7 +44,7 @@ pub struct Transport<Mcu: 'static, TxMessages, RxMessages, const CONN_MAX: usize
 impl<Mcu, TxMessage, RxMessage, const CONN_MAX: usize> external::Transport
     for Transport<Mcu, TxMessage, RxMessage, CONN_MAX>
 where
-    Mcu: BleStack + McuStorage + 'static,
+    Mcu: BleStack + 'static,
     TxMessage: crate::external::TxMessage,
     RxMessage: crate::external::RxMessage,
 {
@@ -54,12 +53,15 @@ where
     type TxMessage = TxMessage;
     type RxMessage = RxMessage;
 
-    async fn create<T: internal::Transport<Mcu = Self::Mcu>>(
+    async fn create<T>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         _: Address,
         internal_channel: &'static internal::Channel<T>,
-    ) -> Self {
+    ) -> Self
+    where
+        T: internal::Transport<Mcu = Self::Mcu>,
+    {
         Self {
             tx_channel: Channel::new(),
             rx_channel: Channel::new(),
@@ -71,7 +73,10 @@ where
         }
     }
 
-    async fn run(&self) {
+    async fn run<Storage>(&self, storage: &'static Storage)
+    where
+        Storage: storage::Storage,
+    {
         // TODO: use TxMessage::ATTRIBUTE_COUNT and TxMessage::CCCD_MAX
         const ATT_MAX: usize = 50;
         const CCCD_MAX: usize = 50;
@@ -471,9 +476,7 @@ where
                             );
                         } else {
                             debug!("Removing bond info for profile {}", profile_index);
-                            if let Err(e) = self
-                                .mcu
-                                .storage()
+                            if let Err(e) = storage
                                 .remove::<BondInformationWrapper>(profile_index)
                                 .await
                             {
@@ -493,9 +496,7 @@ where
                     Message::ClearActive => {
                         debug!("Removing bond info for active profile");
                         let profile_index = active_profile_index.load(Ordering::SeqCst);
-                        if let Err(e) = self
-                            .mcu
-                            .storage()
+                        if let Err(e) = storage
                             .remove::<BondInformationWrapper>(profile_index)
                             .await
                         {
@@ -512,9 +513,7 @@ where
                     Message::ClearAll => {
                         debug!("Removing all bond infos");
                         for i in 0..num_profiles.get() {
-                            if let Err(e) =
-                                self.mcu.storage().remove::<BondInformationWrapper>(i).await
-                            {
+                            if let Err(e) = storage.remove::<BondInformationWrapper>(i).await {
                                 #[cfg(feature = "defmt")]
                                 let e = defmt::Debug2Format(&e);
                                 error!("Failed to remove bond info: {}", e);

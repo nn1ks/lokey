@@ -101,10 +101,11 @@ impl Device for KeyboardLeft {
 
     type Mcu = Nrf;
 
+    type StorageDriver = lokey_nrf::DefaultStorageDriver;
+
     fn mcu_config() -> lokey_nrf::Config {
         lokey_nrf::Config {
             ble_gap_device_name: Some("keyboard"),
-            ..Default::default()
         }
     }
 }
@@ -250,6 +251,8 @@ impl Device for KeyboardRight {
     const DEFAULT_ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
 
     type Mcu = Nrf;
+
+    type StorageDriver = lokey_nrf::DefaultStorageDriver;
 
     fn mcu_config() -> lokey_nrf::Config {
         lokey_nrf::Config::default()

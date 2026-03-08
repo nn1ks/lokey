@@ -1,8 +1,9 @@
-use core::ops::Range;
+use crate::StorageConfig;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
-use lokey::mcu::{Mcu, McuStorage, Storage};
+use lokey::mcu::Mcu;
+use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::util::unwrap;
 use lokey::{Address, Context, Device, StateContainer, Transports};
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
@@ -18,18 +19,13 @@ use {
     trouble_host::{HostResources, Stack},
 };
 
-type WordSize = typenum::U4;
-type EraseSize = typenum::U4096;
-
 pub struct Config {
-    pub storage_flash_range: Range<u32>,
     pub ble_gap_device_name: Option<&'static str>,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            storage_flash_range: 0x6_0000..0x7_0000,
             ble_gap_device_name: None,
         }
     }
@@ -46,7 +42,6 @@ bind_interrupts!(struct Irqs {
 });
 
 pub struct Nrf {
-    storage: Storage<Flash<'static>, WordSize, EraseSize>,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
     #[cfg(feature = "ble")]
     ble_stack: Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
@@ -55,7 +50,7 @@ pub struct Nrf {
 impl Mcu for Nrf {
     type Config = Config;
 
-    async fn create(config: Self::Config, address: Address) -> Self {
+    async fn create(_: Self::Config, address: Address) -> Self {
         #[cfg(not(feature = "ble"))]
         let _ = address;
 
@@ -83,9 +78,6 @@ impl Mcu for Nrf {
             SESSION_MEM.init(SessionMem::new())
         )));
 
-        let flash = Flash::take(mpsl, p.NVMC);
-        let storage = Storage::new(flash, config.storage_flash_range);
-
         #[cfg(feature = "ble")]
         let ble_stack = {
             let sdc_p = nrf_sdc::Peripherals::new(
@@ -111,7 +103,6 @@ impl Mcu for Nrf {
         };
 
         Self {
-            storage,
             mpsl,
             #[cfg(feature = "ble")]
             ble_stack,
@@ -128,13 +119,20 @@ impl Mcu for Nrf {
     }
 }
 
-impl McuStorage for Nrf {
-    type Flash = Flash<'static>;
-    type WordSize = WordSize;
-    type EraseSize = EraseSize;
+type WordSize = typenum::U4;
+type EraseSize = typenum::U4096;
 
-    fn storage(&self) -> &Storage<Self::Flash, Self::WordSize, Self::EraseSize> {
-        &self.storage
+pub struct DefaultStorageDriver;
+
+impl StorageDriver for DefaultStorageDriver {
+    type Storage = DefaultStorage<Flash<'static>, WordSize, EraseSize>;
+    type Mcu = Nrf;
+    type Config = StorageConfig;
+
+    fn create_storage(mcu: &'static Self::Mcu, config: Self::Config) -> Self::Storage {
+        let nvmc = unsafe { embassy_nrf::peripherals::NVMC::steal() };
+        let flash = Flash::take(mcu.mpsl, nvmc);
+        DefaultStorage::new(flash, config.flash_range)
     }
 }
 

@@ -57,6 +57,8 @@ impl Device for KeyboardLeft {
 
     type Mcu = Rp2040;
 
+    type StorageDriver = lokey_rp::DefaultStorageDriver;
+
     fn mcu_config() -> lokey_rp::Config {
         lokey_rp::Config::default()
     }

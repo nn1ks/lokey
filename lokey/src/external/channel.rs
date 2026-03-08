@@ -35,8 +35,12 @@ where
         }
     }
 
-    pub async fn run<Override>(&self, mut message_override: Override)
-    where
+    pub async fn run<Storage, Override>(
+        &self,
+        storage: &'static Storage,
+        mut message_override: Override,
+    ) where
+        Storage: crate::storage::Storage,
         Override: external::Override,
         Override::TxMessage: Into<Transport::TxMessage> + TryFromMessage<Transport::TxMessage>,
     {
@@ -80,7 +84,12 @@ where
                 }
             }
         };
-        join3(handle_messages, send_messages, self.transport.run()).await;
+        join3(
+            handle_messages,
+            send_messages,
+            self.transport.run::<Storage>(storage),
+        )
+        .await;
     }
 
     /// Converts this channel into a dynamic one.

@@ -79,12 +79,16 @@ use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
     external
 };
+use lokey::storage::EmptyStorageDriver;
 
 struct Keyboard;
 
 impl Device for Keyboard {
-    const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
     type Mcu = DummyMcu;
+    type StorageDriver = EmptyStorageDriver<DummyMcu>;
+
+    const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
+
     fn mcu_config() {
        // ...
     }
@@ -110,10 +114,12 @@ struct Central;
 impl Transports<DummyMcu> for Central {
     type ExternalTransport = external::empty::Transport<DummyMcu>;
     type InternalTransport = internal::empty::Transport<DummyMcu>;
+
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         # unimplemented!()
         // ...
     }
+
     fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
         # unimplemented!()
         // ...
@@ -141,6 +147,7 @@ pub mod external;
 pub mod internal;
 pub mod mcu;
 mod state;
+pub mod storage;
 pub mod util;
 
 use core::any::Any;
@@ -225,9 +232,17 @@ pub struct DynContext {
 pub struct Address(pub [u8; 6]);
 
 pub trait Device: Sized {
-    const DEFAULT_ADDRESS: Address;
     type Mcu: mcu::Mcu;
+
+    type StorageDriver: storage::StorageDriver<Mcu = Self::Mcu>;
+
+    const DEFAULT_ADDRESS: Address;
+
     fn mcu_config() -> <Self::Mcu as mcu::Mcu>::Config;
+
+    fn storage_config() -> <Self::StorageDriver as storage::StorageDriver>::Config {
+        Default::default()
+    }
 }
 
 pub trait Transports<M> {

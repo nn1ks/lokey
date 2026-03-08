@@ -115,14 +115,18 @@ pub trait Transport: Any {
     type TxMessage: Message + Clone;
     type RxMessage: Message + Clone;
 
-    fn create<T: internal::Transport<Mcu = Self::Mcu>>(
+    fn create<T>(
         config: Self::Config,
         mcu: &'static Self::Mcu,
         address: Address,
         internal_channel: &'static internal::Channel<T>,
-    ) -> impl Future<Output = Self>;
+    ) -> impl Future<Output = Self>
+    where
+        T: internal::Transport<Mcu = Self::Mcu>;
 
-    fn run(&self) -> impl Future<Output = ()>;
+    fn run<Storage>(&self, storage: &'static Storage) -> impl Future<Output = ()>
+    where
+        Storage: crate::storage::Storage;
 
     fn send(&self, message: Self::TxMessage) -> impl Future<Output = ()>;
 

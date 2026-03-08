@@ -9,7 +9,7 @@ use embassy_sync::channel::Channel;
 use embassy_time::Timer;
 use lokey::internal::MAX_MESSAGE_SIZE_WITH_TAG;
 use lokey::util::{debug, error, info, unwrap};
-use lokey::{Address, internal};
+use lokey::{Address, internal, storage};
 use trouble_host::gatt::{GattClient, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
     AddrKind, Advertisement, AdvertisementParameters, AsGatt, BdAddr, Characteristic,
@@ -106,7 +106,10 @@ impl<Mcu: BleStack + 'static> internal::Transport for Transport<Mcu> {
         Self { config, mcu }
     }
 
-    async fn run(&self) {
+    async fn run<Storage>(&self, _: &'static Storage)
+    where
+        Storage: storage::Storage,
+    {
         match self.config {
             TransportConfig::Central {
                 peripheral_addresses,

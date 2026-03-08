@@ -17,7 +17,11 @@ impl<Mcu: 'static> internal::Transport for Transport<Mcu> {
         }
     }
 
-    async fn run(&self) {}
+    async fn run<Storage>(&self, _: &'static Storage)
+    where
+        Storage: crate::storage::Storage,
+    {
+    }
 
     async fn send(&self, _: &[u8]) {}
 

@@ -11,5 +11,19 @@
 
 #[cfg(feature = "nrf52840")]
 mod nrf52840;
+
+use core::ops::Range;
 #[cfg(feature = "nrf52840")]
 pub use nrf52840::*;
+
+pub struct StorageConfig {
+    pub flash_range: Range<u32>,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            flash_range: 0x6_0000..0x7_0000,
+        }
+    }
+}
