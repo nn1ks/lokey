@@ -73,7 +73,7 @@
     feature = "macros",
     doc = "
 # use core::unimplemented;
-# use lokey::mcu::DummyMcu;
+# use lokey::DummyMcu;
 use embassy_executor::Spawner;
 use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
