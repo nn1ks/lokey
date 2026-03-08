@@ -5,13 +5,8 @@ use lokey::mcu::Mcu;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::{Address, Context, Device, StateContainer, Transports};
 
+#[derive(Default)]
 pub struct Config {}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 #[non_exhaustive]
 pub struct Rp2040 {}

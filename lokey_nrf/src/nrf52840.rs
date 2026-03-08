@@ -19,16 +19,9 @@ use {
     trouble_host::{HostResources, Stack},
 };
 
+#[derive(Default)]
 pub struct Config {
     pub ble_gap_device_name: Option<&'static str>,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            ble_gap_device_name: None,
-        }
-    }
 }
 
 bind_interrupts!(struct Irqs {
