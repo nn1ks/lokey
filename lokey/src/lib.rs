@@ -145,7 +145,7 @@ async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawne
 
 pub mod external;
 pub mod internal;
-pub mod mcu;
+mod mcu;
 mod state;
 pub mod storage;
 pub mod util;
@@ -154,6 +154,9 @@ use core::any::Any;
 use core::future::Future;
 #[cfg(feature = "macros")]
 pub use lokey_macros::{State, device};
+#[doc(hidden)]
+pub use mcu::DummyMcu; // This is only used for doc tests
+pub use mcu::Mcu;
 pub use state::{DynState, State, StateContainer};
 #[doc(hidden)]
 pub use static_cell;

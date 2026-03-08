@@ -1,9 +1,8 @@
 use crate::StorageConfig;
 use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
-use lokey::mcu::Mcu;
 use lokey::storage::{DefaultStorage, StorageDriver};
-use lokey::{Address, Context, Device, StateContainer, Transports};
+use lokey::{Address, Context, Device, Mcu, StateContainer, Transports};
 
 #[derive(Default)]
 pub struct Config {}

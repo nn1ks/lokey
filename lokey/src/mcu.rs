@@ -23,8 +23,6 @@ pub trait Mcu: Any {
         Self: Sized;
 }
 
-// This is only used for doc tests
-#[doc(hidden)]
 pub use dummy::DummyMcu;
 
 mod dummy {
