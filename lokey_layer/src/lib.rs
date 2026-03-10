@@ -3,39 +3,47 @@
 #![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
 //!
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-use arrayvec::ArrayVec;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::mutex::Mutex;
-use lokey::util::info;
+mod layer_manager_inner;
 
-// TODO: Make configurable
-const ACTIVATE_LAYER_SLOTS: usize = 16;
-// TODO: Make configurable
-const CONDITIONAL_LAYER_SLOTS: usize = 16;
-// TODO: Make configurable
-const ACTIVATED_CONDITIONAL_LAYER_SLOTS: usize = 16;
-// TODO: Make configurable
-const NUM_MAX_CONDITIONAL_REQUIRED_LAYERS: usize = 4;
+use layer_manager_inner::{LayerManagerInner, LayerManagerTrait};
+use lokey::state::ToStateQuery;
 
 /// The ID of a layer.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct LayerId(pub u8);
 
 /// Handle to an entry in [`LayerManager`].
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct LayerManagerEntry(u64);
 
-struct ConditionalLayer {
-    required: ArrayVec<LayerId, NUM_MAX_CONDITIONAL_REQUIRED_LAYERS>,
-    then: LayerId,
+/// Conditional layer configuration.
+///
+/// A conditional layer is a layer that is automatically activated when specific layers are active.
+/// If all layers in the `required` array are active, the layer in the `then` field will be
+/// activated as well.
+///
+/// Conditional layers can be added to a [`LayerManager`] by using the
+/// [`LayerManager::with_conditional_layers`] function.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct ConditionalLayer {
+    /// The layers that need to be active for the conditional layer to be activated.
+    pub required: [LayerId; 2],
+    /// The layer to activate when all layers in `required` are active.
+    pub then: LayerId,
 }
 
-struct ActivatedConditionalLayer {
-    required: ArrayVec<LayerId, NUM_MAX_CONDITIONAL_REQUIRED_LAYERS>,
-    then: u64,
+impl ConditionalLayer {
+    /// Creates a new [`ConditionalLayer`] with the specified required layers and the layer to
+    /// activate.
+    pub const fn new(required: [LayerId; 2], then: LayerId) -> Self {
+        Self { required, then }
+    }
 }
 
 /// Type for managing the currently active layers.
@@ -43,128 +51,252 @@ struct ActivatedConditionalLayer {
 /// Internally a stack-like datastructure is used to keep track of the order in which the layers got
 /// activated. When pushing a new layer ID to the [`LayerManager`] it will become the active one and
 /// a [`LayerManagerEntry`] is returned that can be used to deactive the layer again.
-pub struct LayerManager {
-    layer_manager_map:
-        Mutex<CriticalSectionRawMutex, ArrayVec<(u64, LayerId), ACTIVATE_LAYER_SLOTS>>,
-    conditional_layers:
-        Mutex<CriticalSectionRawMutex, ArrayVec<ConditionalLayer, CONDITIONAL_LAYER_SLOTS>>,
-    activated_conditional_layers: Mutex<
-        CriticalSectionRawMutex,
-        ArrayVec<ActivatedConditionalLayer, ACTIVATED_CONDITIONAL_LAYER_SLOTS>,
-    >,
+pub struct LayerManager<const CONDITIONAL_LAYER_SLOTS: usize> {
+    inner: LayerManagerInner<CONDITIONAL_LAYER_SLOTS>,
 }
 
-impl Default for LayerManager {
+impl LayerManager<0> {
+    /// Creates a new [`LayerManager`] without any conditional layers.
+    pub fn new() -> Self {
+        Self {
+            inner: LayerManagerInner::new([]),
+        }
+    }
+}
+
+impl Default for LayerManager<0> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl LayerManager {
-    /// Creates a new [`LayerManager`].
-    pub const fn new() -> Self {
+impl<const NUM_CONDITIONAL_LAYERS: usize> LayerManager<NUM_CONDITIONAL_LAYERS> {
+    /// Creates a new [`LayerManager`] with the specified conditional layers.
+    pub const fn with_conditional_layers(
+        conditional_layers: [ConditionalLayer; NUM_CONDITIONAL_LAYERS],
+    ) -> Self {
         Self {
-            layer_manager_map: Mutex::new(ArrayVec::new_const()),
-            conditional_layers: Mutex::new(ArrayVec::new_const()),
-            activated_conditional_layers: Mutex::new(ArrayVec::new_const()),
+            inner: LayerManagerInner::new(conditional_layers),
         }
-    }
-
-    fn next_id(map: &ArrayVec<(u64, LayerId), ACTIVATE_LAYER_SLOTS>) -> u64 {
-        let next_id = map.iter().map(|(id, _)| id).max().map_or(0, |id| id + 1);
-        assert!(!map.iter().any(|(id, _)| id == &next_id));
-        next_id
-    }
-
-    /// Sets the active layer to the layer with the specified ID.
-    pub async fn push(&self, layer: LayerId) -> LayerManagerEntry {
-        let mut map = self.layer_manager_map.lock().await;
-        let new_id = Self::next_id(&map);
-        map.push((new_id, layer));
-        let entry = LayerManagerEntry(new_id);
-        let conditional_layers = self.conditional_layers.lock().await;
-        let activated_conditional_layers =
-            conditional_layers.iter().filter_map(|conditional_layer| {
-                let all_required_layers_are_active =
-                    conditional_layer.required.iter().all(|required_layer_id| {
-                        map.iter()
-                            .any(|(_, layer_id)| layer_id == required_layer_id)
-                    });
-                if !all_required_layers_are_active {
-                    return None;
-                }
-                let new_id = Self::next_id(&map);
-                map.push((new_id, conditional_layer.then));
-                info!("Activating conditional layer {}", conditional_layer.then.0);
-                Some(ActivatedConditionalLayer {
-                    required: conditional_layer.required.clone(),
-                    then: new_id,
-                })
-            });
-        self.activated_conditional_layers
-            .lock()
-            .await
-            .extend(activated_conditional_layers);
-        entry
-    }
-
-    /// Deactivates the layer that was pushed to the stack with the specified [`LayerManagerEntry`].
-    pub async fn remove(&self, entry: LayerManagerEntry) -> LayerId {
-        let mut map = self.layer_manager_map.lock().await;
-        let index = map
-            .iter()
-            .position(|(id, _)| id == &entry.0)
-            .expect("invalid LayerManagerEntry");
-        let (_, removed_layer_id) = map.remove(index);
-        let mut activated_conditional_layers = self.activated_conditional_layers.lock().await;
-        for i in (0..activated_conditional_layers.len()).rev() {
-            let activated_conditional_layer = &activated_conditional_layers[i];
-            if activated_conditional_layer
-                .required
-                .contains(&removed_layer_id)
-            {
-                let index = map
-                    .iter()
-                    .position(|(id, _)| id == &activated_conditional_layer.then)
-                    .expect("invalid state in activated_conditional_layers");
-                let (_, layer_id) = map.remove(index);
-                info!("Deactivating conditional layer {}", layer_id.0);
-                activated_conditional_layers.remove(i);
-            }
-        }
-        removed_layer_id
     }
 
     /// Returns the ID of the currently active layer (i.e. the layer ID that was last pushed to the stack).
-    pub async fn active(&self) -> LayerId {
-        match self
-            .layer_manager_map
-            .lock()
-            .await
-            .iter()
-            .max_by_key(|(id, _)| id)
-        {
-            Some((_, layer)) => *layer,
-            None => LayerId(0),
-        }
+    pub fn active(&self) -> LayerId {
+        self.inner.active()
     }
 
-    /// Adds a conditional layer.
-    ///
-    /// Whenever all `required` layers are active, the the layer passed as the `then` argument will
-    /// be activated.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the number of conditional layers exceeds the configured limit.
-    pub async fn add_conditional_layer(
-        &self,
-        required: impl IntoIterator<Item = LayerId>,
-        then: LayerId,
-    ) {
-        self.conditional_layers.lock().await.push(ConditionalLayer {
-            required: required.into_iter().collect(),
-            then,
-        })
+    /// Sets the active layer to the layer with the specified ID.
+    pub fn push(&self, layer: LayerId) -> LayerManagerEntry {
+        self.inner.push(layer)
+    }
+
+    /// Deactivates the layer that was pushed to the stack with the specified [`LayerManagerEntry`].
+    pub fn remove(&self, entry: LayerManagerEntry) -> LayerId {
+        self.inner.remove(entry)
+    }
+}
+
+impl<const NUM_CONDITIONAL_LAYERS: usize> ToStateQuery for LayerManager<NUM_CONDITIONAL_LAYERS> {
+    type Query<'a> = LayerManagerQuery<'a>;
+
+    fn to_query(&self) -> Self::Query<'_> {
+        LayerManagerQuery { inner: &self.inner }
+    }
+}
+
+/// State query type for [`LayerManager`].
+///
+/// This type can be used to get the layer manager of a state container if the exact `LayerManager`
+/// type (i.e. the generics) are not known. Use with the
+/// [`QueryState::query`](lokey::QueryState::query) or
+/// [`StateContainer::try_query`](lokey::StateContainer::try_query) method of a state container to
+/// get the [`LayerManagerQuery`].
+///
+/// # Example
+///
+/// ```
+/// use lokey::State;
+/// use lokey::state::{QueryState, StateContainer};
+/// use lokey_layer::{LayerManager, LayerManagerQuery};
+///
+/// #[derive(Default, State)]
+/// struct MyState {
+///     #[state(query)]
+///     layer_manager: LayerManager<0>,
+/// }
+///
+/// let state = MyState::default();
+///
+/// let layer_manager_query = QueryState::<LayerManagerQuery>::query(&state);
+///
+/// let layer_manager_query = state.try_query::<LayerManagerQuery>();
+/// assert!(layer_manager_query.is_some());
+/// ```
+#[repr(transparent)]
+pub struct LayerManagerQuery<'a> {
+    inner: &'a dyn LayerManagerTrait,
+}
+
+impl<'a> LayerManagerQuery<'a> {
+    /// Returns the ID of the currently active layer (i.e. the layer ID that was last pushed to the stack).
+    pub fn active(&self) -> LayerId {
+        self.inner.active()
+    }
+
+    /// Sets the active layer to the layer with the specified ID.
+    pub fn push(&self, layer: LayerId) -> LayerManagerEntry {
+        self.inner.push(layer)
+    }
+
+    /// Deactivates the layer that was pushed to the stack with the specified [`LayerManagerEntry`].
+    pub fn remove(&self, entry: LayerManagerEntry) -> LayerId {
+        self.inner.remove(entry)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic1() {
+        let manager = LayerManager::new();
+        assert_eq!(manager.active(), LayerId(0));
+
+        let entry = manager.push(LayerId(42));
+        assert_eq!(manager.active(), LayerId(42));
+
+        manager.remove(entry);
+        assert_eq!(manager.active(), LayerId(0));
+    }
+
+    #[test]
+    fn basic2() {
+        let manager = LayerManager::new();
+        assert_eq!(manager.active(), LayerId(0));
+
+        let entry1 = manager.push(LayerId(20));
+        assert_eq!(manager.active(), LayerId(20));
+
+        let entry2 = manager.push(LayerId(10));
+        assert_eq!(manager.active(), LayerId(10));
+
+        manager.remove(entry1);
+        assert_eq!(manager.active(), LayerId(10));
+
+        manager.remove(entry2);
+        assert_eq!(manager.active(), LayerId(0));
+    }
+
+    #[test]
+    fn basic3() {
+        let manager = LayerManager::new();
+        assert_eq!(manager.active(), LayerId(0));
+
+        let entry1 = manager.push(LayerId(20));
+        assert_eq!(manager.active(), LayerId(20));
+
+        let entry2 = manager.push(LayerId(10));
+        assert_eq!(manager.active(), LayerId(10));
+
+        let entry3 = manager.push(LayerId(30));
+        assert_eq!(manager.active(), LayerId(30));
+
+        manager.remove(entry2);
+        assert_eq!(manager.active(), LayerId(30));
+
+        manager.remove(entry3);
+        assert_eq!(manager.active(), LayerId(20));
+
+        let entry4 = manager.push(LayerId(40));
+        assert_eq!(manager.active(), LayerId(40));
+
+        manager.remove(entry1);
+        assert_eq!(manager.active(), LayerId(40));
+
+        manager.remove(entry4);
+        assert_eq!(manager.active(), LayerId(0));
+    }
+
+    #[test]
+    fn conditional_layer1() {
+        let manager = LayerManager::with_conditional_layers([ConditionalLayer::new(
+            [LayerId(1), LayerId(2)],
+            LayerId(42),
+        )]);
+        assert_eq!(manager.active(), LayerId(0));
+
+        let entry1 = manager.push(LayerId(1));
+        assert_eq!(manager.active(), LayerId(1));
+
+        let entry2 = manager.push(LayerId(2));
+        assert_eq!(manager.active(), LayerId(42));
+
+        manager.remove(entry1);
+        assert_eq!(manager.active(), LayerId(2));
+
+        let entry1 = manager.push(LayerId(1));
+        assert_eq!(manager.active(), LayerId(42));
+
+        manager.remove(entry2);
+        assert_eq!(manager.active(), LayerId(1));
+
+        manager.remove(entry1);
+        assert_eq!(manager.active(), LayerId(0));
+    }
+
+    #[test]
+    fn conditional_layer2() {
+        let manager = LayerManager::with_conditional_layers([
+            ConditionalLayer::new([LayerId(20), LayerId(30)], LayerId(10)),
+            ConditionalLayer::new([LayerId(30), LayerId(40)], LayerId(50)),
+        ]);
+        assert_eq!(manager.active(), LayerId(0));
+
+        let entry1 = manager.push(LayerId(20));
+        assert_eq!(manager.active(), LayerId(20));
+
+        let entry2 = manager.push(LayerId(30));
+        assert_eq!(manager.active(), LayerId(10));
+
+        let entry3 = manager.push(LayerId(40));
+        assert_eq!(manager.active(), LayerId(50));
+
+        manager.remove(entry2);
+        assert_eq!(manager.active(), LayerId(40));
+
+        let entry2 = manager.push(LayerId(30));
+        assert_eq!(manager.active(), LayerId(50));
+
+        manager.remove(entry3);
+        assert_eq!(manager.active(), LayerId(10));
+
+        manager.remove(entry2);
+        assert_eq!(manager.active(), LayerId(20));
+
+        manager.remove(entry1);
+        assert_eq!(manager.active(), LayerId(0));
+    }
+
+    #[test]
+    fn state_query() {
+        use lokey::State;
+        use lokey::state::StateContainer;
+
+        #[derive(Default, State)]
+        struct MyState {
+            #[state(query)]
+            layer_manager: LayerManager<0>,
+        }
+
+        let state = MyState::default();
+
+        let query = state.try_query::<LayerManagerQuery>().unwrap();
+
+        assert_eq!(query.active(), LayerId(0));
+
+        query.push(LayerId(42));
+
+        assert_eq!(query.active(), LayerId(42));
     }
 }

@@ -9,9 +9,10 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::toggle;
+use lokey::state::StateContainer;
 use lokey::util::{unwrap, warn};
-use lokey::{Address, Context, Device, StateContainer, Transports};
-use lokey_layer::{LayerId, LayerManager, LayerManagerEntry};
+use lokey::{Address, Context, Device, Transports};
+use lokey_layer::{LayerId, LayerManagerEntry, LayerManagerQuery};
 use portable_atomic::AtomicBool;
 use seq_macro::seq;
 use typenum::Unsigned;
@@ -311,12 +312,12 @@ impl Action for Layer {
                 "on_press was called again without calling on_release first for layer {}",
                 self.layer.0
             );
-            if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
-                layer_manager.remove(entry).await;
+            if let Some(layer_manager) = context.state.try_query::<LayerManagerQuery>() {
+                layer_manager.remove(entry);
             }
         }
-        if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
-            let entry = layer_manager.push(self.layer).await;
+        if let Some(layer_manager) = context.state.try_query::<LayerManagerQuery>() {
+            let entry = layer_manager.push(self.layer);
             *self.layer_manager_entry.lock().await = Some(entry);
         }
     }
@@ -328,9 +329,9 @@ impl Action for Layer {
         S: StateContainer,
     {
         if let Some(entry) = self.layer_manager_entry.lock().await.take()
-            && let Some(layer_manager) = context.state.try_get::<LayerManager>()
+            && let Some(layer_manager) = context.state.try_query::<LayerManagerQuery>()
         {
-            layer_manager.remove(entry).await;
+            layer_manager.remove(entry);
         }
     }
 }
@@ -358,8 +359,8 @@ impl<A: ActionContainer> Action for PerLayer<A> {
         T: Transports<D::Mcu>,
         S: StateContainer,
     {
-        if let Some(layer_manager) = context.state.try_get::<LayerManager>() {
-            let active_layer_id = layer_manager.active().await;
+        if let Some(layer_manager) = context.state.try_query::<LayerManagerQuery>() {
+            let active_layer_id = layer_manager.active();
             if let Some(index) = self
                 .layer_ids
                 .iter()

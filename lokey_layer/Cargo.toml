@@ -25,5 +25,8 @@ document-features = "0.2.11"
 embassy-sync = "0.7.2"
 lokey = { path = "../lokey" }
 
+[dev-dependencies]
+critical-section = { version = "1.2.0", features = ["std"] }
+
 [package.metadata.docs.rs]
 features = ["defmt"]
