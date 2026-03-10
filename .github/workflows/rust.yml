@@ -61,12 +61,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo test -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey --verbose --target ${{ matrix.target }}
   lokey_usb:
     runs-on: ubuntu-latest
     if: always()
@@ -347,12 +342,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo test -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_layer --verbose --target ${{ matrix.target }}
   lokey_led_array:
     runs-on: ubuntu-latest
     if: always()
