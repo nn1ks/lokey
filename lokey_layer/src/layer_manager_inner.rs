@@ -55,7 +55,7 @@ impl<const NUM_CONDITIONAL_LAYERS: usize> LayerManagerTrait
         self.active_layers.lock(|active_layers| {
             let active_layers = &mut *active_layers.borrow_mut();
 
-            let new_id = Self::next_id(&active_layers);
+            let new_id = Self::next_id(active_layers);
             active_layers.push(ActiveEntry {
                 entry_id: new_id,
                 layer_id: layer,
@@ -73,7 +73,7 @@ impl<const NUM_CONDITIONAL_LAYERS: usize> LayerManagerTrait
                     });
                 if required_layers_are_active {
                     info!("Activating conditional layer {}", conditional_layer.then.0);
-                    let new_id = Self::next_id(&active_layers);
+                    let new_id = Self::next_id(active_layers);
                     active_layers.push(ActiveEntry {
                         entry_id: new_id,
                         layer_id: conditional_layer.then,
