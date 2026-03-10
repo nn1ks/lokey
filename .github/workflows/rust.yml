@@ -58,13 +58,13 @@ jobs:
             cargo clippy -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
-      - name: Run doc tests
-        if: matrix.target != 'x86_64-unknown-linux-gnu'
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo test -p lokey --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo test -p lokey --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
   lokey_usb:
@@ -342,6 +342,15 @@ jobs:
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
             cargo clippy -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo test -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
   lokey_led_array:
