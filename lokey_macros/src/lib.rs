@@ -11,7 +11,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_error]
-#[proc_macro_derive(State)]
+#[proc_macro_derive(State, attributes(state))]
 pub fn state_derive(item: TokenStream) -> TokenStream {
     state::state_derive(item)
 }

@@ -27,10 +27,9 @@ pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
 pub use key_override::{KeyOverride, KeyOverrideEntry};
+use lokey::state::StateContainer;
 use lokey::util::{debug, error, unwrap};
-use lokey::{
-    Component, Context, Device, DynContext, StateContainer, Transports, external, internal,
-};
+use lokey::{Component, Context, Device, DynContext, Transports, external, internal};
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the

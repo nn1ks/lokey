@@ -68,7 +68,6 @@
 
 ```no_run"
 )]
-#![cfg_attr(feature = "macros", doc = core::include_str!("../../doctest_setup"))]
 #![cfg_attr(
     feature = "macros",
     doc = "
@@ -76,9 +75,10 @@
 # use lokey::DummyMcu;
 use embassy_executor::Spawner;
 use lokey::{
-    Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
+    Address, ComponentSupport, Context, Device, State, Transports, internal,
     external
 };
+use lokey::state::StateContainer;
 use lokey::storage::EmptyStorageDriver;
 
 struct Keyboard;
@@ -140,13 +140,13 @@ async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawne
 )]
 //!
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod external;
 pub mod internal;
 mod mcu;
-mod state;
+pub mod state;
 pub mod storage;
 pub mod util;
 
@@ -157,9 +157,12 @@ pub use lokey_macros::{State, device};
 #[doc(hidden)]
 pub use mcu::DummyMcu; // This is only used for doc tests
 pub use mcu::Mcu;
-pub use state::{DynState, State, StateContainer};
+use state::DynState;
+pub use state::StateContainer;
 #[doc(hidden)]
-pub use static_cell;
+pub use static_cell; // Re-exported for use in the `device` attribute macro.
+#[doc(hidden)]
+pub use typeid; // Re-exported for use in the `State` derive macro.
 
 pub struct Context<D, T, S>
 where

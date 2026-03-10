@@ -2,9 +2,10 @@ use crate::StorageConfig;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
+use lokey::state::StateContainer;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::util::unwrap;
-use lokey::{Address, Context, Device, Mcu, StateContainer, Transports};
+use lokey::{Address, Context, Device, Mcu, Transports};
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
 #[cfg(feature = "ble")]
