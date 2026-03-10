@@ -26,7 +26,8 @@ use switch_hal::IntoSwitch;
 
 #[derive(Default, State)]
 struct DefaultState {
-    layer_manager: LayerManager,
+    #[state(query)]
+    layer_manager: LayerManager<0>,
 }
 
 struct Central;

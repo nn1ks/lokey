@@ -10,10 +10,8 @@ use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::external::NoMessage;
-use lokey::{
-    Address, ComponentSupport, Context, Device, State, StateContainer, Transports, external,
-    internal,
-};
+use lokey::state::StateContainer;
+use lokey::{Address, ComponentSupport, Context, Device, State, Transports, external, internal};
 use lokey_blink::Blink;
 use lokey_keyboard::{
     ActionContainer, DirectPins, DirectPinsConfig, Layout, Matrix, MatrixConfig, Scanner,
@@ -31,7 +29,8 @@ pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 
 #[derive(Default, State)]
 pub struct DefaultState {
-    pub layer_manager: LayerManager,
+    #[state(query)]
+    pub layer_manager: LayerManager<0>,
 }
 
 pub struct Central;

@@ -22,12 +22,6 @@ fn key_override() -> KeyOverride<2, 1> {
 
 #[lokey::device(message_override = key_override())]
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
-    context
-        .state
-        .layer_manager
-        .add_conditional_layer([LayerId(1), LayerId(2)], LayerId(4))
-        .await;
-
     let layout = layout!(
         // Layer 0
         [
