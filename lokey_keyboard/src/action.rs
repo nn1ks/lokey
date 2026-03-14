@@ -366,8 +366,8 @@ impl<A: ActionContainer> Action for PerLayer<A> {
                 .iter()
                 .position(|layer_id| *layer_id == active_layer_id)
             {
-                unwrap!(self.actions.child_on_press(index, context).await);
                 *self.active_action_index.lock().await = Some(index);
+                unwrap!(self.actions.child_on_press(index, context).await);
             }
         }
     }
