@@ -20,9 +20,13 @@ pub mod usb;
 use action::InvalidChildActionIndex;
 pub use action::{Action, ActionContainer};
 use core::any::Any;
+use core::array;
 use core::future::Future;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
+use embassy_futures::join::{join, join_array};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 #[doc(hidden)]
 pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
@@ -107,43 +111,65 @@ impl<A: ActionContainer> Layout<A> {
         Self { actions }
     }
 
+    async fn run_action_worker<D, T, S, const N: usize>(
+        &self,
+        queue: &Channel<CriticalSectionRawMutex, Message, N>,
+        context: Context<D, T, S>,
+    ) where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: StateContainer,
+    {
+        loop {
+            let message = queue.receive().await;
+            match message {
+                Message::Press { key_index } => {
+                    if let Err(InvalidChildActionIndex { .. }) = self
+                        .actions
+                        .child_on_press(key_index as usize, context)
+                        .await
+                    {
+                        error!("Layout has no action at key index {}", key_index);
+                    }
+                }
+                Message::Release { key_index } => {
+                    if let Err(InvalidChildActionIndex { .. }) = self
+                        .actions
+                        .child_on_release(key_index as usize, context)
+                        .await
+                    {
+                        error!("Layout has no action at key index {}", key_index);
+                    }
+                }
+            }
+        }
+    }
+
     pub async fn run<D, T, S>(&self, context: Context<D, T, S>)
     where
         D: Device,
         T: Transports<D::Mcu>,
         S: StateContainer,
     {
+        const ACTION_QUEUE_SIZE: usize = 32;
+        const NUM_ACTION_WORKERS: usize = 8;
+
         let mut receiver = unwrap!(context.internal_channel.receiver::<Message>());
-        loop {
-            let message = receiver.next().await;
-            debug!("Received keys message: {}", message);
-            match message {
-                Message::Press { key_index } => {
-                    match self
-                        .actions
-                        .child_on_press(key_index as usize, context)
-                        .await
-                    {
-                        Ok(()) => (),
-                        Err(InvalidChildActionIndex { .. }) => {
-                            error!("Layout has no action at key index {}", key_index);
-                        }
-                    }
-                }
-                Message::Release { key_index } => {
-                    match self
-                        .actions
-                        .child_on_release(key_index as usize, context)
-                        .await
-                    {
-                        Ok(()) => (),
-                        Err(InvalidChildActionIndex { .. }) => {
-                            error!("Layout has no action at key index {}", key_index);
-                        }
-                    }
-                }
+        let action_queue = Channel::<CriticalSectionRawMutex, Message, ACTION_QUEUE_SIZE>::new();
+
+        let receive_messages = async {
+            loop {
+                let message = receiver.next().await;
+                debug!("Received layout message: {}", message);
+                action_queue.send(message).await;
             }
-        }
+        };
+
+        let action_worker_futures = array::from_fn::<_, NUM_ACTION_WORKERS, _>(|_| {
+            self.run_action_worker(&action_queue, context)
+        });
+
+        join(receive_messages, join_array(action_worker_futures)).await;
     }
 }
 
