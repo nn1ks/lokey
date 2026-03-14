@@ -93,15 +93,10 @@ jobs:
             cargo clippy -p lokey_usb --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
-      - name: Run doc tests
-        if: matrix.target != 'x86_64-unknown-linux-gnu'
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo test -p lokey_usb --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_usb --verbose --target ${{ matrix.target }} --all-features
   lokey_ble:
     runs-on: ubuntu-latest
     if: always()
@@ -133,15 +128,10 @@ jobs:
             cargo clippy -p lokey_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
-      - name: Run doc tests
-        if: matrix.target != 'x86_64-unknown-linux-gnu'
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo test -p lokey_ble --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_ble --verbose --target ${{ matrix.target }} --all-features
   lokey_usb_ble:
     runs-on: ubuntu-latest
     if: always()
@@ -173,15 +163,10 @@ jobs:
             cargo clippy -p lokey_usb_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
-      - name: Run doc tests
-        if: matrix.target != 'x86_64-unknown-linux-gnu'
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo test -p lokey_usb_ble --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_usb_ble --verbose --target ${{ matrix.target }} --all-features
   lokey_nrf:
     runs-on: ubuntu-latest
     if: always()
@@ -219,12 +204,7 @@ jobs:
           done
       - name: Run doc tests
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo test -p lokey_nrf --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_nrf --verbose --doc --target ${{ matrix.target }} --features "${{ matrix.mcu_features }}"
   lokey_rp:
     runs-on: ubuntu-latest
     if: always()
@@ -262,12 +242,7 @@ jobs:
           done
       - name: Run doc tests
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo test -p lokey_rp --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_rp --verbose --doc --target ${{ matrix.target }} --features "${{ matrix.mcu_features }}"
   lokey_keyboard:
     runs-on: ubuntu-latest
     if: always()
@@ -337,7 +312,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_layer --verbose --target ${{ matrix.target }}
+          cargo test -p lokey_layer --verbose --target ${{ matrix.target }} --all-features
   lokey_led_array:
     runs-on: ubuntu-latest
     if: always()
@@ -377,14 +352,9 @@ jobs:
             echo "::endgroup::"
           done
       - name: Run doc tests
-        if: matrix.mcu != 'no_mcu'
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo test -p lokey_led_array --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_led_array --verbose --target ${{ matrix.target }} --all-features
   examples:
     runs-on: ubuntu-latest
     if: always()
