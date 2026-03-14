@@ -86,9 +86,11 @@ where
 
         builder.handler(&mut device_handler);
 
+        #[allow(clippy::missing_transmute_annotations)]
         let tx_message_service = TxMessage::MessageService::init(&mut builder, unsafe {
             core::mem::transmute(&mut tx_message_service_params)
         });
+        #[allow(clippy::missing_transmute_annotations)]
         let rx_message_service = RxMessage::MessageService::init(&mut builder, unsafe {
             core::mem::transmute(&mut rx_message_service_params)
         });
