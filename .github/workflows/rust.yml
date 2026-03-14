@@ -299,15 +299,10 @@ jobs:
             cargo clippy -p lokey_keyboard --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
-      - name: Run doc tests
-        if: matrix.target != 'x86_64-unknown-linux-gnu'
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          export IFS=";"
-          for features in $FEATURE_COMBINATIONS; do
-            echo "::group::Features: \"$features\""
-            cargo test -p lokey_keyboard --verbose --doc --target ${{ matrix.target }} --no-default-features --features "$features"
-            echo "::endgroup::"
-          done
+          cargo test -p lokey_keyboard --verbose --target ${{ matrix.target }} --all-features
   lokey_layer:
     runs-on: ubuntu-latest
     if: always()
