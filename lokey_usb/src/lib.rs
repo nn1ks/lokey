@@ -10,6 +10,8 @@
 
 pub mod external;
 
+#[doc(hidden)]
+pub use embassy_usb; // Re-exported for use in the `TxMessage` derive macro.
 use embassy_usb::driver::Driver;
 
 pub trait CreateDriver: 'static {

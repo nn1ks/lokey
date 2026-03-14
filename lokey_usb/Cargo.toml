@@ -11,6 +11,11 @@ categories = ["embedded", "no-std"]
 keywords = ["firmware"]
 
 [features]
+default = ["macros"]
+
+## Enables macros.
+macros = ["dep:lokey_usb_macros"]
+
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
@@ -28,6 +33,7 @@ embassy-futures = "0.1.1"
 embassy-sync = "0.7.2"
 embassy-usb = { version = "0.5.1", features = ["usbd-hid"] }
 lokey = { path = "../lokey", version = "0.0.1" }
+lokey_usb_macros = { path = "../lokey_usb_macros", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 
 [package.metadata.docs.rs]

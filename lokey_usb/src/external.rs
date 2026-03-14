@@ -7,6 +7,8 @@ use embassy_sync::signal::Signal;
 use embassy_usb::driver::Driver;
 use lokey::external::{self, NoMessage};
 use lokey::util::{debug, info};
+#[cfg(feature = "macros")]
+pub use lokey_usb_macros::TxMessage;
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 use portable_atomic::AtomicBool;
 pub use transport::Transport;
