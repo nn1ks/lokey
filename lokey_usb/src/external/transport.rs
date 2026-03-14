@@ -54,8 +54,14 @@ where
     where
         Storage: storage::Storage,
     {
-        let mut tx_hid_state = embassy_usb::class::hid::State::new();
-        let mut rx_hid_state = embassy_usb::class::hid::State::new();
+        let mut tx_message_service_params =
+            <TxMessage::MessageService<'_, Mcu::Driver<'_>> as InitMessageService<
+                Mcu::Driver<'_>,
+            >>::create_params();
+        let mut rx_message_service_params =
+            <RxMessage::MessageService<'_, Mcu::Driver<'_>> as InitMessageService<
+                Mcu::Driver<'_>,
+            >>::create_params();
 
         let driver = self.mcu.create_driver();
 
@@ -80,8 +86,12 @@ where
 
         builder.handler(&mut device_handler);
 
-        let tx_message_service = TxMessage::MessageService::init(&mut builder, &mut tx_hid_state);
-        let rx_message_service = RxMessage::MessageService::init(&mut builder, &mut rx_hid_state);
+        let tx_message_service = TxMessage::MessageService::init(&mut builder, unsafe {
+            core::mem::transmute(&mut tx_message_service_params)
+        });
+        let rx_message_service = RxMessage::MessageService::init(&mut builder, unsafe {
+            core::mem::transmute(&mut rx_message_service_params)
+        });
 
         let mut usb = builder.build();
 

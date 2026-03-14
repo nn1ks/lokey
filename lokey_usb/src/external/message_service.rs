@@ -1,15 +1,13 @@
 use embassy_usb::Builder;
-use embassy_usb::class::hid::State as HidState;
 use embassy_usb::driver::Driver;
 use lokey::external::{Message, NoMessage};
 
 pub trait InitMessageService<'d, D: Driver<'d>> {
-    // TODO: Remove hid_state parameter as it is not needed for non-HID USB transports. The
-    //       parameter is currently added here to work around lifetime issues.
-    fn init<'a>(builder: &mut Builder<'d, D>, hid_state: &'d mut HidState<'d>) -> Self
-    where
-        'd: 'a,
-        D: 'a;
+    type Params;
+
+    fn create_params() -> Self::Params;
+
+    fn init(builder: &mut Builder<'d, D>, params: &'d mut Self::Params) -> Self;
 }
 
 pub trait TxMessageService<T: Message> {
@@ -21,12 +19,11 @@ pub trait RxMessageService<T: Message> {
 }
 
 impl<'d, D: Driver<'d>> InitMessageService<'d, D> for () {
-    fn init<'a>(_: &mut Builder<'d, D>, _: &'d mut HidState<'d>) -> Self
-    where
-        'd: 'a,
-        D: 'a,
-    {
-    }
+    type Params = ();
+
+    fn create_params() -> Self::Params {}
+
+    fn init(_: &mut Builder<'d, D>, _: &'d mut Self::Params) -> Self {}
 }
 
 impl TxMessageService<NoMessage> for () {

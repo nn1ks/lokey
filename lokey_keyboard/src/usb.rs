@@ -24,11 +24,13 @@ pub struct ExternalMessageService<'d, D: Driver<'d>> {
 }
 
 impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d, D> {
-    fn init<'a>(builder: &mut Builder<'d, D>, hid_state: &'d mut HidState<'d>) -> Self
-    where
-        'd: 'a,
-        D: 'a,
-    {
+    type Params = HidState<'d>;
+
+    fn create_params() -> Self::Params {
+        HidState::new()
+    }
+
+    fn init(builder: &mut Builder<'d, D>, hid_state: &'d mut Self::Params) -> Self {
         let hid_config = embassy_usb::class::hid::Config {
             report_descriptor: KeyboardReport::desc(),
             request_handler: None,
