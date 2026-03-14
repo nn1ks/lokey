@@ -83,7 +83,12 @@ pub type DeviceTransportRxMessage<D, T> =
 
 pub trait Message: Any + Clone + Send + Sync {
     fn has_inner_message<M: Message>() -> bool;
+
     fn inner_message<M: Message>(&self) -> Option<&M>;
+
+    fn try_from_inner_message(value: &dyn Any) -> Result<Self, MismatchedMessageType>
+    where
+        Self: Sized;
 }
 
 pub trait TryFromMessage<T>: Sized {
@@ -106,6 +111,13 @@ impl Message for NoMessage {
 
     fn inner_message<M: Message>(&self) -> Option<&M> {
         None
+    }
+
+    fn try_from_inner_message(_: &dyn Any) -> Result<Self, MismatchedMessageType>
+    where
+        Self: Sized,
+    {
+        Err(MismatchedMessageType)
     }
 }
 

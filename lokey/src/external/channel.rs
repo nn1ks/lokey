@@ -4,7 +4,7 @@ use crate::external::{
     OBSERVER_SLOTS, RECEIVER_SLOTS, TryFromMessage, TryReceiverError, UnsupportedMessageType,
 };
 use crate::util::unwrap;
-use core::any::Any;
+use core::any::{Any, TypeId};
 use core::marker::PhantomData;
 use embassy_futures::join::{join, join3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -113,12 +113,19 @@ where
     where
         M: Message,
     {
-        let any: &dyn Any = &message;
-        let message = any
-            .downcast_ref::<Transport::TxMessage>()
-            .ok_or(UnsupportedMessageType)?;
-        self.tx_raw_channel.send(message.clone()).await;
-        Ok(())
+        if TypeId::of::<M>() == TypeId::of::<Transport::TxMessage>() {
+            let any: &dyn Any = &message;
+            let message = unwrap!(any.downcast_ref::<Transport::TxMessage>());
+            self.tx_raw_channel.send(message.clone()).await;
+            Ok(())
+        } else if Transport::TxMessage::has_inner_message::<M>() {
+            let any: &dyn Any = &message;
+            let message = unwrap!(Transport::TxMessage::try_from_inner_message(any));
+            self.tx_raw_channel.send(message.clone()).await;
+            Ok(())
+        } else {
+            Err(UnsupportedMessageType)
+        }
     }
 
     pub fn receiver<M>(

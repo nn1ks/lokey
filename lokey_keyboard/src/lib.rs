@@ -19,6 +19,7 @@ pub mod usb;
 
 use action::InvalidChildActionIndex;
 pub use action::{Action, ActionContainer};
+use core::any::Any;
 use core::future::Future;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
@@ -27,6 +28,7 @@ pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
 pub use key_override::{KeyOverride, KeyOverrideEntry};
+use lokey::external::MismatchedMessageType;
 use lokey::state::StateContainer;
 use lokey::util::{debug, error, unwrap};
 use lokey::{Component, Context, Device, DynContext, Transports, external, internal};
@@ -245,6 +247,13 @@ impl external::Message for ExternalMessage {
 
     fn inner_message<M: external::Message>(&self) -> Option<&M> {
         None
+    }
+
+    fn try_from_inner_message(_: &dyn Any) -> Result<Self, MismatchedMessageType>
+    where
+        Self: Sized,
+    {
+        Err(MismatchedMessageType)
     }
 }
 
