@@ -85,11 +85,18 @@ cargo clippy -p lokey_led_array --all-features
 
 ## Tests
 
-At the moment, only doc tests exist. You can run them with the following commands:
+The unit tests and doc tests can be run with the following commands:
 
 ```sh
-cargo test --doc -p lokey --all-features --target thumbv7em-none-eabihf
-cargo test --doc -p lokey_keyboard --all-features --target thumbv7em-none-eabihf
+cargo test -p lokey
+cargo test -p lokey_usb --all-features
+cargo test -p lokey_ble --all-features
+cargo test -p lokey_usb_ble --all-features
+cargo test -p lokey_nrf --doc --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
+cargo test -p lokey_rp --doc --features "defmt usb rp2040" --target thumbv6m-none-eabi
+cargo test -p lokey_keyboard --all-features
+cargo test -p lokey_layer --all-features
+cargo test -p lokey_led_array --all-features
 ```
 
 > [!NOTE]
