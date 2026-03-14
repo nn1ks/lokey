@@ -42,7 +42,6 @@ use lokey::{Component, Context, Device, DynContext, Transports, external, intern
 /// # Example
 ///
 /// ```no_run
-#[doc = include_str!("../../doctest_setup")]
 /// # fn with_macro() {
 /// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
 /// use lokey_keyboard::{Key, layout};
