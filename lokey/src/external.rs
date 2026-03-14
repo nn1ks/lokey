@@ -9,6 +9,8 @@ pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
 use derive_more::{Display, Error, From};
+#[cfg(feature = "macros")]
+pub use lokey_macros::ExternalMessage as Message;
 pub use r#override::{IdentityOverride, MessageSender, Override};
 
 declare_const_for_feature_group!(
