@@ -96,7 +96,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_usb --verbose --target ${{ matrix.target }} --all-features
+          cargo test -p lokey_usb --verbose --target ${{ matrix.target }}
   lokey_ble:
     runs-on: ubuntu-latest
     if: always()
@@ -131,7 +131,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_ble --verbose --target ${{ matrix.target }} --all-features
+          cargo test -p lokey_ble --verbose --target ${{ matrix.target }}
   lokey_usb_ble:
     runs-on: ubuntu-latest
     if: always()
@@ -166,7 +166,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_usb_ble --verbose --target ${{ matrix.target }} --all-features
+          cargo test -p lokey_usb_ble --verbose --target ${{ matrix.target }}
   lokey_nrf:
     runs-on: ubuntu-latest
     if: always()
@@ -277,7 +277,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_keyboard --verbose --target ${{ matrix.target }} --all-features
+          cargo test -p lokey_keyboard --verbose --target ${{ matrix.target }} --features "usb ble usb-ble"
   lokey_layer:
     runs-on: ubuntu-latest
     if: always()
@@ -312,7 +312,7 @@ jobs:
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_layer --verbose --target ${{ matrix.target }} --all-features
+          cargo test -p lokey_layer --verbose --target ${{ matrix.target }}
   lokey_led_array:
     runs-on: ubuntu-latest
     if: always()
@@ -354,7 +354,7 @@ jobs:
       - name: Run doc tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_led_array --verbose --target ${{ matrix.target }} --all-features
+          cargo test -p lokey_led_array --verbose --target ${{ matrix.target }} --features "ble"
   examples:
     runs-on: ubuntu-latest
     if: always()
