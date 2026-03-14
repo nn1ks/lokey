@@ -47,21 +47,21 @@ use lokey::{Component, Context, Device, DynContext, Transports, external, intern
 ///
 /// ```no_run
 /// # fn with_macro() {
-/// use lokey_keyboard::action::{HoldTap, KeyCode, Layer};
+/// use lokey_keyboard::action::{HoldTap, Layer};
 /// use lokey_keyboard::{Key, layout};
 /// use lokey_layer::LayerId;
 ///
 /// let layout = layout!(
 ///     // Layer 0
 ///     [
-///         KeyCode::new(Key::A),
-///         HoldTap::new(KeyCode::new(Key::LControl), KeyCode::new(Key::B)),
+///         Key::A,
+///         HoldTap::new(Key::LControl, Key::B),
 ///         Layer::new(LayerId(1)),
 ///     ],
 ///     // Layer 1
 ///     [
-///         KeyCode::new(Key::C),
-///         KeyCode::new(Key::D),
+///         Key::C,
+///         Key::D,
 ///         Transparent, // Has the same action as the previous layer (i.e. Layer::new(LayerId(1)))
 ///     ],
 /// );
@@ -72,16 +72,16 @@ use lokey::{Component, Context, Device, DynContext, Transports, external, intern
 ///
 /// # fn without_macro() {
 /// use lokey_keyboard::{Key, Layout};
-/// use lokey_keyboard::action::{HoldTap, KeyCode, Layer, PerLayer};
+/// use lokey_keyboard::action::{HoldTap, Layer, PerLayer};
 /// use lokey_layer::LayerId;
 ///
 /// let layout = Layout::new((
 ///     PerLayer::new(
-///         (KeyCode::new(Key::A), KeyCode::new(Key::C)),
+///         (Key::A, Key::C),
 ///         [LayerId(0), LayerId(1)].into()
 ///     ),
 ///     PerLayer::new(
-///         (HoldTap::new(KeyCode::new(Key::LControl), KeyCode::new(Key::B)), KeyCode::new(Key::D)),
+///         (HoldTap::new(Key::LControl, Key::B), Key::D),
 ///         [LayerId(0), LayerId(1)].into()
 ///     ),
 ///     PerLayer::new(

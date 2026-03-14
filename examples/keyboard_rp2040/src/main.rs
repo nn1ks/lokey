@@ -15,7 +15,6 @@ use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
 use lokey_blink::Blink;
-use lokey_keyboard::action::KeyCode;
 use lokey_keyboard::{
     ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
 };
@@ -108,7 +107,7 @@ impl<S: StateContainer, A: ActionContainer<NumChildren = NumKeys>> ComponentSupp
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
     let layout = layout!(
         // Layer 0
-        [KeyCode::new(Key::A)],
+        [Key::A],
         // Layer 1
         [Transparent]
     );

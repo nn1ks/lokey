@@ -250,17 +250,7 @@ impl<A: ActionContainer> Action for Sequence<A> {
     }
 }
 
-pub struct KeyCode {
-    pub key: Key,
-}
-
-impl KeyCode {
-    pub const fn new(key: Key) -> Self {
-        Self { key }
-    }
-}
-
-impl Action for KeyCode {
+impl Action for Key {
     async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
     where
         D: Device,
@@ -269,7 +259,7 @@ impl Action for KeyCode {
     {
         let _ = context
             .external_channel
-            .try_send(ExternalMessage::KeyPress(self.key))
+            .try_send(ExternalMessage::KeyPress(*self))
             .await;
     }
 
@@ -281,7 +271,7 @@ impl Action for KeyCode {
     {
         let _ = context
             .external_channel
-            .try_send(ExternalMessage::KeyRelease(self.key))
+            .try_send(ExternalMessage::KeyRelease(*self))
             .await;
     }
 }

@@ -9,8 +9,7 @@ use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::{Context, Device};
 use lokey_blink::Blink;
 use lokey_keyboard::action::{
-    BleClearActive, BleNextProfile, BlePreviousProfile, KeyCode, Layer, NoOp,
-    ToggleExternalTransport,
+    BleClearActive, BleNextProfile, BlePreviousProfile, Layer, NoOp, ToggleExternalTransport,
 };
 use lokey_keyboard::{Key, KeyOverride, KeyOverrideEntry, MatrixConfig, Scanner, layout};
 use lokey_layer::LayerId;
@@ -25,15 +24,15 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
     let layout = layout!(
         // Layer 0
         [
-            KeyCode::new(Key::Z),
+            Key::Z,
             BleClearActive,
             BleNextProfile,
             BlePreviousProfile,
             ToggleExternalTransport(KeyboardLeft::DEFAULT_ADDRESS),
-            KeyCode::new(Key::A),
-            KeyCode::new(Key::B),
-            KeyCode::new(Key::C),
-            KeyCode::new(Key::LShift),
+            Key::A,
+            Key::B,
+            Key::C,
+            Key::LShift,
             NoOp,
             Layer::new(LayerId(1)),
             Layer::new(LayerId(2)),
@@ -43,7 +42,7 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
             NoOp,
             NoOp,
             NoOp,
-            KeyCode::new(Key::A),
+            Key::A,
             NoOp,
             NoOp,
             NoOp,
