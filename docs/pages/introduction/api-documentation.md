@@ -18,5 +18,6 @@
 ## Miscellaneous
 
 - [lokey_keyboard](https://docs.rs/lokey_keyboard) - Keyboard related functionality
+- [lokey_mouse](https://docs.rs/lokey_mouse) - Mouse related functionality
 - [lokey_layer](https://docs.rs/lokey_layer) - Layer management
 - [lokey_led_array](https://docs.rs/lokey_led_array) - Component for controlling LED arrays
