@@ -15,13 +15,13 @@ use lokey::{
     Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
 };
 use lokey_blink::Blink;
+use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
     ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
 };
 use lokey_layer::LayerManager;
 use lokey_rp::Rp2040;
 use panic_probe as _;
-use switch_hal::IntoSwitch;
 
 #[derive(Default, State)]
 struct DefaultState {

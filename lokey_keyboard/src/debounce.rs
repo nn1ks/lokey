@@ -1,6 +1,6 @@
+use crate::switch::WaitableInputSwitch;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Timer};
-use switch_hal::WaitableInputSwitch;
 
 /// Configuration for debouncing key switches.
 #[derive(Clone)]

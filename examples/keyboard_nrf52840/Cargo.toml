@@ -47,5 +47,4 @@ lokey_nrf = { path = "../../lokey_nrf", features = ["nrf52840", "usb", "ble"] }
 lokey_usb = { path = "../../lokey_usb" }
 lokey_usb_ble = { path = "../../lokey_usb_ble" }
 panic-probe = "1.0.0"
-switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
 typenum = { version = "1.19.0", features = ["const-generics"] }

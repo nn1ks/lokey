@@ -14,6 +14,7 @@ mod direct_pins;
 mod key;
 mod key_override;
 mod matrix;
+pub mod switch;
 #[cfg(feature = "usb")]
 pub mod usb;
 

@@ -13,6 +13,7 @@ use lokey::external::NoMessage;
 use lokey::state::StateContainer;
 use lokey::{Address, ComponentSupport, Context, Device, State, Transports, external, internal};
 use lokey_blink::Blink;
+use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
     ActionContainer, DirectPins, DirectPinsConfig, Layout, Matrix, MatrixConfig, Scanner,
 };
@@ -22,7 +23,6 @@ use lokey_led_array::pwm::{Pwm as _, PwmChannel};
 use lokey_led_array::{HookBundle, LedArray};
 use lokey_nrf::Nrf;
 use panic_probe as _;
-use switch_hal::IntoSwitch;
 
 pub const NUM_KEYS: usize = 36;
 pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;

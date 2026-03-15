@@ -1,8 +1,8 @@
 use super::{Debounce, Message, ScannerDriver};
 use crate::DynContext;
+use crate::switch::{InputSwitch, WaitableInputSwitch};
 use embassy_time::Timer;
 use lokey::util::error;
-use switch_hal::{InputSwitch, WaitableInputSwitch};
 
 /// Configuration for the [`DirectPins`] scanner.
 #[derive(Clone, Default)]

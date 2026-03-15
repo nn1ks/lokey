@@ -1,10 +1,10 @@
 use super::{Debounce, Message, ScannerDriver};
 use crate::DynContext;
+use crate::switch::{InputSwitch, OutputSwitch, WaitableInputSwitch};
 use arrayvec::ArrayVec;
 use embassy_time::{Duration, Instant, Timer};
 use lokey::Component;
 use lokey::util::error;
-use switch_hal::{InputSwitch, OutputSwitch, WaitableInputSwitch};
 
 /// Size of the debounce buffer. This limits the number of key state changes that can be tracked
 /// simultaneously.

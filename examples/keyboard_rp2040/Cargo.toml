@@ -39,5 +39,4 @@ lokey_layer = { path = "../../lokey_layer" }
 lokey_rp = { path = "../../lokey_rp", features = ["usb", "rp2040"] }
 lokey_usb = { path = "../../lokey_usb" }
 panic-probe = "1.0.0"
-switch-hal = { git = "https://github.com/daniel-dbg-ginsburg/switch-hal", branch = "hal-update", features = ["async"] }
 typenum = "1.19.0"
