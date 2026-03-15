@@ -278,6 +278,41 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           cargo test -p lokey_keyboard --verbose --target ${{ matrix.target }} --features "usb ble usb-ble"
+  lokey_mouse:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ";defmt;keyboard-actions;usb;ble;defmt keyboard-actions usb ble"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey_mouse --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey_mouse --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          cargo test -p lokey_mouse --verbose --target ${{ matrix.target }} --features "keyboard-actions usb ble"
   lokey_layer:
     runs-on: ubuntu-latest
     if: always()
