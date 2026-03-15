@@ -53,7 +53,7 @@ mod usb {
     use lokey_usb::CreateDriver;
 
     impl CreateDriver for Rp2040 {
-        type Driver<'d> = impl embassy_usb::driver::Driver<'d>;
+        type Driver<'d> = embassy_rp::usb::Driver<'d, embassy_rp::peripherals::USB>;
 
         fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
             bind_interrupts!(struct Irqs {

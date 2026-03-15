@@ -7,7 +7,6 @@
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![cfg_attr(feature = "usb", feature(impl_trait_in_assoc_type))]
 
 #[cfg(feature = "rp2040")]
 mod rp2040;

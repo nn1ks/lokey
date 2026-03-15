@@ -138,7 +138,7 @@ mod usb {
     use lokey_usb::CreateDriver;
 
     impl CreateDriver for Nrf {
-        type Driver<'d> = impl embassy_usb::driver::Driver<'d>;
+        type Driver<'d> = embassy_nrf::usb::Driver<'d, HardwareVbusDetect>;
 
         fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
             embassy_nrf::interrupt::USBD.set_priority(Priority::P2);
