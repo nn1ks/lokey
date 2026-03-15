@@ -11,8 +11,8 @@
 pub mod external;
 pub mod internal;
 
-use bt_hci::cmd::le::{LeConnUpdate, LeReadLocalSupportedFeatures};
-use bt_hci::controller::{ControllerCmdAsync, ControllerCmdSync};
+use bt_hci::cmd::le::LeReadLocalSupportedFeatures;
+use bt_hci::controller::ControllerCmdSync;
 use trouble_host::prelude::DefaultPacketPool;
 use trouble_host::{Controller, Stack};
 
