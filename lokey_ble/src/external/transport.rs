@@ -131,10 +131,10 @@ where
         let adv_service_uuids_16_rx = RxMessage::service_uuids_16();
         let adv_service_uuids_128_rx = RxMessage::service_uuids_128();
 
-        unwrap!(AdStructure::encode_slice(
+        let adv_data_len = unwrap!(AdStructure::encode_slice(
             &[
-                AdStructure::CompleteLocalName(self.name.as_bytes()),
                 AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
+                AdStructure::CompleteLocalName(self.name.as_bytes()),
                 AdStructure::ServiceUuids16(&adv_service_uuids_16_tx),
                 AdStructure::ServiceUuids16(&adv_service_uuids_16_rx),
                 AdStructure::ServiceUuids128(&adv_service_uuids_128_tx),
@@ -212,7 +212,7 @@ where
                 };
 
                 let adv = Advertisement::ConnectableScannableUndirected {
-                    adv_data: &adv_data,
+                    adv_data: &adv_data[..adv_data_len],
                     scan_data: &scan_data,
                 };
 
