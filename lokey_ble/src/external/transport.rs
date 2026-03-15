@@ -290,7 +290,7 @@ where
                         conn_params.max_connection_interval = v;
                     }
                     let result = new_connection
-                        .update_connection_params(&ble_stack, &conn_params)
+                        .update_connection_params(ble_stack, &conn_params)
                         .await;
                     if result.is_err() {
                         error!("Failed to update connection parameters");
