@@ -8,8 +8,9 @@
 //!
 //! <ul>
 //! <li>
-//!     <span class="stab portability"><code>max-internal-message-size-*</code></span>
-//!     — Sets the maximum size of internal messages in bytes where <code>*</code> must be one of the following values:
+//!     <p><span class="stab portability"><code>max-internal-message-size-*</code></span>
+//!     — Sets the maximum size of internal messages in bytes where <code>*</code> must be one of
+//!     the following values:
 //!     <code>8</code>,
 //!     <code>16</code>,
 //!     <code>32</code>,
@@ -18,11 +19,15 @@
 //!     <code>256</code>,
 //!     <code>512</code>,
 //!     <code>1024</code>.
-//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest
+//!     value will be used.</p>
+//!     <p><i>This feature should be set by all crates that define an internal message type to
+//!     ensure that the maximum message size is large enough to fit all messages.</i></p>
 //! </li>
 //! <li>
-//!     <span class="stab portability"><code>internal-receiver-slots-*</code></span>
-//!     — Sets the number of slots for receivers of internal messages where <code>*</code> must be one of the following values:
+//!     <p><span class="stab portability"><code>internal-receiver-slots-*</code></span>
+//!     — Sets the number of slots for receivers of internal messages where <code>*</code> must be
+//!     one of the following values:
 //!     <code>8</code>,
 //!     <code>16</code>,
 //!     <code>24</code>,
@@ -31,11 +36,14 @@
 //!     <code>48</code>,
 //!     <code>56</code>,
 //!     <code>64</code>.
-//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest
+//!     value will be used.</p>
+//!     <p><i>This feature should only be set by crates that build the final binary.</i></p>
 //! </li>
 //! <li>
-//!     <span class="stab portability"><code>external-receiver-slots-*</code></span>
-//!     — Sets the number of slots for receivers of external messages where <code>*</code> must be one of the following values:
+//!     <p><span class="stab portability"><code>external-receiver-slots-*</code></span>
+//!     — Sets the number of slots for receivers of external messages where <code>*</code> must be
+//!     one of the following values:
 //!     <code>8</code>,
 //!     <code>16</code>,
 //!     <code>24</code>,
@@ -44,11 +52,14 @@
 //!     <code>48</code>,
 //!     <code>56</code>,
 //!     <code>64</code>.
-//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest
+//!     value will be used.</p>
+//!     <p><i>This feature should only be set by crates that build the final binary.</i></p>
 //! </li>
 //! <li>
-//!     <span class="stab portability"><code>external-observer-slots-*</code></span>
-//!     — Sets the number of slots for observers of external messages where <code>*</code> must be one of the following values:
+//!     <p><span class="stab portability"><code>external-observer-slots-*</code></span>
+//!     — Sets the number of slots for observers of external messages where <code>*</code> must be
+//!     one of the following values:
 //!     <code>8</code>,
 //!     <code>16</code>,
 //!     <code>24</code>,
@@ -57,7 +68,9 @@
 //!     <code>48</code>,
 //!     <code>56</code>,
 //!     <code>64</code>.
-//!     If multiple instances of this feature are enabled, the enabled feature with the highest value will be used.
+//!     If multiple instances of this feature are enabled, the enabled feature with the highest
+//!     value will be used.</p>
+//!     <p><i>This feature should only be set by crates that build the final binary.</i></p>
 //! </li>
 //! </ul>
 //!
