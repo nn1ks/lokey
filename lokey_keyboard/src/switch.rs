@@ -136,8 +136,8 @@ pub trait StatefulOutputSwitch {
 /// # Type Params
 /// - `IoPin` must be a type that implements either of the [`InputPin`] or [`OutputPin`] traits.
 /// - `ActiveLevel` indicates whether the `Switch` is [`ActiveHigh`] or [`ActiveLow`].
-///     `ActiveLevel` is not actually stored in the struct.
-///     It's [`PhantomData`] used to indicate which implementation to use.
+///   `ActiveLevel` is not actually stored in the struct.
+///   It's [`PhantomData`] used to indicate which implementation to use.
 pub struct Switch<IoPin, ActiveLevel> {
     pin: RefCell<IoPin>,
     active: PhantomData<ActiveLevel>,
