@@ -3,6 +3,7 @@ use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
+use embassy_time::Duration;
 use generic_array::GenericArray;
 use lokey::util::{error, info};
 use lokey::{Address, external, internal, storage};
@@ -212,6 +213,8 @@ pub struct TransportConfig {
     pub self_powered: bool,
     pub num_ble_profiles: u8,
     pub appearance: &'static BluetoothUuid16,
+    pub ble_min_connection_interval: Option<Duration>,
+    pub ble_max_connection_interval: Option<Duration>,
     pub deactivate_unused_transport: bool,
 }
 
@@ -229,6 +232,8 @@ impl Default for TransportConfig {
             self_powered: false,
             num_ble_profiles: 4,
             appearance: &appearance::UNKNOWN,
+            ble_min_connection_interval: None,
+            ble_max_connection_interval: None,
             deactivate_unused_transport: true,
         }
     }
@@ -257,6 +262,8 @@ impl TransportConfig {
             serial_number: self.serial_number,
             num_profiles: self.num_ble_profiles,
             appearance: self.appearance,
+            min_connection_interval: self.ble_min_connection_interval,
+            max_connection_interval: self.ble_max_connection_interval,
         }
     }
 }

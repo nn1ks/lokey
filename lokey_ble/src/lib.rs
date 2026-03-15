@@ -11,10 +11,12 @@
 pub mod external;
 pub mod internal;
 
+use bt_hci::cmd::le::{LeConnUpdate, LeReadLocalSupportedFeatures};
+use bt_hci::controller::{ControllerCmdAsync, ControllerCmdSync};
 use trouble_host::prelude::DefaultPacketPool;
 use trouble_host::{Controller, Stack};
 
 pub trait BleStack {
-    type Controller: Controller;
+    type Controller: Controller + ControllerCmdSync<LeReadLocalSupportedFeatures>;
     fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool>;
 }

@@ -1,6 +1,7 @@
 mod message_service;
 mod transport;
 
+use embassy_time::Duration;
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::NoMessage;
 use lokey::util::error;
@@ -19,6 +20,8 @@ pub struct TransportConfig {
     pub serial_number: Option<&'static str>,
     pub num_profiles: u8,
     pub appearance: &'static BluetoothUuid16,
+    pub min_connection_interval: Option<Duration>,
+    pub max_connection_interval: Option<Duration>,
 }
 
 impl Default for TransportConfig {
@@ -33,6 +36,8 @@ impl Default for TransportConfig {
             serial_number: None,
             num_profiles: 4,
             appearance: &appearance::UNKNOWN,
+            min_connection_interval: None,
+            max_connection_interval: None,
         }
     }
 }

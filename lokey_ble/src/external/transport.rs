@@ -11,7 +11,7 @@ use embassy_sync::channel::Channel;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
-use embassy_time::Timer;
+use embassy_time::{Duration, Timer};
 use generic_array::GenericArray;
 use lokey::util::{debug, error, info, unwrap, warn};
 use lokey::{Address, external, internal, storage};
@@ -22,6 +22,7 @@ use trouble_host::gatt::{GattConnection, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
     AdStructure, Advertisement, AdvertisementParameters, AttributeServer, AttributeTable,
     BR_EDR_NOT_SUPPORTED, BluetoothUuid16, DefaultPacketPool, LE_GENERAL_DISCOVERABLE,
+    RequestedConnParams,
 };
 use trouble_host::{BleHostError, BondInformation};
 
@@ -39,6 +40,8 @@ pub struct Transport<Mcu: 'static, TxMessages, RxMessages, const CONN_MAX: usize
     appearance: &'static BluetoothUuid16,
     mcu: &'static Mcu,
     internal_channel: internal::DynChannelRef<'static>,
+    min_connection_interval: Option<Duration>,
+    max_connection_interval: Option<Duration>,
 }
 
 impl<Mcu, TxMessage, RxMessage, const CONN_MAX: usize> external::Transport
@@ -70,6 +73,8 @@ where
             appearance: config.appearance,
             mcu,
             internal_channel: internal_channel.as_dyn_ref(),
+            min_connection_interval: config.min_connection_interval,
+            max_connection_interval: config.max_connection_interval,
         }
     }
 
@@ -273,6 +278,25 @@ where
                     .send(Event::StoppedAdvertising { scannable })
                     .await;
                 let device_address = Address(new_connection.peer_address().into_inner());
+
+                if self.min_connection_interval.is_some() || self.max_connection_interval.is_some()
+                {
+                    debug!("Updating connection parameters");
+                    let mut conn_params = RequestedConnParams::default();
+                    if let Some(v) = self.min_connection_interval {
+                        conn_params.min_connection_interval = v;
+                    }
+                    if let Some(v) = self.max_connection_interval {
+                        conn_params.max_connection_interval = v;
+                    }
+                    let result = new_connection
+                        .update_connection_params(&ble_stack, &conn_params)
+                        .await;
+                    if result.is_err() {
+                        error!("Failed to update connection parameters");
+                    }
+                }
+
                 let new_connection = match new_connection.with_attribute_server(&server) {
                     Ok(v) => v,
                     Err(e) => {

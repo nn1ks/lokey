@@ -14,6 +14,7 @@ keywords = ["firmware"]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
+  "bt-hci/defmt",
   "embassy-futures/defmt",
   "embassy-sync/defmt",
   "embassy-time/defmt",
@@ -24,6 +25,7 @@ defmt = [
 
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
+bt-hci = "0.8.0"
 defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 embassy-futures = "0.1.1"
