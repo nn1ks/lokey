@@ -170,6 +170,7 @@ pub use lokey_macros::{State, device};
 #[doc(hidden)]
 pub use mcu::DummyMcu; // This is only used for doc tests
 pub use mcu::Mcu;
+use seq_macro::seq;
 use state::DynState;
 pub use state::StateContainer;
 #[doc(hidden)]
@@ -280,3 +281,89 @@ pub trait ComponentSupport<C: Component, S: StateContainer>: Device {
     where
         T: Transports<Self::Mcu>;
 }
+
+pub struct ComponentRunner<D, T, S, C>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
+    context: Context<D, T, S>,
+    component_collection: C,
+}
+
+impl<D, T, S> ComponentRunner<D, T, S, ()>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+{
+    pub fn new(context: Context<D, T, S>) -> Self {
+        Self {
+            context,
+            component_collection: (),
+        }
+    }
+}
+
+impl<D, T, S, C> ComponentRunner<D, T, S, C>
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: StateContainer,
+    C: ComponentCollection<D, T, S, Context = Context<D, T, S>>,
+{
+    pub fn with<NewC: Component>(self, component: NewC) -> ComponentRunner<D, T, S, C::Add1<NewC>> {
+        ComponentRunner {
+            context: self.context,
+            component_collection: self.component_collection.with(component),
+        }
+    }
+
+    pub async fn enable_all(self) {
+        self.component_collection.enable_all(self.context).await;
+    }
+}
+
+pub trait ComponentCollection<D, T, S> {
+    type Context;
+    type Add1<C: Component>;
+
+    fn with<C: Component>(self, component: C) -> Self::Add1<C>;
+
+    fn enable_all(self, context: Self::Context) -> impl Future<Output = ()>;
+}
+
+macro_rules! impl_component_collection_for_tuples {
+    ($num:literal) => {
+        seq!(N in 0..=$num {
+            #(impl_component_collection_for_tuples!(@ N);)*
+        });
+    };
+    (@ $num:literal) => {
+        seq!(N in 0..$num {
+            impl<D, T, S, #(C~N,)*> ComponentCollection<D, T, S> for (#(C~N,)*)
+            where
+                D: Device #(+ ComponentSupport<C~N, S>)*,
+                T: Transports<D::Mcu>,
+                S: StateContainer,
+                #(C~N: Component,)*
+            {
+                type Context = Context<D, T, S>;
+                type Add1<C: Component> = (#(C~N,)* C,);
+
+                fn with<C: Component>(self, component: C) -> Self::Add1<C> {
+                    (#(self.N,)* component,)
+                }
+
+                async fn enable_all(self, #[allow(unused_variables)] context: Self::Context) {
+                    futures_util::join!(
+                        #(context.enable(self.N),)*
+                    );
+                }
+            }
+        });
+    };
+}
+
+impl_component_collection_for_tuples!(16);
