@@ -19,11 +19,6 @@ use {
     trouble_host::{HostResources, Stack},
 };
 
-#[derive(Default)]
-pub struct Config {
-    pub ble_gap_device_name: Option<&'static str>,
-}
-
 bind_interrupts!(struct Irqs {
     RNG => embassy_nrf::rng::InterruptHandler<RNG>;
     EGU0_SWI0 => nrf_mpsl::LowPrioInterruptHandler;
@@ -41,16 +36,15 @@ pub struct Nrf {
 }
 
 impl Mcu for Nrf {
-    type Config = Config;
+    type Config = embassy_nrf::config::Config;
 
-    async fn create(_: Self::Config, address: Address) -> Self {
+    async fn create(mut config: Self::Config, address: Address) -> Self {
         #[cfg(not(feature = "ble"))]
         let _ = address;
 
-        let mut nrf_config = embassy_nrf::config::Config::default();
-        nrf_config.gpiote_interrupt_priority = Priority::P2;
-        nrf_config.time_interrupt_priority = Priority::P2;
-        let p = embassy_nrf::init(nrf_config);
+        config.gpiote_interrupt_priority = Priority::P2;
+        config.time_interrupt_priority = Priority::P2;
+        let p = embassy_nrf::init(config);
 
         let mpsl_p = nrf_mpsl::Peripherals::new(
             p.RTC0, p.TIMER0, p.TEMP, p.PPI_CH19, p.PPI_CH30, p.PPI_CH31,

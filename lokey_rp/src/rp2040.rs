@@ -4,18 +4,14 @@ use embassy_rp::peripherals::{DMA_CH0, FLASH};
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::{Address, Context, Device, Mcu, StateContainer, Transports};
 
-#[derive(Default)]
-pub struct Config {}
-
 #[non_exhaustive]
 pub struct Rp2040 {}
 
 impl Mcu for Rp2040 {
-    type Config = Config;
+    type Config = embassy_rp::config::Config;
 
-    async fn create(_: Self::Config, _address: Address) -> Self {
-        let rp_config = embassy_rp::config::Config::default();
-        embassy_rp::init(rp_config);
+    async fn create(config: Self::Config, _address: Address) -> Self {
+        embassy_rp::init(config);
         Self {}
     }
 
