@@ -96,17 +96,10 @@ impl Transports<Nrf> for Peripheral {
 pub struct KeyboardLeft;
 
 impl Device for KeyboardLeft {
-    const DEFAULT_ADDRESS: Address = Address([0x8b, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
-
     type Mcu = Nrf;
-
     type StorageDriver = lokey_nrf::DefaultStorageDriver;
 
-    fn mcu_config() -> lokey_nrf::Config {
-        lokey_nrf::Config {
-            ble_gap_device_name: Some("keyboard"),
-        }
-    }
+    const DEFAULT_ADDRESS: Address = Address([0x8b, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
 }
 
 impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
@@ -247,15 +240,10 @@ impl<S: StateContainer, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for K
 pub struct KeyboardRight;
 
 impl Device for KeyboardRight {
-    const DEFAULT_ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
-
     type Mcu = Nrf;
-
     type StorageDriver = lokey_nrf::DefaultStorageDriver;
 
-    fn mcu_config() -> lokey_nrf::Config {
-        lokey_nrf::Config::default()
-    }
+    const DEFAULT_ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
 }
 
 impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardRight {

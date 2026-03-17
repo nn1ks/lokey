@@ -20,7 +20,7 @@ use lokey_keyboard::{
     ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
 };
 use lokey_layer::LayerManager;
-use lokey_rp::Rp2040;
+use lokey_rp::Rp;
 use panic_probe as _;
 
 #[derive(Default, State)]
@@ -31,10 +31,10 @@ struct DefaultState {
 
 struct Central;
 
-impl Transports<Rp2040> for Central {
+impl Transports<Rp> for Central {
     type ExternalTransport =
-        lokey_usb::external::Transport<Rp2040, lokey_keyboard::ExternalMessage, NoMessage>;
-    type InternalTransport = internal::empty::Transport<Rp2040>;
+        lokey_usb::external::Transport<Rp, lokey_keyboard::ExternalMessage, NoMessage>;
+    type InternalTransport = internal::empty::Transport<Rp>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         lokey_usb::external::TransportConfig {
@@ -53,15 +53,10 @@ impl Transports<Rp2040> for Central {
 struct KeyboardLeft;
 
 impl Device for KeyboardLeft {
-    const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
-
-    type Mcu = Rp2040;
-
+    type Mcu = Rp;
     type StorageDriver = lokey_rp::DefaultStorageDriver;
 
-    fn mcu_config() -> lokey_rp::Config {
-        lokey_rp::Config::default()
-    }
+    const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
 }
 
 impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
