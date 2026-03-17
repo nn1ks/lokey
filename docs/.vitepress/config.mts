@@ -58,9 +58,10 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'What is Lokey?', link: '/introduction/what-is-lokey' },
-          { text: 'Supported Hardware', link: '/introduction/supported-hardware' },
           { text: 'Getting Started', link: '/introduction/getting-started' },
+          { text: 'Supported Hardware', link: '/introduction/supported-hardware' },
           { text: 'API Documentation', link: '/introduction/api-documentation' },
+          { text: 'Troubleshooting', link: '/introduction/troubleshooting' },
         ]
       },
       {

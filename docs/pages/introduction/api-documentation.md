@@ -2,7 +2,7 @@
 
 ## Core
 
-- [lokey](https://docs.rs/lokey)
+- [lokey](https://docs.rs/lokey) - Core framework primitives and abstractions
 
 ## Transports
 
@@ -12,7 +12,7 @@
 
 ## Microcontrollers
 
-- [lokey_nrf](https://docs.rs/lokey_nrf) - nRF series microcontrollers
+- [lokey_nrf](https://docs.rs/lokey_nrf) - Nordic nRF series microcontrollers
 - [lokey_rp](https://docs.rs/lokey_rp) - Raspberry Pi RP2040 and RP235x microcontrollers
 
 ## Miscellaneous

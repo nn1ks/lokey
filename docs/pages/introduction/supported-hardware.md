@@ -1,8 +1,27 @@
 # Supported Hardware
 
+## Microcontrollers
+
 Lokey currently supports the following microcontrollers:
 
-- NRF52840
-- RP2040
+- **Nordic nRF52840**
+- **Raspberry Pi RP2040**
+- **Raspberry Pi RP235x** *(currently untested)*
 
-It is also possible to add support for other microcontrollers without needing to modify the source code of the framework itself, however please consider submitting a pull request of you microcontroller implementation so that other people can benefit from it as well. See [MCUs](/concepts/mcus) and [Adding Support for a MCU](/guides/adding-support-for-a-mcu) for more information.
+::: info
+Support for additional microcontrollers can be added without modifying the core framework. For more details, see [Adding Support for a MCU](/guides/adding-support-for-a-mcu).
+
+If you implement support for a new microcontroller, consider submitting a pull request with your implementation so it can be included as a first-party crate.
+:::
+
+## Devices
+
+Device support is provided by third-party crates. The following is a non-exhaustive list of device crates:
+
+- TODO
+
+::: info
+For details on implementing a device crate, see [Adding Support for a Device](/guides/adding-support-for-a-device).
+
+If you implement support for a new device, consider submitting a pull request that adds a link to your crate on this page so others can discover it more easily.
+:::
