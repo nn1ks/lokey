@@ -3,7 +3,7 @@ use core::any::Any;
 
 pub trait Mcu: Any {
     /// The configuration for this MCU.
-    type Config;
+    type Config: Default;
 
     /// Creates the MCU.
     ///

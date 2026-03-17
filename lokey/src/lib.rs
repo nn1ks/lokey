@@ -101,10 +101,6 @@ impl Device for Keyboard {
     type StorageDriver = EmptyStorageDriver<DummyMcu>;
 
     const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
-
-    fn mcu_config() {
-       // ...
-    }
 }
 
 struct ExampleComponent;
@@ -265,7 +261,9 @@ pub trait Device: Sized {
 
     const DEFAULT_ADDRESS: Address;
 
-    fn mcu_config() -> <Self::Mcu as mcu::Mcu>::Config;
+    fn mcu_config() -> <Self::Mcu as mcu::Mcu>::Config {
+        Default::default()
+    }
 
     fn storage_config() -> <Self::StorageDriver as storage::StorageDriver>::Config {
         Default::default()
