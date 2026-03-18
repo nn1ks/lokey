@@ -20,7 +20,6 @@ pub mod usb;
 
 use action::InvalidChildActionIndex;
 pub use action::{Action, ActionContainer};
-use core::any::Any;
 use core::array;
 use core::future::Future;
 pub use debounce::Debounce;
@@ -28,12 +27,13 @@ pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_futures::join::{join, join_array};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
+use embassy_sync::mutex::{Mutex, MutexGuard};
+use enumset::EnumSet;
 #[doc(hidden)]
 pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
 pub use key_override::{KeyOverride, KeyOverrideEntry};
-use lokey::external::MismatchedMessageType;
 use lokey::state::StateContainer;
 use lokey::util::{debug, error, unwrap};
 use lokey::{Component, Context, Device, DynContext, Transports, external, internal};
@@ -260,68 +260,74 @@ impl internal::Message for Message {
     }
 }
 
-#[derive(Clone)]
-pub enum ExternalMessage {
-    KeyPress(Key),
-    KeyRelease(Key),
+pub type KeySet = EnumSet<Key>;
+
+#[derive(Debug, Clone, external::Message)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct KeyboardReport {
+    pub keys: KeySet,
 }
 
-impl external::Message for ExternalMessage {
-    fn has_inner_message<M: external::Message>() -> bool {
-        false
-    }
-
-    fn inner_message<M: external::Message>(&self) -> Option<&M> {
-        None
-    }
-
-    fn try_from_inner_message(_: &dyn Any) -> Result<Self, MismatchedMessageType>
-    where
-        Self: Sized,
-    {
-        Err(MismatchedMessageType)
+impl Default for KeyboardReport {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
-impl ExternalMessage {
-    #[cfg(any(feature = "usb", feature = "ble"))]
-    pub fn update_keyboard_report(
-        &self,
-        report: &mut usbd_hid::descriptor::KeyboardReport,
-    ) -> bool {
-        let mut changed = false;
-        match self {
-            Self::KeyPress(key) => match key.to_hid_report_byte() {
-                HidReportByte::Key(v) => {
-                    if !report.keycodes.contains(&v) {
-                        if let Some(i) = report.keycodes.iter().position(|keycode| *keycode == 0) {
-                            report.keycodes[i] = v;
-                        }
-                        changed = true;
-                    }
-                }
-                HidReportByte::Modifier(v) => {
-                    if report.modifier & v == 0 {
-                        report.modifier |= v;
-                        changed = true;
-                    }
-                }
-            },
-            Self::KeyRelease(key) => match key.to_hid_report_byte() {
-                HidReportByte::Key(v) => {
-                    if let Some(i) = report.keycodes.iter().position(|keycode| *keycode == v) {
-                        report.keycodes[i] = 0;
-                        changed = true;
-                    }
-                }
-                HidReportByte::Modifier(v) => {
-                    if report.modifier & v == v {
-                        report.modifier &= !v;
-                        changed = true;
-                    }
-                }
-            },
+impl KeyboardReport {
+    pub const fn empty() -> Self {
+        Self {
+            keys: EnumSet::empty(),
         }
-        changed
+    }
+
+    pub const fn clear(&mut self) {
+        self.keys = EnumSet::empty();
+    }
+
+    #[cfg(any(feature = "usb", feature = "ble"))]
+    pub fn to_hid_report(&self) -> usbd_hid::descriptor::KeyboardReport {
+        let mut hid_report = usbd_hid::descriptor::KeyboardReport {
+            modifier: 0,
+            reserved: 0,
+            leds: 0,
+            keycodes: [0; 6],
+        };
+        for key in self.keys {
+            match key.to_hid_report_byte() {
+                HidReportByte::Key(v) => {
+                    if let Some(i) = hid_report.keycodes.iter().position(|keycode| *keycode == 0) {
+                        hid_report.keycodes[i] = v;
+                    } else {
+                        error!("Too many keys pressed at once, only 6 keys can be reported");
+                    }
+                }
+                HidReportByte::Modifier(v) => hid_report.modifier |= v,
+            }
+        }
+        hid_report
+    }
+}
+
+#[derive(Default)]
+pub struct KeyboardReportState {
+    inner: Mutex<CriticalSectionRawMutex, KeyboardReport>,
+}
+
+impl KeyboardReportState {
+    pub fn new(keyboard_report: KeyboardReport) -> Self {
+        Self {
+            inner: Mutex::new(keyboard_report),
+        }
+    }
+
+    pub async fn lock(&self) -> MutexGuard<'_, CriticalSectionRawMutex, KeyboardReport> {
+        self.inner.lock().await
+    }
+
+    pub async fn modify_and_clone(&self, f: impl FnOnce(&mut KeyboardReport)) -> KeyboardReport {
+        let mut report = self.lock().await;
+        f(&mut report);
+        report.clone()
     }
 }

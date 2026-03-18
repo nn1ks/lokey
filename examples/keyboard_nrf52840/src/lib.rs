@@ -15,7 +15,8 @@ use lokey::{Address, ComponentSupport, Context, Device, State, Transports, exter
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
-    ActionContainer, DirectPins, DirectPinsConfig, Layout, Matrix, MatrixConfig, Scanner,
+    ActionContainer, DirectPins, DirectPinsConfig, KeyboardReport, Layout, Matrix, MatrixConfig,
+    Scanner,
 };
 use lokey_layer::LayerManager;
 use lokey_led_array::nrf52840::Pwm;
@@ -31,32 +32,27 @@ pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 pub struct DefaultState {
     #[state(query)]
     pub layer_manager: LayerManager<0>,
+    pub keyboard_report: KeyboardReport,
 }
 
 pub struct Central;
 
 impl Transports<Nrf> for Central {
-    type ExternalTransport =
-        lokey_usb::external::Transport<Nrf, lokey_keyboard::ExternalMessage, NoMessage>;
-    // type ExternalTransportConfig =
-    //     external::toggle::TransportConfig<external::ble::TransportConfig>;
-    // type ExternalTransportConfig = external::usb_ble::TransportConfig;
+    type ExternalTransport = lokey_ble::external::Transport<Nrf, KeyboardReport, NoMessage>;
     type InternalTransport = internal::empty::Transport<Nrf>;
-    // type InternalTransport = internal::ble::Transport<Nrf>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
-        lokey_usb::external::TransportConfig {
+        // lokey_usb::external::TransportConfig {
+        //     manufacturer: Some("n1ks"),
+        //     product: Some("keyboard_nrf52840"),
+        //     self_powered: true,
+        //     ..Default::default()
+        // }
+        lokey_ble::external::TransportConfig {
+            name: "keyboard",
             manufacturer: Some("n1ks"),
-            product: Some("keyboard_nrf52840"),
-            self_powered: true,
             ..Default::default()
         }
-        // external::toggle::TransportConfig::new(external::ble::TransportConfig {
-        //     // name: "keyboard_nrf52840",
-        //     name: "keyboard",
-        //     manufacturer: Some("n1ks"),
-        //     ..Default::default()
-        // })
         // external::usb_ble::TransportConfig {
         //     name: "keyboard_nrf52840",
         //     manufacturer: Some("n1ks"),

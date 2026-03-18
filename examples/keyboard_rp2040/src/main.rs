@@ -17,7 +17,8 @@ use lokey::{
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
-    ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, Layout, Scanner, layout,
+    ActionContainer, Debounce, DirectPins, DirectPinsConfig, Key, KeyboardReport, Layout, Scanner,
+    layout,
 };
 use lokey_layer::LayerManager;
 use lokey_rp::Rp;
@@ -27,13 +28,13 @@ use panic_probe as _;
 struct DefaultState {
     #[state(query)]
     layer_manager: LayerManager<0>,
+    keyboard_report: KeyboardReport,
 }
 
 struct Central;
 
 impl Transports<Rp> for Central {
-    type ExternalTransport =
-        lokey_usb::external::Transport<Rp, lokey_keyboard::ExternalMessage, NoMessage>;
+    type ExternalTransport = lokey_usb::external::Transport<Rp, KeyboardReport, NoMessage>;
     type InternalTransport = internal::empty::Transport<Rp>;
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {

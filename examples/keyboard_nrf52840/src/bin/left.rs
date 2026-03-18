@@ -15,8 +15,8 @@ use lokey_keyboard::{Key, KeyOverride, KeyOverrideEntry, MatrixConfig, Scanner, 
 use lokey_layer::LayerId;
 use lokey_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, LedArray};
 
-fn key_override() -> KeyOverride<2, 1> {
-    KeyOverride::new([KeyOverrideEntry::new([Key::LShift, Key::A], Key::E)])
+fn key_override() -> KeyOverride<1> {
+    KeyOverride::new([KeyOverrideEntry::new(Key::LShift | Key::A, Key::E)])
 }
 
 #[lokey::device(message_override = key_override())]

@@ -1,4 +1,4 @@
-use super::{ExternalMessage, Key};
+use crate::{Key, KeyboardReport, KeyboardReportState};
 use core::future::Future;
 use core::sync::atomic::Ordering;
 use derive_more::{Display, Error};
@@ -10,7 +10,7 @@ use embassy_time::{Duration, Timer};
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::toggle;
 use lokey::state::StateContainer;
-use lokey::util::{unwrap, warn};
+use lokey::util::{error, unwrap, warn};
 use lokey::{Address, Context, Device, Transports};
 use lokey_layer::{LayerId, LayerManagerEntry, LayerManagerQuery};
 use portable_atomic::AtomicBool;
@@ -257,10 +257,21 @@ impl Action for Key {
         T: Transports<D::Mcu>,
         S: StateContainer,
     {
-        let _ = context
-            .external_channel
-            .try_send(ExternalMessage::KeyPress(*self))
+        let report = match context.state.try_get::<KeyboardReportState>() {
+            Some(report) => report,
+            None => {
+                error!("Key action requires KeyboardReportState");
+                return;
+            }
+        };
+        let keyboard_report = report
+            .modify_and_clone(|keyboard_report| {
+                keyboard_report.keys.insert(*self);
+            })
             .await;
+        if let Err(e) = context.external_channel.try_send(keyboard_report).await {
+            error!("Failed to send keyboard report: {:?}", e);
+        }
     }
 
     async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
@@ -269,10 +280,21 @@ impl Action for Key {
         T: Transports<D::Mcu>,
         S: StateContainer,
     {
-        let _ = context
-            .external_channel
-            .try_send(ExternalMessage::KeyRelease(*self))
+        let report = match context.state.try_get::<KeyboardReportState>() {
+            Some(report) => report,
+            None => {
+                error!("Key action requires KeyboardReportState");
+                return;
+            }
+        };
+        let keyboard_report = report
+            .modify_and_clone(|keyboard_report| {
+                keyboard_report.keys.remove(*self);
+            })
             .await;
+        if let Err(e) = context.external_channel.try_send(keyboard_report).await {
+            error!("Failed to send keyboard report: {:?}", e);
+        }
     }
 }
 
@@ -457,22 +479,31 @@ impl<A: Action> Action for Sticky<A> {
         T: Transports<D::Mcu>,
         S: StateContainer,
     {
+        let previous_keyboard_report = match context.state.try_get::<KeyboardReportState>() {
+            Some(report) => report.lock().await.clone(),
+            None => {
+                error!("Sticky action requires KeyboardReportState");
+                return;
+            }
+        };
         self.is_held.store(true, Ordering::SeqCst);
-        let mut receiver = unwrap!(context.external_channel.try_observer::<ExternalMessage>());
+        let mut observer = unwrap!(context.external_channel.try_observer::<KeyboardReport>());
         if !self.lazy {
             self.action.on_press(context).await;
         }
         let fut1 = async {
             loop {
-                if let ExternalMessage::KeyPress(key) = receiver.next().await {
-                    if self.ignore_modifiers && key.is_modifier() {
-                        continue;
-                    }
-                    if self.lazy {
-                        self.action.on_press(context).await;
-                    }
-                    break;
+                let keyboard_report = observer.next().await;
+                let new_keys = keyboard_report
+                    .keys
+                    .difference(previous_keyboard_report.keys);
+                if self.ignore_modifiers && new_keys.iter().all(|key| key.is_modifier()) {
+                    continue;
                 }
+                if self.lazy {
+                    self.action.on_press(context).await;
+                }
+                break;
             }
         };
         let fut2 = Timer::after(self.timeout);

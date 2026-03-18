@@ -1,4 +1,7 @@
-#[derive(Clone, Copy, PartialEq, Eq)]
+use enumset::EnumSetType;
+
+#[derive(Debug, EnumSetType)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Key {
     LControl,
     RControl,
