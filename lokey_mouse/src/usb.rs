@@ -15,7 +15,7 @@ impl TxMessage for MouseReport {
 const MOUSE_REPORT_SIZE: usize = 5;
 
 pub struct ExternalMessageService<'d, D: Driver<'d>> {
-    inner: Mutex<CriticalSectionRawMutex, HidWriter<'d, D, MOUSE_REPORT_SIZE>>,
+    hid_writer: Mutex<CriticalSectionRawMutex, HidWriter<'d, D, MOUSE_REPORT_SIZE>>,
 }
 
 impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d, D> {
@@ -35,14 +35,14 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d,
 
         let hid_writer = HidWriter::<_, MOUSE_REPORT_SIZE>::new(builder, params, hid_config);
         Self {
-            inner: Mutex::new(hid_writer),
+            hid_writer: Mutex::new(hid_writer),
         }
     }
 }
 
 impl<'d, D: Driver<'d>> TxMessageService<MouseReport> for ExternalMessageService<'d, D> {
     async fn send(&self, message: MouseReport) {
-        let hid_writer = &mut *self.inner.lock().await;
+        let hid_writer = &mut *self.hid_writer.lock().await;
 
         let hid_mouse_report = message.to_hid_report();
 

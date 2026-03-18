@@ -8,6 +8,8 @@ use lokey_ble::external::{InitMessageService, TxMessage, TxMessageService};
 use trouble_host::prelude::*;
 use usbd_hid::descriptor::{MouseReport as HidMouseReport, SerializedDescriptor};
 
+const INPUT_MOUSE_SIZE: usize = 5;
+
 impl TxMessage for MouseReport {
     type MessageService = ExternalMessageService;
 
@@ -38,7 +40,7 @@ struct HidService {
     pub protocol_mode: u8,
     #[descriptor(uuid = "2908", read, value = [0u8, 1u8])]
     #[characteristic(uuid = "2a4d", read, notify)]
-    pub input_mouse: [u8; 5],
+    pub input_mouse: [u8; INPUT_MOUSE_SIZE],
 }
 
 pub struct ExternalMessageService {
@@ -61,8 +63,17 @@ impl TxMessageService<MouseReport> for ExternalMessageService {
         connection: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) {
         let mouse_report = message.to_hid_report();
-        let mut buf = [0; 5];
-        ssmarshal::serialize(&mut buf, &mouse_report).unwrap();
+        let mut buf = [0; INPUT_MOUSE_SIZE];
+        let len = match ssmarshal::serialize(&mut buf, &mouse_report) {
+            Ok(v) => v,
+            Err(e) => {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to serialize mouse report: {}", e);
+                return;
+            }
+        };
+        assert_eq!(len, INPUT_MOUSE_SIZE);
         if let Err(e) = self.hid_service.input_mouse.notify(connection, &buf).await {
             error!("Failed to set input report: {}", e);
         }
