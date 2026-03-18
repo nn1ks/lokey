@@ -2,16 +2,16 @@
 
 Lokey is a framework for developing firmware for a variety of input devices[^1].
 
-The framework supports keyboards, mice, and MIDI controllers, but it is also designed to be extensible, allowing for integration with other types of input devices.
+Keyboards, mice, and MIDI controllers are supported out of the box, but the framework can also be extended to other kinds of input devices.
 
-Lokey is written in [Rust](https://rust-lang.org) and built on top of [Embassy](https://embassy.dev). It is designed to be modular and extensible, so features can be composed and adapted to different device types. At the same time, Lokey puts a strong focus on user-friendly APIs, making firmware development easier without sacrificing flexibility.
+Lokey is written in [Rust](https://rust-lang.org) and built on top of [Embassy](https://embassy.dev). It is designed to be modular, so you can combine features and adapt them to different hardware targets. It also aims to keep APIs user-friendly, making firmware code easier to build and maintain.
 
 <br>
 
 ::: warning
-Lokey is still in an early stage of development. The information described here may change as the framework evolves.
+Lokey is still in an early stage of development. The information described on this site may change as the framework evolves.
 :::
 
 <br>
 
-[^1]: Input devices are devices that provide data to a host (e.g. key presses, mouse movement, etc.)
+[^1]: Input devices are devices that provide data (e.g. key presses, mouse movements) to a host
