@@ -42,7 +42,6 @@ use lokey::external::Message;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Message)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[non_exhaustive]
 pub struct MouseReport {
     pub buttons: EnumSet<MouseButton>,
     pub move_x: i8,
