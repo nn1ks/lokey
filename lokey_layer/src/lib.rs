@@ -280,8 +280,7 @@ mod tests {
 
     #[test]
     fn state_query() {
-        use lokey::State;
-        use lokey::state::AnyState;
+        use lokey::{AnyState, State};
 
         #[derive(Default, State)]
         struct MyState {

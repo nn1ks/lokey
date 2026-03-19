@@ -12,10 +12,9 @@ use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
-use lokey::state::AnyState;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::util::unwrap;
-use lokey::{Address, Context, Device, Mcu, Transports};
+use lokey::{Address, AnyState, Context, Device, Mcu, Transports};
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
 #[cfg(feature = "ble")]

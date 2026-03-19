@@ -2,8 +2,8 @@
     doctest,
     doc = "
 ```compile_fail
-use lokey::State;
-use lokey::state::{AnyState, ToStateQuery};
+use lokey::{AnyState, State};
+use lokey::state::ToStateQuery;
 
 struct Foo {}
 
