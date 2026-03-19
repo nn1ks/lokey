@@ -9,16 +9,16 @@ use lokey_usb::external::{InitMessageService, TxMessage, TxMessageService};
 use usbd_hid::descriptor::{MouseReport as HidMouseReport, SerializedDescriptor};
 
 impl TxMessage for MouseReport {
-    type MessageService<'d, D: Driver<'d>> = ExternalMessageService<'d, D>;
+    type MessageService<'d, D: Driver<'d>> = MouseReportService<'d, D>;
 }
 
 const MOUSE_REPORT_SIZE: usize = 5;
 
-pub struct ExternalMessageService<'d, D: Driver<'d>> {
+pub struct MouseReportService<'d, D: Driver<'d>> {
     hid_writer: Mutex<CriticalSectionRawMutex, HidWriter<'d, D, MOUSE_REPORT_SIZE>>,
 }
 
-impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d, D> {
+impl<'d, D: Driver<'d>> InitMessageService<'d, D> for MouseReportService<'d, D> {
     type Params = HidState<'d>;
 
     fn create_params() -> Self::Params {
@@ -40,7 +40,7 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d,
     }
 }
 
-impl<'d, D: Driver<'d>> TxMessageService<MouseReport> for ExternalMessageService<'d, D> {
+impl<'d, D: Driver<'d>> TxMessageService<MouseReport> for MouseReportService<'d, D> {
     async fn send(&self, message: MouseReport) {
         let hid_writer = &mut *self.hid_writer.lock().await;
 

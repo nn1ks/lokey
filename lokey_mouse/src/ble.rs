@@ -11,7 +11,7 @@ use usbd_hid::descriptor::{MouseReport as HidMouseReport, SerializedDescriptor};
 const INPUT_MOUSE_SIZE: usize = 5;
 
 impl TxMessage for MouseReport {
-    type MessageService = ExternalMessageService;
+    type MessageService = MouseReportService;
 
     const ATTRIBUTE_COUNT: usize = HidService::ATTRIBUTE_COUNT;
     const CCCD_COUNT: usize = HidService::CCCD_COUNT;
@@ -43,11 +43,11 @@ struct HidService {
     pub input_mouse: [u8; INPUT_MOUSE_SIZE],
 }
 
-pub struct ExternalMessageService {
+pub struct MouseReportService {
     hid_service: HidService,
 }
 
-impl InitMessageService for ExternalMessageService {
+impl InitMessageService for MouseReportService {
     fn init<'a, const ATT_MAX: usize>(
         attribute_table: &mut AttributeTable<'static, NoopRawMutex, ATT_MAX>,
     ) -> Self {
@@ -56,7 +56,7 @@ impl InitMessageService for ExternalMessageService {
     }
 }
 
-impl TxMessageService<MouseReport> for ExternalMessageService {
+impl TxMessageService<MouseReport> for MouseReportService {
     async fn send<'stack, 'server>(
         &self,
         message: MouseReport,
