@@ -165,8 +165,8 @@ pub use lokey_macros::{State, device};
 pub use mcu::DummyMcu; // This is only used for doc tests
 pub use mcu::Mcu;
 use seq_macro::seq;
-pub use state::AnyState;
 use state::DynState;
+pub use state::{AnyState, QueryState, State};
 #[doc(hidden)]
 pub use static_cell; // Re-exported for use in the `device` attribute macro.
 #[doc(hidden)]
