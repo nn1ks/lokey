@@ -110,7 +110,7 @@ pub fn state_derive(item: TokenStream) -> TokenStream {
 
     quote! {
         #(
-            impl ::lokey::state::GetState<#field_types> for #ident {
+            impl ::lokey::state::State<#field_types> for #ident {
                 fn get(&self) -> &#field_types {
                     &self.#field_accessors
                 }

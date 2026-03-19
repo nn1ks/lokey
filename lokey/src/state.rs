@@ -35,7 +35,7 @@ use core::any::{Any, TypeId};
 use core::mem::transmute;
 use core::ops::Deref;
 
-pub trait GetState<T> {
+pub trait State<T> {
     fn get(&self) -> &T;
     fn get_mut(&mut self) -> &mut T;
 }
