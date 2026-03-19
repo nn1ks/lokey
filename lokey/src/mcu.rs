@@ -1,4 +1,4 @@
-use crate::{Address, Context, Device, StateContainer, Transports};
+use crate::{Address, AnyState, Context, Device, Transports};
 use core::any::Any;
 
 pub trait Mcu: Any {
@@ -19,7 +19,7 @@ pub trait Mcu: Any {
     where
         D: Device<Mcu = Self>,
         T: Transports<Self>,
-        S: StateContainer,
+        S: AnyState,
         Self: Sized;
 }
 
@@ -41,7 +41,7 @@ mod dummy {
         where
             D: Device<Mcu = Self>,
             T: Transports<Self>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }

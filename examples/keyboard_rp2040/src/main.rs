@@ -11,9 +11,7 @@ use embassy_rp::gpio::{AnyPin, Input, Level, Output, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::external::{self, NoMessage};
-use lokey::{
-    Address, ComponentSupport, Context, Device, State, StateContainer, Transports, internal,
-};
+use lokey::{Address, AnyState, ComponentSupport, Context, Device, State, Transports, internal};
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
@@ -60,7 +58,7 @@ impl Device for KeyboardLeft {
     const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
 }
 
-impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
+impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardLeft {
     async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
@@ -74,7 +72,7 @@ impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
 const NUM_KEYS: usize = 1;
 pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 
-impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardLeft {
+impl<S: AnyState> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardLeft {
     async fn enable<T>(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
@@ -88,7 +86,7 @@ impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S>
     }
 }
 
-impl<S: StateContainer, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
+impl<S: AnyState, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
     for KeyboardLeft
 {
     async fn enable<T>(component: Layout<A>, context: Context<Self, T, S>)

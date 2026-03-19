@@ -95,7 +95,7 @@ pub fn layout(item: TokenStream) -> TokenStream {
             where
                 D: ::lokey::Device,
                 T: ::lokey::Transports<D::Mcu>,
-                S: ::lokey::StateContainer
+                S: ::lokey::AnyState
             {
                 match child_index {
                     #(#field_indices => {
@@ -114,7 +114,7 @@ pub fn layout(item: TokenStream) -> TokenStream {
             where
                 D: ::lokey::Device,
                 T: ::lokey::Transports<D::Mcu>,
-                S: ::lokey::StateContainer
+                S: ::lokey::AnyState
             {
                 match child_index {
                     #(#field_indices => {

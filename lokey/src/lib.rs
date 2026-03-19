@@ -88,10 +88,8 @@
 # use lokey::DummyMcu;
 use embassy_executor::Spawner;
 use lokey::{
-    Address, ComponentSupport, Context, Device, State, Transports, internal,
-    external
+    Address, AnyState, ComponentSupport, Context, Device, State, Transports, internal, external
 };
-use lokey::state::StateContainer;
 use lokey::storage::EmptyStorageDriver;
 
 struct Keyboard;
@@ -108,7 +106,7 @@ struct ExampleComponent;
 impl lokey::Component for ExampleComponent {}
 
 // Adds support for the component
-impl<S: StateContainer> ComponentSupport<ExampleComponent, S> for Keyboard {
+impl<S: AnyState> ComponentSupport<ExampleComponent, S> for Keyboard {
     async fn enable<T>(component: ExampleComponent, context: Context<Self, T, S>)
     where
         T: Transports<DummyMcu>,
@@ -167,8 +165,8 @@ pub use lokey_macros::{State, device};
 pub use mcu::DummyMcu; // This is only used for doc tests
 pub use mcu::Mcu;
 use seq_macro::seq;
+pub use state::AnyState;
 use state::DynState;
-pub use state::StateContainer;
 #[doc(hidden)]
 pub use static_cell; // Re-exported for use in the `device` attribute macro.
 #[doc(hidden)]
@@ -178,7 +176,7 @@ pub struct Context<D, T, S>
 where
     D: Device,
     T: Transports<D::Mcu>,
-    S: StateContainer,
+    S: AnyState,
 {
     pub address: Address,
     pub mcu: &'static D::Mcu,
@@ -191,7 +189,7 @@ impl<D, T, S> Context<D, T, S>
 where
     D: Device,
     T: Transports<D::Mcu>,
-    S: StateContainer,
+    S: AnyState,
 {
     pub fn as_dyn(&self) -> DynContext {
         let mcu = self.mcu;
@@ -224,7 +222,7 @@ impl<D, T, S> Clone for Context<D, T, S>
 where
     D: Device,
     T: Transports<D::Mcu>,
-    S: StateContainer,
+    S: AnyState,
 {
     fn clone(&self) -> Self {
         *self
@@ -235,7 +233,7 @@ impl<D, T, S> Copy for Context<D, T, S>
 where
     D: Device,
     T: Transports<D::Mcu>,
-    S: StateContainer,
+    S: AnyState,
 {
 }
 
@@ -280,7 +278,7 @@ pub trait Transports<M> {
 pub trait Component {}
 
 /// Trait for adding support of a component to a device.
-pub trait ComponentSupport<C: Component, S: StateContainer>: Device {
+pub trait ComponentSupport<C: Component, S: AnyState>: Device {
     /// Enables the specified component for this device.
     fn enable<T>(component: C, context: Context<Self, T, S>) -> impl Future<Output = ()>
     where
@@ -291,7 +289,7 @@ pub trait ComponentCollection<D, T, S>
 where
     D: Device,
     T: Transports<D::Mcu>,
-    S: StateContainer,
+    S: AnyState,
 {
     fn enable_all(self, context: Context<D, T, S>) -> impl Future<Output = ()>;
 }
@@ -308,7 +306,7 @@ macro_rules! impl_component_collection_for_tuples {
             where
                 D: Device #(+ ComponentSupport<C~N, S>)*,
                 T: Transports<D::Mcu>,
-                S: StateContainer,
+                S: AnyState,
                 #(C~N: Component,)*
             {
                 async fn enable_all(self, #[allow(unused_variables)] context: Context<D, T, S>) {

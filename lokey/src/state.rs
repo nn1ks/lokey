@@ -3,7 +3,7 @@
     doc = "
 ```compile_fail
 use lokey::State;
-use lokey::state::{StateContainer, ToStateQuery};
+use lokey::state::{AnyState, ToStateQuery};
 
 struct Foo {}
 
@@ -44,7 +44,7 @@ pub trait QueryState<'a, T: 'a> {
     fn query(&'a self) -> T;
 }
 
-pub trait StateContainer: 'static {
+pub trait AnyState: 'static {
     fn try_get_raw(&self, type_id: TypeId) -> Option<&dyn Any>;
     fn try_get_mut_raw(&mut self, type_id: TypeId) -> Option<&mut dyn Any>;
 
@@ -92,11 +92,11 @@ impl<'a, T> Deref for StateQueryRef<'a, T> {
 }
 
 #[repr(transparent)]
-pub struct DynState(dyn StateContainer);
+pub struct DynState(dyn AnyState);
 
 impl DynState {
-    pub const fn from_ref<T: StateContainer>(value: &T) -> &Self {
-        let value: &dyn StateContainer = value;
+    pub const fn from_ref<T: AnyState>(value: &T) -> &Self {
+        let value: &dyn AnyState = value;
         unsafe { transmute(value) }
     }
 

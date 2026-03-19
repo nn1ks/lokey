@@ -109,14 +109,14 @@ impl<const NUM_CONDITIONAL_LAYERS: usize> ToStateQuery for LayerManager<NUM_COND
 /// This type can be used to get the layer manager of a state container if the exact `LayerManager`
 /// type (i.e. the generics) are not known. Use with the
 /// [`QueryState::query`](lokey::state::QueryState::query) or
-/// [`StateContainer::try_query`](lokey::StateContainer::try_query) method of a state container to
+/// [`AnyState::try_query`](lokey::AnyState::try_query) method of a state container to
 /// get the [`LayerManagerQuery`].
 ///
 /// # Example
 ///
 /// ```
-/// use lokey::State;
-/// use lokey::state::{QueryState, StateContainer};
+/// use lokey::{AnyState, State};
+/// use lokey::state::QueryState;
 /// use lokey_layer::{LayerManager, LayerManagerQuery};
 ///
 /// #[derive(Default, State)]
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn state_query() {
         use lokey::State;
-        use lokey::state::StateContainer;
+        use lokey::state::AnyState;
 
         #[derive(Default, State)]
         struct MyState {

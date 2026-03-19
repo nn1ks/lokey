@@ -12,7 +12,7 @@ use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
-use lokey::state::StateContainer;
+use lokey::state::AnyState;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::util::unwrap;
 use lokey::{Address, Context, Device, Mcu, Transports};
@@ -122,7 +122,7 @@ impl Mcu for Nrf {
     where
         D: Device<Mcu = Self>,
         T: Transports<Self>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.mpsl.run().await
     }

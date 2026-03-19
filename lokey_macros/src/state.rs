@@ -123,7 +123,7 @@ pub fn state_derive(item: TokenStream) -> TokenStream {
 
         #query_state_impls
 
-        impl ::lokey::state::StateContainer for #ident {
+        impl ::lokey::state::AnyState for #ident {
             fn try_get_raw(&self, type_id: ::core::any::TypeId) -> ::core::option::Option<&dyn ::core::any::Any> {
                 #(
                     if type_id == ::core::any::TypeId::of::<#field_types>() {

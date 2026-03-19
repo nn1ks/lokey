@@ -10,8 +10,9 @@ use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::external::NoMessage;
-use lokey::state::StateContainer;
-use lokey::{Address, ComponentSupport, Context, Device, State, Transports, external, internal};
+use lokey::{
+    Address, AnyState, ComponentSupport, Context, Device, State, Transports, external, internal,
+};
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
@@ -98,7 +99,7 @@ impl Device for KeyboardLeft {
     const DEFAULT_ADDRESS: Address = Address([0x8b, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
 }
 
-impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
+impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardLeft {
     async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
@@ -109,7 +110,7 @@ impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardLeft {
     }
 }
 
-impl<S: StateContainer, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
+impl<S: AnyState, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
     for KeyboardLeft
 {
     async fn enable<T>(component: Layout<A>, context: Context<Self, T, S>)
@@ -120,7 +121,7 @@ impl<S: StateContainer, A: ActionContainer<NumChildren = NumKeys>> ComponentSupp
     }
 }
 
-impl<S: StateContainer> ComponentSupport<Scanner<MatrixConfig, NUM_KEYS>, S> for KeyboardLeft {
+impl<S: AnyState> ComponentSupport<Scanner<MatrixConfig, NUM_KEYS>, S> for KeyboardLeft {
     async fn enable<T>(component: Scanner<MatrixConfig, NUM_KEYS>, context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
@@ -203,7 +204,7 @@ impl<S: StateContainer> ComponentSupport<Scanner<MatrixConfig, NUM_KEYS>, S> for
     }
 }
 
-impl<S: StateContainer, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for KeyboardLeft {
+impl<S: AnyState, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for KeyboardLeft {
     async fn enable<T>(component: LedArray<4, H>, _context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
@@ -242,7 +243,7 @@ impl Device for KeyboardRight {
     const DEFAULT_ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
 }
 
-impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardRight {
+impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardRight {
     async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
@@ -253,7 +254,7 @@ impl<S: StateContainer> ComponentSupport<Blink, S> for KeyboardRight {
     }
 }
 
-impl<S: StateContainer> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
+impl<S: AnyState> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
     async fn enable<T>(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
@@ -284,7 +285,7 @@ impl lokey_keyboard::Action for LedAction {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.pin.lock().await.set_high();
     }
@@ -293,7 +294,7 @@ impl lokey_keyboard::Action for LedAction {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.pin.lock().await.set_low();
     }

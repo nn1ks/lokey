@@ -34,7 +34,7 @@ pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
 pub use key_override::{KeyOverride, KeyOverrideEntry};
-use lokey::state::StateContainer;
+use lokey::state::AnyState;
 use lokey::util::{debug, error, unwrap};
 use lokey::{Component, Context, Device, DynContext, Transports, external, internal};
 /// Macro for building a [`Layout`].
@@ -119,7 +119,7 @@ impl<A: ActionContainer> Layout<A> {
     ) where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         loop {
             let message = queue.receive().await;
@@ -150,7 +150,7 @@ impl<A: ActionContainer> Layout<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         const ACTION_QUEUE_SIZE: usize = 32;
         const NUM_ACTION_WORKERS: usize = 8;

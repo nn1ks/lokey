@@ -6,7 +6,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use lokey::util::error;
-use lokey::{Context, Device, StateContainer, Transports};
+use lokey::{AnyState, Context, Device, Transports};
 use lokey_keyboard::Action;
 use portable_atomic::AtomicBool;
 
@@ -15,7 +15,7 @@ impl Action for MouseButton {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         let Some(report) = context.state.try_get::<MouseReportState>() else {
             error!("MouseButton action requires MouseReport state");
@@ -33,7 +33,7 @@ impl Action for MouseButton {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         let Some(report) = context.state.try_get::<MouseReportState>() else {
             error!("MouseButton action requires MouseReport state");
@@ -55,7 +55,7 @@ async fn send_mouse_report<D, T, S, F>(
 ) where
     D: Device,
     T: Transports<D::Mcu>,
-    S: StateContainer,
+    S: AnyState,
     F: Fn(&mut MouseReport),
 {
     loop {
@@ -116,7 +116,7 @@ impl Action for MoveMouseX {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
             return;
@@ -136,7 +136,7 @@ impl Action for MoveMouseX {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.stop_signal.signal(());
     }
@@ -183,7 +183,7 @@ impl Action for MoveMouseY {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
             return;
@@ -203,7 +203,7 @@ impl Action for MoveMouseY {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.stop_signal.signal(());
     }
@@ -250,7 +250,7 @@ impl Action for ScrollX {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
             return;
@@ -270,7 +270,7 @@ impl Action for ScrollX {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.stop_signal.signal(());
     }
@@ -317,7 +317,7 @@ impl Action for ScrollY {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
             return;
@@ -337,7 +337,7 @@ impl Action for ScrollY {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.stop_signal.signal(());
     }

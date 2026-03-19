@@ -9,9 +9,8 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::toggle;
-use lokey::state::StateContainer;
 use lokey::util::{error, unwrap, warn};
-use lokey::{Address, Context, Device, Transports};
+use lokey::{Address, AnyState, Context, Device, Transports};
 use lokey_layer::{LayerId, LayerManagerEntry, LayerManagerQuery};
 use portable_atomic::AtomicBool;
 use seq_macro::seq;
@@ -35,7 +34,7 @@ pub trait ActionContainer: Send + Sync + 'static {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer;
+        S: AnyState;
 
     fn child_on_release<D, T, S>(
         &self,
@@ -45,7 +44,7 @@ pub trait ActionContainer: Send + Sync + 'static {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer;
+        S: AnyState;
 }
 
 pub trait ConcurrentActionContainer: Send + Sync + 'static {
@@ -55,13 +54,13 @@ pub trait ConcurrentActionContainer: Send + Sync + 'static {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer;
+        S: AnyState;
 
     fn all_on_release<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer;
+        S: AnyState;
 }
 
 macro_rules! impl_action_container_for_tuples {
@@ -87,7 +86,7 @@ macro_rules! impl_action_container_for_tuples {
                 where
                     D: Device,
                     T: Transports<D::Mcu>,
-                    S: StateContainer,
+                    S: AnyState,
                 {
                     match child_index {
                         #(N => Ok(self.N.on_press(context).await),)*
@@ -104,7 +103,7 @@ macro_rules! impl_action_container_for_tuples {
                 where
                     D: Device,
                     T: Transports<D::Mcu>,
-                    S: StateContainer,
+                    S: AnyState,
                 {
                     match child_index {
                         #(N => Ok(self.N.on_release(context).await),)*
@@ -127,7 +126,7 @@ macro_rules! impl_action_container_for_tuples {
                 where
                     D: Device,
                     T: Transports<D::Mcu>,
-                    S: StateContainer,
+                    S: AnyState,
                 {
                     futures_util::join!( #(self.N.on_press(context),)* );
                 }
@@ -140,7 +139,7 @@ macro_rules! impl_action_container_for_tuples {
                 where
                     D: Device,
                     T: Transports<D::Mcu>,
-                    S: StateContainer,
+                    S: AnyState,
                 {
                     futures_util::join!( #(self.N.on_release(context),)* );
                 }
@@ -156,13 +155,13 @@ pub trait Action: Send + Sync + 'static {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer;
+        S: AnyState;
 
     fn on_release<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer;
+        S: AnyState;
 }
 
 #[derive(Clone, Copy)]
@@ -173,7 +172,7 @@ impl Action for NoOp {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
     }
 
@@ -181,7 +180,7 @@ impl Action for NoOp {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
     }
 }
@@ -201,7 +200,7 @@ impl<A: ConcurrentActionContainer> Action for Concurrent<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.action_container.all_on_press(context).await;
     }
@@ -210,7 +209,7 @@ impl<A: ConcurrentActionContainer> Action for Concurrent<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.action_container.all_on_release(context).await;
     }
@@ -231,7 +230,7 @@ impl<A: ActionContainer> Action for Sequence<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         for i in 0..A::NumChildren::USIZE {
             let _ = self.action_container.child_on_press(i, context).await;
@@ -242,7 +241,7 @@ impl<A: ActionContainer> Action for Sequence<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         for i in (0..A::NumChildren::USIZE).rev() {
             let _ = self.action_container.child_on_release(i, context).await;
@@ -255,7 +254,7 @@ impl Action for Key {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         let report = match context.state.try_get::<KeyboardReportState>() {
             Some(report) => report,
@@ -278,7 +277,7 @@ impl Action for Key {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         let report = match context.state.try_get::<KeyboardReportState>() {
             Some(report) => report,
@@ -317,7 +316,7 @@ impl Action for Layer {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if let Some(entry) = self.layer_manager_entry.lock().await.take() {
             warn!(
@@ -338,7 +337,7 @@ impl Action for Layer {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if let Some(entry) = self.layer_manager_entry.lock().await.take()
             && let Some(layer_manager) = context.state.try_query::<LayerManagerQuery>()
@@ -369,7 +368,7 @@ impl<A: ActionContainer> Action for PerLayer<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if let Some(layer_manager) = context.state.try_query::<LayerManagerQuery>() {
             let active_layer_id = layer_manager.active();
@@ -388,7 +387,7 @@ impl<A: ActionContainer> Action for PerLayer<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if let Some(index) = *self.active_action_index.lock().await {
             unwrap!(self.actions.child_on_release(index, context).await);
@@ -415,7 +414,7 @@ impl<A: Action> Action for Toggle<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         let active = self.active.load(Ordering::SeqCst);
         if active {
@@ -430,7 +429,7 @@ impl<A: Action> Action for Toggle<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
     }
 }
@@ -477,7 +476,7 @@ impl<A: Action> Action for Sticky<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         let previous_keyboard_report = match context.state.try_get::<KeyboardReportState>() {
             Some(report) => report.lock().await.clone(),
@@ -524,7 +523,7 @@ impl<A: Action> Action for Sticky<A> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.is_held.store(false, Ordering::SeqCst);
         if !self.was_released.load(Ordering::SeqCst) {
@@ -564,7 +563,7 @@ impl<Hold: Action, Tap: Action> Action for HoldTap<Hold, Tap> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         self.activated_hold.store(false, Ordering::SeqCst);
         self.activated_tap.reset();
@@ -580,7 +579,7 @@ impl<Hold: Action, Tap: Action> Action for HoldTap<Hold, Tap> {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         if self.activated_hold.load(Ordering::SeqCst) {
             self.hold_action.on_release(context).await;
@@ -600,7 +599,7 @@ impl Action for ToggleExternalTransport {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         context
             .internal_channel
@@ -612,7 +611,7 @@ impl Action for ToggleExternalTransport {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
     }
 }
@@ -624,7 +623,7 @@ impl Action for ActivateExternalTransport {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         context
             .internal_channel
@@ -636,7 +635,7 @@ impl Action for ActivateExternalTransport {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
     }
 }
@@ -648,7 +647,7 @@ impl Action for DeactivateExternalTransport {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
         context
             .internal_channel
@@ -660,7 +659,7 @@ impl Action for DeactivateExternalTransport {
     where
         D: Device,
         T: Transports<D::Mcu>,
-        S: StateContainer,
+        S: AnyState,
     {
     }
 }
@@ -683,7 +682,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context
                 .internal_channel
@@ -695,7 +694,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -707,7 +706,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context
                 .internal_channel
@@ -721,7 +720,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -733,7 +732,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context.internal_channel.send(Message::ClearActive).await;
         }
@@ -742,7 +741,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -754,7 +753,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context.internal_channel.send(Message::ClearAll).await;
         }
@@ -763,7 +762,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -775,7 +774,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context
                 .internal_channel
@@ -787,7 +786,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -799,7 +798,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context
                 .internal_channel
@@ -811,7 +810,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -823,7 +822,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context
                 .internal_channel
@@ -835,7 +834,7 @@ mod ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -860,7 +859,7 @@ mod usb_ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context
                 .internal_channel
@@ -872,7 +871,7 @@ mod usb_ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }
@@ -888,7 +887,7 @@ mod usb_ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
             context
                 .internal_channel
@@ -900,7 +899,7 @@ mod usb_ble {
         where
             D: Device,
             T: Transports<D::Mcu>,
-            S: StateContainer,
+            S: AnyState,
         {
         }
     }

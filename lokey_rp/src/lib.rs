@@ -12,7 +12,7 @@ use core::ops::Range;
 use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
 use lokey::storage::{DefaultStorage, StorageDriver};
-use lokey::{Address, Context, Device, Mcu, StateContainer, Transports};
+use lokey::{Address, AnyState, Context, Device, Mcu, Transports};
 
 pub struct StorageConfig {
     pub flash_range: Range<u32>,
@@ -41,7 +41,7 @@ impl Mcu for Rp {
     where
         D: Device<Mcu = Self>,
         T: Transports<Self>,
-        S: StateContainer,
+        S: AnyState,
     {
     }
 }
