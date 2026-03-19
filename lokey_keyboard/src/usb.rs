@@ -9,16 +9,16 @@ use lokey_usb::external::{InitMessageService, TxMessage, TxMessageService};
 use usbd_hid::descriptor::{KeyboardReport as HidKeyboardReport, SerializedDescriptor};
 
 impl TxMessage for KeyboardReport {
-    type MessageService<'d, D: Driver<'d>> = ExternalMessageService<'d, D>;
+    type MessageService<'d, D: Driver<'d>> = KeyboardReportService<'d, D>;
 }
 
 const KEYBOARD_REPORT_SIZE: usize = 9;
 
-pub struct ExternalMessageService<'d, D: Driver<'d>> {
+pub struct KeyboardReportService<'d, D: Driver<'d>> {
     hid_writer: Mutex<CriticalSectionRawMutex, HidWriter<'d, D, KEYBOARD_REPORT_SIZE>>,
 }
 
-impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d, D> {
+impl<'d, D: Driver<'d>> InitMessageService<'d, D> for KeyboardReportService<'d, D> {
     type Params = HidState<'d>;
 
     fn create_params() -> Self::Params {
@@ -40,7 +40,7 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for ExternalMessageService<'d,
     }
 }
 
-impl<'d, D: Driver<'d>> TxMessageService<KeyboardReport> for ExternalMessageService<'d, D> {
+impl<'d, D: Driver<'d>> TxMessageService<KeyboardReport> for KeyboardReportService<'d, D> {
     async fn send(&self, message: KeyboardReport) {
         let hid_writer = &mut *self.hid_writer.lock().await;
 

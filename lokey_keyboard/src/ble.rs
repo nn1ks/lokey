@@ -12,7 +12,7 @@ const INPUT_KEYBOARD_SIZE: usize = 8;
 const OUTPUT_KEYBOARD_SIZE: usize = 1;
 
 impl TxMessage for KeyboardReport {
-    type MessageService = ExternalMessageService;
+    type MessageService = KeyboardReportService;
 
     const ATTRIBUTE_COUNT: usize = HidService::ATTRIBUTE_COUNT;
     const CCCD_COUNT: usize = HidService::CCCD_COUNT;
@@ -47,11 +47,11 @@ struct HidService {
     pub output_keyboard: [u8; OUTPUT_KEYBOARD_SIZE],
 }
 
-pub struct ExternalMessageService {
+pub struct KeyboardReportService {
     hid_service: HidService,
 }
 
-impl InitMessageService for ExternalMessageService {
+impl InitMessageService for KeyboardReportService {
     fn init<'a, const ATT_MAX: usize>(
         attribute_table: &mut AttributeTable<'static, NoopRawMutex, ATT_MAX>,
     ) -> Self {
@@ -60,7 +60,7 @@ impl InitMessageService for ExternalMessageService {
     }
 }
 
-impl TxMessageService<KeyboardReport> for ExternalMessageService {
+impl TxMessageService<KeyboardReport> for KeyboardReportService {
     async fn send<'stack, 'server>(
         &self,
         message: KeyboardReport,
