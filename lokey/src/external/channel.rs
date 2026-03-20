@@ -1,7 +1,8 @@
 use crate::external::r#override::MessageSender;
 use crate::external::{
     self, MaximumObserversReached, MaximumReceiversReached, Message, MismatchedMessageType,
-    OBSERVER_SLOTS, RECEIVER_SLOTS, TryFromMessage, TryReceiverError, UnsupportedMessageType,
+    OBSERVER_SLOTS, RECEIVER_SLOTS, TryFromMessage, TryObserverError, TryReceiverError,
+    UnsupportedMessageType,
 };
 use crate::util::unwrap;
 use core::any::{Any, TypeId};
@@ -11,6 +12,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel;
 use embassy_sync::pubsub::{PubSubChannel, Subscriber, WaitResult};
 
+/// External channel for communication between the device and a host.
 pub struct Channel<Transport>
 where
     Transport: external::Transport,
@@ -35,6 +37,7 @@ where
         }
     }
 
+    /// Runs the external channel background task, handling incoming and outgoing messages.
     pub async fn run<Storage, Override>(
         &self,
         storage: &'static Storage,
@@ -102,6 +105,7 @@ where
         }
     }
 
+    /// Sends a message through this channel.
     pub async fn send<M>(&self, message: M)
     where
         M: Into<Transport::TxMessage>,
@@ -109,6 +113,8 @@ where
         self.tx_raw_channel.send(message.into()).await;
     }
 
+    /// Tries to send a message through this channel, returning an error if the message type is not
+    /// supported.
     pub async fn try_send<M>(&self, message: M) -> Result<(), UnsupportedMessageType>
     where
         M: Message,
@@ -128,6 +134,7 @@ where
         }
     }
 
+    /// Creates a new receiver for messages of the specified type.
     pub fn receiver<M>(
         &self,
     ) -> Result<Receiver<'_, M, Transport::TxMessage>, MaximumReceiversReached>
@@ -144,6 +151,8 @@ where
         })
     }
 
+    /// Creates a new receiver for messages of the specified type, returning an error if the message
+    /// type is not supported.
     pub fn try_receiver<M>(
         &self,
     ) -> Result<TryReceiver<'_, M, Transport::TxMessage>, TryReceiverError>
@@ -165,6 +174,7 @@ where
         })
     }
 
+    /// Creates a new observer for messages of the specified type.
     pub fn observer<M>(
         &self,
     ) -> Result<Observer<'_, M, Transport::TxMessage>, MaximumObserversReached>
@@ -181,12 +191,19 @@ where
         })
     }
 
+    /// Creates a new observer for messages of the specified type, returning an error if the message
+    /// type is not supported.
     pub fn try_observer<M>(
         &self,
-    ) -> Result<TryObserver<'_, M, Transport::TxMessage>, MaximumObserversReached>
+    ) -> Result<TryObserver<'_, M, Transport::TxMessage>, TryObserverError>
     where
         M: Message,
     {
+        if !Transport::TxMessage::has_inner_message::<M>() {
+            return Err(TryObserverError::UnsupportedMessageType(
+                UnsupportedMessageType,
+            ));
+        }
         let subscriber = self
             .tx_channel
             .subscriber()
@@ -198,12 +215,15 @@ where
     }
 }
 
+/// A dynamic reference to the external channel.
 #[derive(Clone, Copy)]
 pub struct DynChannelRef<'a> {
     phantom: PhantomData<&'a ()>,
 }
 
 impl DynChannelRef<'_> {
+    // TODO: Implement methods
+
     // pub async fn try_send<M>(&self, message: M) -> Result<(), UnsupportedMessageType>
     // where
     //     M: Message,
@@ -226,6 +246,7 @@ impl DynChannelRef<'_> {
     // }
 }
 
+/// Receiver for messages of a specific type from the external channel.
 pub struct Receiver<'a, Message, TxMessage>
 where
     Message: TryFromMessage<TxMessage>,
@@ -240,6 +261,7 @@ where
     Message: TryFromMessage<TxMessage>,
     TxMessage: Clone,
 {
+    /// Waits for the next message of the specified type and returns it.
     pub async fn next(&mut self) -> Message {
         loop {
             let message = match self.subscriber.next_message().await {

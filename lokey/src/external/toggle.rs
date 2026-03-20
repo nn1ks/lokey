@@ -1,3 +1,7 @@
+//! An external transport wrapper that can be activated and deactivated.
+//!
+//! The transport can be activated and deactivated by sending [`Message`] through the internal channel.
+
 use crate::util::{debug, unwrap};
 use crate::{Address, external, internal};
 use core::sync::atomic::Ordering;
@@ -10,10 +14,14 @@ use portable_atomic::AtomicBool;
 static ACTIVATION_REQUEST: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
+/// An internal message used to activate, deactivate, or toggle the transport.
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Message {
+    /// Activates the transport of the device with the specified address.
     Activate(Address),
+    /// Deactivates the transport of the device with the specified address.
     Deactivate(Address),
+    /// Toggles the transport of the device with the specified address.
     Toggle(Address),
 }
 
@@ -59,13 +67,18 @@ impl internal::Message for Message {
     }
 }
 
+/// Configuration for the toggle transport.
 pub struct TransportConfig<T> {
+    /// The configuration of the underlying transport.
     pub transport: T,
+    /// Whether the transport is active when it is created.
     pub active: bool,
+    /// Whether the transport should ignore activation requests from the host.
     pub ignore_activation_request: bool,
 }
 
 impl<T> TransportConfig<T> {
+    /// Creates a new transport configuration with the specified underlying transport configuration.
     pub const fn new(transport: T) -> Self {
         Self {
             transport,
@@ -74,17 +87,20 @@ impl<T> TransportConfig<T> {
         }
     }
 
+    /// Sets whether the transport is active when it is created.
     pub const fn active(mut self, value: bool) -> Self {
         self.active = value;
         self
     }
 
+    /// Sets whether the transport should ignore activation requests from the host.
     pub const fn ignore_activation_request(mut self, value: bool) -> Self {
         self.ignore_activation_request = value;
         self
     }
 }
 
+/// An external transport wrapper that can be activated and deactivated.
 pub struct Transport<T> {
     transport: T,
     ignore_activation_request: bool,

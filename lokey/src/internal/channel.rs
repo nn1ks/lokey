@@ -16,6 +16,7 @@ use typenum::Unsigned;
 //   - Don't convert local messages to bytes and then convert it back to a message
 //   - Make a pub sub channel that only sends the relevant messages to the receivers
 
+/// Internal channel for communication between components and devices.
 pub struct Channel<Transport> {
     transport: Transport,
     rx_channel: PubSubChannel<
@@ -39,6 +40,7 @@ impl<Transport: internal::Transport> Channel<Transport> {
         }
     }
 
+    /// Runs the internal channel background task, handling incoming and outgoing messages.
     pub async fn run<Storage>(&self, storage: &'static Storage)
     where
         Storage: crate::storage::Storage,
@@ -73,17 +75,19 @@ impl<Transport: internal::Transport> Channel<Transport> {
     /// generic.
     pub fn as_dyn_ref(&self) -> DynChannelRef<'_> {
         DynChannelRef {
-            inner_channel: &self.rx_channel,
+            rx_channel: &self.rx_channel,
             tx_channel: &self.tx_channel,
         }
     }
 
+    /// Sends a message through this channel.
     pub async fn send<M: Message>(&self, message: M) {
         if let Some(bytes) = build_message_bytes(message) {
             self.tx_channel.send(bytes).await;
         }
     }
 
+    /// Creates a new receiver for messages of the specified type.
     pub fn receiver<M: Message>(&self) -> Result<Receiver<'_, M>, MaximumReceiversReached> {
         let subscriber = self
             .rx_channel
@@ -96,9 +100,13 @@ impl<Transport: internal::Transport> Channel<Transport> {
     }
 }
 
+/// A dynamic reference to the internal channel.
+///
+/// This can be used to send messages and create receivers without needing to know the transport
+/// type.
 #[derive(Clone, Copy)]
 pub struct DynChannelRef<'a> {
-    inner_channel: &'a PubSubChannel<
+    rx_channel: &'a PubSubChannel<
         CriticalSectionRawMutex,
         ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
         1,
@@ -110,6 +118,7 @@ pub struct DynChannelRef<'a> {
 }
 
 impl DynChannelRef<'_> {
+    /// Sends a message through this channel.
     pub async fn send<M: Message>(&self, message: M) {
         if let Some(bytes) = build_message_bytes(message) {
             self.tx_channel.send(bytes).await;
@@ -137,6 +146,7 @@ fn build_message_bytes<M: Message>(message: M) -> Option<ArrayVec<u8, MAX_MESSAG
     Some(M::TAG.into_iter().chain(message.to_bytes()).collect())
 }
 
+/// Receiver for messages of a specific type from the internal channel.
 pub struct Receiver<'a, Message> {
     subscriber: Subscriber<
         'a,
@@ -150,6 +160,7 @@ pub struct Receiver<'a, Message> {
 }
 
 impl<Message: internal::Message> Receiver<'_, Message> {
+    /// Waits for the next message of this type and returns it.
     pub async fn next(&mut self) -> Message {
         loop {
             let message_bytes = match self.subscriber.next_message().await {

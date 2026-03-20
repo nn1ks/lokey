@@ -1,8 +1,15 @@
+//! Empty internal transport implementation.
+
 use crate::{Address, internal};
 use core::marker::PhantomData;
 
+/// Configuration for the empty internal transport.
 pub struct TransportConfig;
 
+/// An internal transport implementation that does not actually send or receive any messages.
+///
+/// This transport is intended for single-part devices that do not require internal communication
+/// between devices.
 pub struct Transport<Mcu> {
     phantom: PhantomData<Mcu>,
 }

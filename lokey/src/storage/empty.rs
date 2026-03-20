@@ -2,6 +2,7 @@ use crate::storage::{Entry, Error, Storage, StorageDriver};
 use core::convert::Infallible;
 use core::marker::PhantomData;
 
+/// A storage driver to crate an [`EmptyStorage`] instance.
 pub struct EmptyStorageDriver<M> {
     phantom: PhantomData<M>,
 }
@@ -16,6 +17,9 @@ impl<Mcu: 'static> StorageDriver for EmptyStorageDriver<Mcu> {
     }
 }
 
+/// A storage implementation that does not actually store anything.
+///
+/// This can be used for testing or for devices that do not have any non-volatile storage.
 pub struct EmptyStorage;
 
 impl Storage for EmptyStorage {

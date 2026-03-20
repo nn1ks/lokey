@@ -1,20 +1,26 @@
 use crate::{Address, AnyState, Context, Device, Transports};
 use core::any::Any;
 
+/// Microcontroller abstraction.
+///
+/// This trait encapsulates Microcontroller-specific setup and background execution.
 pub trait Mcu: Any {
     /// The configuration for this MCU.
     type Config: Default;
 
-    /// Creates the MCU.
+    /// Creates and initializes the MCU instance.
     ///
-    /// This function must be called only once for a MCU type.
+    /// This function must be called only once per concrete MCU type.
     fn create(config: Self::Config, address: Address) -> impl Future<Output = Self>
     where
         Self: Sized;
 
-    /// Runs MCU specific tasks.
+    /// Runs MCU-specific tasks.
     ///
-    /// This function must be called only once for a MCU type.
+    /// This function is expected to drive MCU background work and usually runs for the lifetime of
+    /// the device.
+    ///
+    /// This function must be called only once per concrete MCU type.
     fn run<D, T, S>(&'static self, context: Context<D, T, S>) -> impl Future<Output = ()>
     where
         D: Device<Mcu = Self>,
@@ -25,6 +31,7 @@ pub trait Mcu: Any {
 
 pub use dummy::DummyMcu;
 
+#[allow(missing_docs)]
 mod dummy {
     use super::*;
 

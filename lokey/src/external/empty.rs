@@ -1,9 +1,15 @@
+//! Empty external transport implementation.
+
 use crate::external::NoMessage;
 use crate::{Address, external, internal};
 use core::marker::PhantomData;
 
+/// Configuration for the empty external transport.
 pub struct TransportConfig;
 
+/// An external transport implementation that does not actually send or receive any messages.
+///
+/// This transport is intended for devices that do not communicate with a host.
 pub struct Transport<Mcu> {
     phantom: PhantomData<Mcu>,
 }

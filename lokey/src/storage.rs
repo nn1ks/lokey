@@ -1,3 +1,17 @@
+//! Persistent storage for device data.
+//!
+//! This module provides abstractions for storing and retrieving typed entries in non-volatile
+//! memory.
+//!
+//! Main building blocks:
+//! - [`StorageDriver`]: Creates a concrete storage backend from MCU-specific resources.
+//! - [`Storage`]: Async API to store, fetch, and remove typed entries.
+//! - [`Entry`]: Defines how a type is tagged and serialized for storage.
+//! - [`Error`]: Common storage error type used across backends.
+//!
+//! Entries are identified by an 8-byte tag (see [`ENTRY_TAG_SIZE`]). Tags can be parameterized via
+//! [`Entry::TagParams`] to support multiple stored instances of the same entry type.
+
 mod default;
 mod empty;
 
@@ -7,35 +21,50 @@ pub use default::DefaultStorage;
 pub use empty::{EmptyStorage, EmptyStorageDriver};
 use generic_array::{ArrayLength, GenericArray};
 
+/// Trait to create and configure a storage instance for a specific MCU.
 pub trait StorageDriver: Any {
+    /// The type of the storage created by this driver.
     type Storage: Storage;
+
+    /// The type of the MCU that this storage driver is designed for.
     type Mcu;
+
+    /// The configuration type for this storage driver.
     type Config: Default;
+
+    /// Creates a storage instance for the specified MCU and configuration.
     fn create_storage(mcu: &'static Self::Mcu, config: Self::Config) -> Self::Storage;
 }
 
+/// Trait for persistent storage of typed entries.
 pub trait Storage: Any {
+    /// The error type returned by flash operations in this storage.
     type FlashError: Debug;
 
+    /// Removes the specified entry from storage.
     fn remove<E: Entry>(
         &self,
         tag_params: E::TagParams,
     ) -> impl Future<Output = Result<(), Error<<Self as Storage>::FlashError>>>;
 
+    /// Stores the specified entry in storage.
     fn store<E: Entry>(
         &self,
         tag_params: E::TagParams,
         entry: &E,
     ) -> impl Future<Output = Result<(), Error<<Self as Storage>::FlashError>>>;
 
+    /// Fetches the specified entry from storage.
     fn fetch<E: Entry>(
         &self,
         tag_params: E::TagParams,
     ) -> impl Future<Output = Result<Option<E>, Error<<Self as Storage>::FlashError>>>;
 }
 
+/// The size of the tag used to identify entries in storage.
 pub const ENTRY_TAG_SIZE: usize = 8;
 
+/// Trait for types that can be stored in persistent storage.
 pub trait Entry {
     /// The length of the byte array that this type is serialized to.
     type Size: ArrayLength;
@@ -61,12 +90,17 @@ pub trait Entry {
     fn to_bytes(&self) -> GenericArray<u8, Self::Size>;
 }
 
+/// Error type for storage operations.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error<E> {
+    /// Flash error returned by the underlying flash storage.
     Flash(E),
+    /// The storage is full and can not store any more entries.
     FullStorage,
+    /// The storage is corrupted and can not be used.
     Corrupted,
+    /// The entry is too big to be stored in the storage.
     EntryTooBig,
 }
 
