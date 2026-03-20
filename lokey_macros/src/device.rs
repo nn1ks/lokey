@@ -69,19 +69,19 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     let modify_mcu_config = match args.mcu_config {
-        Some(v) => quote! { #v(__config); },
+        Some(v) => quote! { (#v)(__config); },
         None => quote! {},
     };
     let modify_storage_config = match args.storage_config {
-        Some(v) => quote! { #v(__config); },
+        Some(v) => quote! { (#v)(__config); },
         None => quote! {},
     };
     let modify_internal_transport_config = match args.internal_transport_config {
-        Some(v) => quote! { #v(__config); },
+        Some(v) => quote! { (#v)(__config); },
         None => quote! {},
     };
     let modify_external_transport_config = match args.external_transport_config {
-        Some(v) => quote! { #v(__config); },
+        Some(v) => quote! { (#v)(__config); },
         None => quote! {},
     };
 
