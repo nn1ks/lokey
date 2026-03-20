@@ -174,8 +174,8 @@ use core::future::Future;
 ///
 /// - **`#[state(query)]`**
 ///
-///     Enables query support for the field by generating [`QueryState`] and [`AnyState::try_query`]
-///     integrations. Note that [`state::ToStateQuery`] must be implemented for the field type.
+///   Enables query support for the field by generating [`QueryState`] and [`AnyState::try_query`]
+///   integrations. Note that [`state::ToStateQuery`] must be implemented for the field type.
 ///
 /// # Example
 ///
@@ -220,35 +220,35 @@ pub use lokey_macros::State;
 ///
 /// - **`address`**
 ///
-///     Sets the device address.
+///   Sets the device address.
 ///
-///     *If omitted, [`Device::DEFAULT_ADDRESS`] is used.*
+///   *If omitted, [`Device::DEFAULT_ADDRESS`] is used.*
 ///
 /// - **`mcu_config`**
 ///
-///     Modifies the MCU configuration. Must be set to a function or closure that receives
-///     `&mut <D::Mcu as Mcu>::Config`.
+///   Modifies the MCU configuration. Must be set to a function or closure that receives
+///   `&mut <D::Mcu as Mcu>::Config`.
 ///
 /// - **`storage_config`**
 ///
-///     Modifies the storage configuration. Must be set to a function or closure that receives
-///     `&mut <D::StorageDriver as storage::StorageDriver>::Config`.
+///   Modifies the storage configuration. Must be set to a function or closure that receives
+///   `&mut <D::StorageDriver as storage::StorageDriver>::Config`.
 ///
 /// - **`internal_transport_config`**
 ///
-///     Modifies the internal transport configuration. Must be set to a function or closure that
-///     receives `&mut <T::InternalTransport as internal::Transport>::Config`.
+///   Modifies the internal transport configuration. Must be set to a function or closure that
+///   receives `&mut <T::InternalTransport as internal::Transport>::Config`.
 ///
 /// - **`external_transport_config`**
 ///
-///     Modifies the external transport configuration. Must be set to a function or closure that
-///     receives `&mut <T::ExternalTransport as external::Transport>::Config`.
+///   Modifies the external transport configuration. Must be set to a function or closure that
+///   receives `&mut <T::ExternalTransport as external::Transport>::Config`.
 ///
 /// - **`message_override`**
 ///
-///     Sets a custom [`external::Override`] instance for outgoing external messages.
+///   Sets a custom [`external::Override`] instance for outgoing external messages.
 ///
-///     *If omitted, [`external::IdentityOverride`] is used.*
+///   *If omitted, [`external::IdentityOverride`] is used.*
 ///
 /// # Example
 ///

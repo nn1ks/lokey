@@ -17,7 +17,7 @@ use derive_more::{Display, Error, From};
 ///
 /// - **Structs** are treated as standalone message types (no inner message types).
 /// - **Enums** are treated as wrapper message types, where each variant must have exactly one
-///     unnamed field (tuple variant).
+///   unnamed field (tuple variant).
 ///
 /// # Example
 ///
