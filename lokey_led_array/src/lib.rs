@@ -16,7 +16,7 @@ use embassy_futures::join::join;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
 use generic_array::GenericArray;
-use lokey::util::warn;
+use lokey::util::{unwrap, warn};
 use lokey::{Address, Component, DynContext, internal};
 use portable_atomic::AtomicU32;
 use pwm::PwmChannel;
@@ -382,7 +382,7 @@ impl<const NUM_LEDS: usize, Hooks: HookBundle> LedArray<NUM_LEDS, Hooks> {
     }
 
     pub async fn run(self, mut pwm_channels: [&mut dyn PwmChannel; NUM_LEDS]) {
-        let mut receiver = self.context.internal_channel.receiver::<Message>();
+        let mut receiver = unwrap!(self.context.internal_channel.receiver::<Message>());
         let mut actions = ArrayVec::<(ActionId, Action, Option<Instant>), ACTION_SLOTS>::new();
         deactivate_pwm_channels(&mut pwm_channels);
         let handle_messages = async {
@@ -476,7 +476,7 @@ mod ble {
 
     impl Hook for BleAdvertisementHook {
         async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
-            let mut receiver = context.internal_channel.receiver::<external::Event>();
+            let mut receiver = unwrap!(context.internal_channel.receiver::<external::Event>());
             let mut current_action_id = None;
             loop {
                 let message = receiver.next().await;
@@ -513,7 +513,7 @@ mod ble {
 
     impl Hook for BleProfileHook {
         async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
-            let mut receiver = context.internal_channel.receiver::<external::Event>();
+            let mut receiver = unwrap!(context.internal_channel.receiver::<external::Event>());
             loop {
                 let message = receiver.next().await;
                 if let external::Event::SwitchedProfile {

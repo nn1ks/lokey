@@ -418,7 +418,7 @@ where
         };
 
         let handle_internal_messages = async {
-            let mut receiver = self.internal_channel.receiver::<Message>();
+            let mut receiver = unwrap!(self.internal_channel.receiver::<Message>());
             loop {
                 let message = receiver.next().await;
                 match message {

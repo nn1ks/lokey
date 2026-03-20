@@ -5,7 +5,7 @@ use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
 use embassy_time::Duration;
 use generic_array::GenericArray;
-use lokey::util::{error, info};
+use lokey::util::{error, info, unwrap};
 use lokey::{Address, external, internal, storage};
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
@@ -140,7 +140,7 @@ where
         };
 
         let handle_internal_messages = async {
-            let mut receiver = self.internal_channel.receiver::<Message>();
+            let mut receiver = unwrap!(self.internal_channel.receiver::<Message>());
             loop {
                 let message = receiver.next().await;
                 match message {

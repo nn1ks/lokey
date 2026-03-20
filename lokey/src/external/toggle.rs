@@ -1,4 +1,4 @@
-use crate::util::debug;
+use crate::util::{debug, unwrap};
 use crate::{Address, external, internal};
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
@@ -129,7 +129,7 @@ where
         Storage: crate::storage::Storage,
     {
         let handle_internal_messages = async {
-            let mut receiver = self.internal_channel.receiver::<Message>();
+            let mut receiver = unwrap!(self.internal_channel.receiver::<Message>());
             loop {
                 let message = receiver.next().await;
                 debug!("Received toggle message: {:?}", message);

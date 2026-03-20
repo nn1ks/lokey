@@ -116,11 +116,16 @@ impl DynChannelRef<'_> {
         }
     }
 
-    pub fn receiver<M: Message>(&self) -> Receiver<'_, M> {
-        Receiver {
-            subscriber: unwrap!(self.inner_channel.subscriber()),
+    /// Creates a new receiver for messages of the specified type.
+    pub fn receiver<M: Message>(&self) -> Result<Receiver<'_, M>, MaximumReceiversReached> {
+        let subscriber = self
+            .rx_channel
+            .subscriber()
+            .map_err(|_| MaximumReceiversReached)?;
+        Ok(Receiver {
+            subscriber,
             _phantom: PhantomData,
-        }
+        })
     }
 }
 
