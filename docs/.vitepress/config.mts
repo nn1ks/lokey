@@ -96,6 +96,7 @@ export default defineConfig({
           { text: 'Scanning', link: '/keyboard/scanning' },
           { text: 'Debouncing', link: '/keyboard/debouncing' },
           { text: 'Key Overrides', link: '/keyboard/key-overrides' },
+          { text: 'Comparison with Alternatives', link: '/keyboard/comparison-with-alternatives' },
         ]
       },
       {
