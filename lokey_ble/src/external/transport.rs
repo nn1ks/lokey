@@ -128,29 +128,31 @@ where
 
         let adv_params = AdvertisementParameters::default();
         let mut adv_data = [0; 31];
-        // const APPEARANCE_ADV_TYPE: u8 = 0x19;
-        // const KEYBOARD_APPEARANCE: &[u8] = &[0xC1, 0x03];
 
         let adv_service_uuids_16_tx = TxMessage::service_uuids_16();
         let adv_service_uuids_128_tx = TxMessage::service_uuids_128();
         let adv_service_uuids_16_rx = RxMessage::service_uuids_16();
         let adv_service_uuids_128_rx = RxMessage::service_uuids_128();
 
-        let adv_data_len = unwrap!(AdStructure::encode_slice(
-            &[
-                AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-                AdStructure::CompleteLocalName(self.name.as_bytes()),
-                AdStructure::ServiceUuids16(&adv_service_uuids_16_tx),
-                AdStructure::ServiceUuids16(&adv_service_uuids_16_rx),
-                AdStructure::ServiceUuids128(&adv_service_uuids_128_tx),
-                AdStructure::ServiceUuids128(&adv_service_uuids_128_rx),
-                // AdStructure::Unknown {
-                //     ty: APPEARANCE_ADV_TYPE,
-                //     data: KEYBOARD_APPEARANCE,
-                // },
-            ],
-            &mut adv_data,
-        ));
+        let mut ad_structure_vec = ArrayVec::<AdStructure, 6>::new();
+        ad_structure_vec.extend([
+            AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
+            AdStructure::CompleteLocalName(self.name.as_bytes()),
+        ]);
+        if !adv_service_uuids_16_tx.is_empty() {
+            ad_structure_vec.push(AdStructure::ServiceUuids16(&adv_service_uuids_16_tx));
+        }
+        if !adv_service_uuids_16_rx.is_empty() {
+            ad_structure_vec.push(AdStructure::ServiceUuids16(&adv_service_uuids_16_rx));
+        }
+        if !adv_service_uuids_128_tx.is_empty() {
+            ad_structure_vec.push(AdStructure::ServiceUuids128(&adv_service_uuids_128_tx));
+        }
+        if !adv_service_uuids_128_rx.is_empty() {
+            ad_structure_vec.push(AdStructure::ServiceUuids128(&adv_service_uuids_128_rx));
+        }
+
+        let adv_data_len = unwrap!(AdStructure::encode_slice(&ad_structure_vec, &mut adv_data));
 
         // TODO: add services to scan data
         let scan_data = [0; 31];
