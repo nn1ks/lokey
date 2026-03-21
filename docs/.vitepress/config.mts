@@ -49,7 +49,7 @@ export default defineConfig({
 
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Docs', link: '/introduction/what-is-lokey', activeMatch: '/introduction/|/concepts/|/guides/|/keyboard/|/mouse/|/encoder/|/midi-controller/|/examples/' }
+      { text: 'Docs', link: '/introduction/what-is-lokey', activeMatch: '/introduction/|/concepts/|/guides/|/keyboard/|/mouse/|/midi-controller/' }
     ],
 
     sidebar: [
@@ -83,9 +83,7 @@ export default defineConfig({
         items: [
           { text: 'Writing a Custom Component', link: '/guides/writing-a-custom-component' },
           { text: 'Adding Support for a Device', link: '/guides/adding-support-for-a-device' },
-          { text: 'Implementing a USB Class', link: '/guides/implementing-a-usb-class' },
-          { text: 'Implementing a BLE Service', link: '/guides/implementing-a-ble-service' },
-          { text: 'Adding Support for a MCU', link: '/guides/adding-support-for-a-mcu' },
+          { text: 'Adding Support for an MCU', link: '/guides/adding-support-for-an-mcu' },
         ]
       },
       {
@@ -114,13 +112,6 @@ export default defineConfig({
           { text: 'Introduction', link: '/midi-controller/introduction' },
         ]
       },
-      {
-        text: 'Examples',
-        collapsed: false,
-        items: [
-          { text: 'TODO' },
-        ]
-      }
     ],
 
     socialLinks: [

@@ -9,7 +9,7 @@ Lokey currently supports the following microcontrollers:
 - **Raspberry Pi RP235x** *(currently untested)*
 
 ::: info
-Support for additional microcontrollers can be added without modifying the core framework. For more details, see [Adding Support for a MCU](/guides/adding-support-for-a-mcu).
+Support for additional microcontrollers can be added without modifying the core framework. For more details, see [Adding Support for an MCU](/guides/adding-support-for-an-mcu).
 
 If you implement support for a new microcontroller, consider submitting a pull request with your implementation so it can be included as a first-party crate.
 :::
