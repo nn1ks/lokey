@@ -21,11 +21,11 @@ impl Action for MouseButton {
             error!("MouseButton action requires MouseReport state");
             return;
         };
-        let report = {
-            let mut report = report.lock().await;
-            report.buttons |= *self;
-            report.clone()
-        };
+        let report = report
+            .modify_and_clone(|report| {
+                report.buttons.insert(*self);
+            })
+            .await;
         let _ = context.external_channel.try_send(report).await;
     }
 
@@ -39,11 +39,11 @@ impl Action for MouseButton {
             error!("MouseButton action requires MouseReport state");
             return;
         };
-        let report = {
-            let mut report = report.lock().await;
-            report.buttons &= !*self;
-            report.clone()
-        };
+        let report = report
+            .modify_and_clone(|report| {
+                report.buttons.remove(*self);
+            })
+            .await;
         let _ = context.external_channel.try_send(report).await;
     }
 }
