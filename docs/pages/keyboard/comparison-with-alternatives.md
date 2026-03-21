@@ -17,7 +17,7 @@ The following table compares Lokey with two popular keyboard firmware alternativ
 | **Backlight/RGB** | ❌ | ✅ | ✅ |
 | Behaviour: **Layers** | ✅ | ✅ | ✅ |
 | Behaviour: **Conditional Layers / Tri-Layers** | ✅ | ✅ | ✅ |
-| Behaviour: **Mod-Tap / Layer-Tap** | ✅ | ✅ | ✅ |
+| Behaviour: **Hold-Tap** | ✅ | ✅ | ✅ |
 | Behaviour: **Media Keys** | ❌ | ✅ | ✅ |
 | Behaviour: **Sticky / One-Shot** | ✅ | ✅ | ✅ |
 | Behaviour: **Toggle / Lock** | ✅ | ✅ | ✅ |
