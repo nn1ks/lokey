@@ -31,7 +31,7 @@ defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 embassy-futures = "0.1.1"
 embassy-sync = "0.7.2"
-embassy-usb = { version = "0.5.1", features = ["usbd-hid"] }
+embassy-usb = { version = "0.5.1", default-features = false }
 lokey = { path = "../lokey", version = "0.0.1" }
 lokey_usb_macros = { path = "../lokey_usb_macros", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
