@@ -6,7 +6,7 @@ use generic_array::GenericArray;
 use lokey::util::error;
 use lokey_ble::external::{InitMessageService, TxMessage, TxMessageService};
 use trouble_host::prelude::*;
-use usbd_hid::descriptor::{MouseReport as HidMouseReport, SerializedDescriptor};
+use usbd_hid::descriptor::{AsInputReport, MouseReport as HidMouseReport, SerializedDescriptor};
 
 const INPUT_MOUSE_SIZE: usize = 5;
 
@@ -64,7 +64,7 @@ impl TxMessageService<MouseReport> for MouseReportService {
     ) {
         let mouse_report = message.to_hid_report();
         let mut buf = [0; INPUT_MOUSE_SIZE];
-        let len = match ssmarshal::serialize(&mut buf, &mouse_report) {
+        let len = match mouse_report.serialize(&mut buf) {
             Ok(v) => v,
             Err(e) => {
                 #[cfg(feature = "defmt")]

@@ -2,11 +2,11 @@ use crate::MouseReport;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_usb::Builder;
-use embassy_usb::class::hid::{HidWriter, State as HidState};
+use embassy_usb::class::hid::{HidBootProtocol, HidSubclass, HidWriter, State as HidState};
 use embassy_usb::driver::Driver;
 use lokey::util::error;
 use lokey_usb::external::{InitMessageService, TxMessage, TxMessageService};
-use usbd_hid::descriptor::{MouseReport as HidMouseReport, SerializedDescriptor};
+use usbd_hid::descriptor::{AsInputReport, MouseReport as HidMouseReport, SerializedDescriptor};
 
 impl TxMessage for MouseReport {
     type MessageService<'d, D: Driver<'d>> = MouseReportService<'d, D>;
@@ -31,6 +31,8 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for MouseReportService<'d, D> 
             request_handler: None,
             poll_ms: 2,
             max_packet_size: 64,
+            hid_subclass: HidSubclass::No,
+            hid_boot_protocol: HidBootProtocol::None,
         };
 
         let hid_writer = HidWriter::<_, MOUSE_REPORT_SIZE>::new(builder, params, hid_config);
@@ -47,7 +49,7 @@ impl<'d, D: Driver<'d>> TxMessageService<MouseReport> for MouseReportService<'d,
         let hid_mouse_report = message.to_hid_report();
 
         let mut buf = [0; MOUSE_REPORT_SIZE];
-        let len = match ssmarshal::serialize(&mut buf, &hid_mouse_report) {
+        let len = match hid_mouse_report.serialize(&mut buf) {
             Ok(v) => v,
             Err(e) => {
                 #[cfg(feature = "defmt")]

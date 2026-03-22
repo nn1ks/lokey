@@ -2,11 +2,13 @@ use crate::KeyboardReport;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_usb::Builder;
-use embassy_usb::class::hid::{HidWriter, State as HidState};
+use embassy_usb::class::hid::{HidBootProtocol, HidSubclass, HidWriter, State as HidState};
 use embassy_usb::driver::Driver;
 use lokey::util::error;
 use lokey_usb::external::{InitMessageService, TxMessage, TxMessageService};
-use usbd_hid::descriptor::{KeyboardReport as HidKeyboardReport, SerializedDescriptor};
+use usbd_hid::descriptor::{
+    AsInputReport, KeyboardReport as HidKeyboardReport, SerializedDescriptor,
+};
 
 impl TxMessage for KeyboardReport {
     type MessageService<'d, D: Driver<'d>> = KeyboardReportService<'d, D>;
@@ -31,6 +33,8 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for KeyboardReportService<'d, 
             request_handler: None,
             poll_ms: 60,
             max_packet_size: 64,
+            hid_subclass: HidSubclass::No,
+            hid_boot_protocol: HidBootProtocol::None,
         };
 
         let hid_writer = HidWriter::<_, KEYBOARD_REPORT_SIZE>::new(builder, hid_state, hid_config);
@@ -47,7 +51,7 @@ impl<'d, D: Driver<'d>> TxMessageService<KeyboardReport> for KeyboardReportServi
         let hid_keyboard_report = message.to_hid_report();
 
         let mut buf = [0; KEYBOARD_REPORT_SIZE];
-        let len = match ssmarshal::serialize(&mut buf, &hid_keyboard_report) {
+        let len = match hid_keyboard_report.serialize(&mut buf) {
             Ok(v) => v,
             Err(e) => {
                 #[cfg(feature = "defmt")]

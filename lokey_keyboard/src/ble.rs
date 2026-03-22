@@ -6,7 +6,9 @@ use generic_array::GenericArray;
 use lokey::util::error;
 use lokey_ble::external::{InitMessageService, TxMessage, TxMessageService};
 use trouble_host::prelude::*;
-use usbd_hid::descriptor::{KeyboardReport as HidKeyboardReport, SerializedDescriptor};
+use usbd_hid::descriptor::{
+    AsInputReport, KeyboardReport as HidKeyboardReport, SerializedDescriptor,
+};
 
 const INPUT_KEYBOARD_SIZE: usize = 8;
 const OUTPUT_KEYBOARD_SIZE: usize = 1;
@@ -68,7 +70,7 @@ impl TxMessageService<KeyboardReport> for KeyboardReportService {
     ) {
         let hid_keyboard_report = message.to_hid_report();
         let mut buf = [0; INPUT_KEYBOARD_SIZE];
-        let len = match ssmarshal::serialize(&mut buf, &hid_keyboard_report) {
+        let len = match hid_keyboard_report.serialize(&mut buf) {
             Ok(v) => v,
             Err(e) => {
                 #[cfg(feature = "defmt")]
