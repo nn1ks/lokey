@@ -30,19 +30,30 @@ nix develop
 
 ### Workspace overview
 
-- `lokey/` – core crate
-- `lokey_macros/` – macro crate for `lokey`
-- `lokey_usb/` – feature crate for USB transports
-- `lokey_ble/` – feature crate for BLE transports
-- `lokey_usb_ble/` – feature crate for a combined USB and BLE transport
-- `lokey_nrf/` – feature crate for nRF microcontroller support
-- `lokey_rp/` – feature crate for Raspberry Pi RP2040 and RP235x microcontroller support
-- `lokey_keyboard/` – feature crate for keyboard-related functionality
-- `lokey_keyboard_macros/` – macro crate for `lokey_keyboard`
-- `lokey_layer/` – feature crate for managing layers
-- `lokey_led_array/` – feature crate for a LED array component
-- `examples/` – examples of the lokey framework
-- `docs/` – documentation website
+This repository is organized as a Cargo workspace with multiple crates. The entries below refer to directories at the repository root.
+
+**Crates:**
+
+- **`lokey`** – Core crate
+- **`lokey_macros`** – Macro crate for `lokey`
+- **`lokey_usb`** – Feature crate for USB transports
+- **`lokey_usb_macros`** – Macro crate for `lokey_usb`
+- **`lokey_ble`** – Feature crate for BLE transports
+- **`lokey_ble_macros`** – Macro crate for `lokey_ble`
+- **`lokey_usb_ble`** – Feature crate for a combined USB and BLE transport
+- **`lokey_nrf`** – Feature crate for nRF microcontroller support
+- **`lokey_rp`** – Feature crate for Raspberry Pi RP2040 and RP235x microcontroller support
+- **`lokey_keyboard`** – Feature crate for keyboard-related functionality
+- **`lokey_keyboard_macros`** – Macro crate for `lokey_keyboard`
+- **`lokey_mouse`** – Feature crate for mouse-related functionality
+- **`lokey_midi`** – Feature crate for MIDI controllers
+- **`lokey_layer`** – Feature crate for managing layers
+- **`lokey_led_array`** – Feature crate for a LED array component
+
+**Miscellaneous:**
+
+- **`examples`** – Examples of the lokey framework
+- **`docs`** – Documentation website
 
 ### Crate dependency graph
 
