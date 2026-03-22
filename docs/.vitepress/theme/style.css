@@ -117,17 +117,17 @@
  * -------------------------------------------------------------------------- */
 
 :root.dark {
-  --vp-c-brand-1: hsl(48, 60%, 63%);
-  --vp-c-brand-2: hsl(48, 80%, 75%);
-  --vp-c-brand-3: hsl(44, 40%, 35%);
-  --vp-c-brand-4: hsl(48, 50%, 40%);
+  --vp-c-brand-1: hsl(48, 60%, 62%);
+  --vp-c-brand-2: hsl(48, 100%, 78%);
+  --vp-c-brand-3: hsl(44, 38%, 42%);
+  --vp-c-brand-4: hsl(48, 42%, 50%);
 }
 
 :root:not(.dark) {
   --vp-c-brand-1: hsl(48, 90%, 33%);
   --vp-c-brand-2: hsl(48, 100%, 25%);
-  --vp-c-brand-3: hsl(44, 40%, 40%);
-  --vp-c-brand-4: hsl(48, 50%, 45%);
+  --vp-c-brand-3: hsl(44, 46%, 47%);
+  --vp-c-brand-4: hsl(48, 50%, 52%);
 }
 
 :root.dark {
