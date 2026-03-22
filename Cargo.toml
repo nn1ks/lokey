@@ -6,6 +6,7 @@ members = [
     "lokey_usb",
     "lokey_usb_macros",
     "lokey_ble",
+    "lokey_ble_macros",
     "lokey_usb_ble",
     "lokey_nrf",
     "lokey_rp",

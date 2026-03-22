@@ -6,6 +6,8 @@ use generic_array::{ArrayLength, GenericArray};
 use lokey::external::NoMessage;
 use lokey::util::error;
 use lokey::{Address, external, internal};
+#[cfg(feature = "macros")]
+pub use lokey_ble_macros::TxMessage;
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
 pub use transport::Transport;
 use trouble_host::prelude::{BluetoothUuid16, appearance};
