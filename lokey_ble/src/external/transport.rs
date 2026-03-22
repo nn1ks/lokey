@@ -377,7 +377,7 @@ where
                             {
                                 if let GattEvent::Write(write_event) = &event
                                     && let Some(message) =
-                                        rx_message_service.receive(write_event).await
+                                        rx_message_service.receive(write_event, connection).await
                                 {
                                     self.rx_channel.send(message).await;
                                 }

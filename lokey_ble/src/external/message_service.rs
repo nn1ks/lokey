@@ -22,6 +22,7 @@ pub trait RxMessageService<T: Message>: Any {
     fn receive<'stack, 'server>(
         &self,
         event: &WriteEvent<'stack, 'server, DefaultPacketPool>,
+        connection: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) -> impl Future<Output = Option<T>>;
 }
 
@@ -46,6 +47,7 @@ impl RxMessageService<NoMessage> for () {
     async fn receive<'stack, 'server>(
         &self,
         _: &WriteEvent<'stack, 'server, DefaultPacketPool>,
+        _: &GattConnection<'stack, 'server, DefaultPacketPool>,
     ) -> Option<NoMessage> {
         None
     }
