@@ -12,6 +12,7 @@ members = [
     "lokey_keyboard",
     "lokey_keyboard_macros",
     "lokey_mouse",
+    "lokey_midi",
     "lokey_layer",
     "lokey_led_array",
 ]
