@@ -5,7 +5,7 @@
 
 <div align="center">
 
-[![Website](https://img.shields.io/badge/website-8456cf)](https://lokey.rs)
+[![Website](https://img.shields.io/badge/website-408240)](https://lokey.rs)
 [![Crate](https://img.shields.io/crates/v/lokey?logo=rust)](https://crates.io/crates/lokey)
 [![Docs](https://img.shields.io/static/v1?label=docs&message=latest&color=yellow&logo=docs.rs)](https://docs.rs/lokey)
 [![License](https://img.shields.io/crates/l/lokey)](https://github.com/nn1ks/lokey#license)
@@ -26,10 +26,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute.
 
 ## License
 
-Licensed under either of [Apache License, Version 2.0] or [MIT License] at your option.
-
-[Apache License, Version 2.0]: https://github.com/nn1ks/lokey/blob/master/LICENSE-APACHE
-[MIT License]: https://github.com/nn1ks/lokey/blob/master/LICENSE-MIT
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT License](LICENSE-MIT) at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in
 this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without
