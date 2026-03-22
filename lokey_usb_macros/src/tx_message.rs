@@ -69,7 +69,7 @@ pub fn tx_message_derive(item: TokenStream) -> TokenStream {
         .collect::<Vec<_>>();
 
     let message_service_ident =
-        syn::Ident::new(&format!("{}TxMessageService", ident), Span::call_site());
+        syn::Ident::new(&format!("{}UsbTxMessageService", ident), Span::call_site());
 
     quote! {
         impl ::lokey_usb::external::TxMessage for #ident {
