@@ -80,15 +80,9 @@ cargo fmt
 Run clippy and make sure no warnings or errors are produced:
 
 ```sh
-cargo clippy -p lokey --all-features
-cargo clippy -p lokey_usb --all-features
-cargo clippy -p lokey_ble --all-features
-cargo clippy -p lokey_usb_ble --all-features
+cargo clippy --workspace --exclude lokey_nrf --exclude lokey_rp --all-features
 cargo clippy -p lokey_nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
 cargo clippy -p lokey_rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
-cargo clippy -p lokey_keyboard --all-features
-cargo clippy -p lokey_layer --all-features
-cargo clippy -p lokey_led_array --all-features
 ```
 
 > [!NOTE]
@@ -99,15 +93,9 @@ cargo clippy -p lokey_led_array --all-features
 The unit tests and doc tests can be run with the following commands:
 
 ```sh
-cargo test -p lokey
-cargo test -p lokey_usb --all-features
-cargo test -p lokey_ble --all-features
-cargo test -p lokey_usb_ble --all-features
-cargo test -p lokey_nrf --doc --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
-cargo test -p lokey_rp --doc --features "defmt usb rp2040" --target thumbv6m-none-eabi
-cargo test -p lokey_keyboard --all-features
-cargo test -p lokey_layer --all-features
-cargo test -p lokey_led_array --all-features
+cargo test --workspace --exclude lokey_nrf --exclude lokey_rp --all-features
+cargo test -p lokey_nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
+cargo test -p lokey_rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
 ```
 
 > [!NOTE]
