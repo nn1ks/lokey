@@ -14,6 +14,10 @@ An internal transport defines how it is initialized and how the communication be
 - **Communication:** How to send and receive messages between device parts.
 - **Background tasks:** Optional transport-level background work, typically running for the device lifetime.
 
+## Single-part devices
+
+For devices that consist of a single part, the [`internal::empty::Transport`](https://docs.rs/lokey/latest/lokey/internal/empty/struct.Transport.html) type can be used, which implements the `internal::Transport` trait but does not actually do anything.
+
 ## Example
 
 ```rust
@@ -61,6 +65,7 @@ where
 
 ## Provided implementations
 
-The following internal transport implementations are provided as separate crates:
+The following internal transport implementations are provided:
 
-- [lokey_ble](https://docs.rs/lokey_ble) – BLE (Bluetooth Low Energy) internal transport
+- [`lokey::internal::empty::Transport`](https://docs.rs/lokey/latest/lokey/internal/empty/struct.Transport.html) – Internal transport that does nothing
+- [`lokey_ble::internal::Transport`](https://docs.rs/lokey_ble/latest/lokey_ble/internal/struct.Transport.html) – BLE (Bluetooth Low Energy) internal transport

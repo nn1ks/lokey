@@ -18,7 +18,7 @@ An external transport defines how it is initialized and how the device communica
 
 ## Devices without host communication
 
-If a device does not need to communicate with a host, the [`external::empty::Transport`](https://docs.rs/lokey/latest/lokey/external/empty/struct.Transport.html) type can be used, which implements the `external::Transport` trait but does not actually do anything. This is usually used in multi-part devices for the device parts that do not send messages to the host.
+For devices that do not need to communicate with a host, the [`external::empty::Transport`](https://docs.rs/lokey/latest/lokey/external/empty/struct.Transport.html) type can be used, which implements the `external::Transport` trait but does not actually do anything. This is usually used in multi-part devices for the device parts that do not send messages to the host.
 
 ## Example
 
@@ -88,8 +88,10 @@ where
 
 ## Provided implementations
 
-The following external transport implementations are provided as separate crates:
+The following external transport implementations are provided:
 
-- [lokey_usb](https://docs.rs/lokey_usb) – USB external transport
-- [lokey_ble](https://docs.rs/lokey_ble) – BLE (Bluetooth Low Energy) external transport
-- [lokey_usb_ble](https://docs.rs/lokey_usb_ble) – Combined USB and BLE external transport that can switch between USB and BLE at runtime
+- [`lokey::external::empty::Transport`](https://docs.rs/lokey/latest/lokey/external/empty/struct.Transport.html) – External transport that does nothing
+- [`lokey::external::toggle::Transport`](https://docs.rs/lokey/latest/lokey/external/toggle/struct.Transport.html) – External transport wrapper that can be activated and deactivated
+- [`lokey_usb::external::Transport`](https://docs.rs/lokey_usb/latest/lokey_usb/external/struct.Transport.html) – USB external transport
+- [`lokey_ble::external::Transport`](https://docs.rs/lokey_ble/latest/lokey_ble/external/struct.Transport.html) – BLE (Bluetooth Low Energy) external transport
+- [`lokey_usb_ble::external::Transport`](https://docs.rs/lokey_usb_ble/latest/lokey_usb_ble/external/struct.Transport.html) – Combined USB and BLE external transport that can switch between USB and BLE at runtime
