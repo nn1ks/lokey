@@ -33,7 +33,7 @@ impl<S: AnyState> ComponentSupport<MyComponent, S> for MyDevice {
 }
 ```
 
-## Enabling components at runtime
+## Enabling components
 
 Inside `main`, components are started through the device `Context`:
 

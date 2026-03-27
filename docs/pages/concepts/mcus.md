@@ -1,10 +1,10 @@
 # MCUs
 
-A **microcontroller (MCU)** in Lokey is the chip-specific integration layer your firmware uses.
+An **MCU** in Lokey represents the microcontroller your firmware runs on.
 
 At the type level, an MCU is defined by implementing the [`Mcu`](https://docs.rs/lokey/latest/lokey/trait.Mcu.html) trait.
 
-## What an MCU defines
+## Responsibilities
 
 An MCU type defines the setup of a microcontroller:
 
