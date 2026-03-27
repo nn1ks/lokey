@@ -74,79 +74,9 @@
 //! </li>
 //! </ul>
 //!
-#![cfg_attr(
-    feature = "macros",
-    doc = "
-# Example
-
-```no_run"
-)]
-#![cfg_attr(
-    feature = "macros",
-    doc = "
-# use core::unimplemented;
-# use lokey::DummyMcu;
-use embassy_executor::Spawner;
-use lokey::{
-    Address, AnyState, Component, ComponentSupport, Context, Device, State, Transports,
-    external, internal
-};
-use lokey::storage::EmptyStorageDriver;
-
-struct Keyboard;
-
-impl Device for Keyboard {
-    type Mcu = DummyMcu;
-    type StorageDriver = EmptyStorageDriver<DummyMcu>;
-
-    const DEFAULT_ADDRESS: Address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]);
-}
-
-struct ExampleComponent;
-
-impl Component for ExampleComponent {}
-
-// Adds support for the component
-impl<S: AnyState> ComponentSupport<ExampleComponent, S> for Keyboard {
-    async fn enable<T>(component: ExampleComponent, context: Context<Self, T, S>)
-    where
-        T: Transports<DummyMcu>,
-    {
-        # unimplemented!()
-        // ...
-    }
-}
-
-struct Central;
-
-impl Transports<DummyMcu> for Central {
-    type ExternalTransport = external::empty::Transport<DummyMcu>;
-    type InternalTransport = internal::empty::Transport<DummyMcu>;
-
-    fn external_transport_config() -> external::empty::TransportConfig {
-        # unimplemented!()
-        // ...
-    }
-
-    fn internal_transport_config() -> internal::empty::TransportConfig {
-        # unimplemented!()
-        // ...
-    }
-}
-
-#[derive(Default, State)]
-struct DefaultState {
-    // ...
-}
-
-#[lokey::device]
-async fn main(context: Context<Keyboard, Central, DefaultState>, spawner: Spawner) {
-    // The component can then be enabled with the Context type
-    context.enable(ExampleComponent).await;
-}
-```"
-)]
+//! # See also
 //!
+//! Refer to the website [https://lokey.rs](https://lokey.rs) for a more high-level overview of the Lokey framework.
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -452,6 +382,9 @@ where
 ///
 /// This can be useful when passing a context to an Embassy task without knowing its exact concrete
 /// type, since Embassy tasks cannot have generic parameters.
+///
+/// An instance of [`DynContext`] can be created from any `Context<D, T, S>` using
+/// [`Context::as_dyn`] or [`DynContext::from`].
 #[derive(Clone, Copy)]
 pub struct DynContext {
     /// The address of the device.

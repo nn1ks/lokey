@@ -216,6 +216,9 @@ where
 }
 
 /// A dynamic reference to the external channel.
+///
+/// An instance of [`DynChannelRef`] can be created from any `Channel<Transport>` using
+/// [`Channel::as_dyn_ref`] or [`DynChannelRef::from`].
 #[derive(Clone, Copy)]
 pub struct DynChannelRef<'a> {
     phantom: PhantomData<&'a ()>,
