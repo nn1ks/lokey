@@ -224,6 +224,12 @@ impl DynState {
     }
 }
 
+impl<'a, S: AnyState> From<&'a S> for &'a DynState {
+    fn from(state: &'a S) -> Self {
+        DynState::from_ref(state)
+    }
+}
+
 /// Converts a stored type into a query view.
 ///
 /// Implement this when callers should access a reduced or abstracted representation instead of the

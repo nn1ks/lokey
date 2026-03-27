@@ -104,6 +104,9 @@ impl<Transport: internal::Transport> Channel<Transport> {
 ///
 /// This can be used to send messages and create receivers without needing to know the transport
 /// type.
+///
+/// An instance of [`DynChannelRef`] can be created from any `Channel<Transport>` using
+/// [`Channel::as_dyn_ref`] or [`DynChannelRef::from`].
 #[derive(Clone, Copy)]
 pub struct DynChannelRef<'a> {
     rx_channel: &'a PubSubChannel<
@@ -135,6 +138,12 @@ impl DynChannelRef<'_> {
             subscriber,
             _phantom: PhantomData,
         })
+    }
+}
+
+impl<'a, Transport: internal::Transport> From<&'a Channel<Transport>> for DynChannelRef<'a> {
+    fn from(channel: &'a Channel<Transport>) -> Self {
+        channel.as_dyn_ref()
     }
 }
 

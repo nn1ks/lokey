@@ -466,6 +466,17 @@ pub struct DynContext {
     pub state: &'static DynState,
 }
 
+impl<D, T, S> From<Context<D, T, S>> for DynContext
+where
+    D: Device,
+    T: Transports<D::Mcu>,
+    S: AnyState,
+{
+    fn from(context: Context<D, T, S>) -> Self {
+        context.as_dyn()
+    }
+}
+
 /// A unique, stable per-device address.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

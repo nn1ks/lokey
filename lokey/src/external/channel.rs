@@ -246,6 +246,12 @@ impl DynChannelRef<'_> {
     // }
 }
 
+impl<'a, Transport: external::Transport> From<&'a Channel<Transport>> for DynChannelRef<'a> {
+    fn from(channel: &'a Channel<Transport>) -> Self {
+        channel.as_dyn_ref()
+    }
+}
+
 /// Receiver for messages of a specific type from the external channel.
 pub struct Receiver<'a, Message, TxMessage>
 where
