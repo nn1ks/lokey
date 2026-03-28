@@ -29,7 +29,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     let invalid_device_type_error = "Parameter must be of type `Context`";
-    let invalid_device_argument_error = "Expected device type as argument";
+    let invalid_argument_type_error = "Unexpected generic argument, expected type argument";
 
     let (device_type_path, transports_type_path, state_type_path) = match &context_param {
         syn::FnArg::Typed(pattern) => match &*pattern.ty {
@@ -43,19 +43,19 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                         let mut iter = v.args.iter();
                         let a = match iter.next().unwrap() {
                             syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_device_argument_error),
+                            _ => abort!(v.span(), invalid_argument_type_error),
                         };
                         let b = match iter.next().unwrap() {
                             syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_device_argument_error),
+                            _ => abort!(v.span(), invalid_argument_type_error),
                         };
                         let c = match iter.next().unwrap() {
                             syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_device_argument_error),
+                            _ => abort!(v.span(), invalid_argument_type_error),
                         };
                         (a, b, c)
                     }
-                    _ => abort!(v.span(), invalid_device_argument_error),
+                    _ => abort!(v.span(), invalid_argument_type_error),
                 }
             }
             _ => abort!(pattern.ty.span(), invalid_device_type_error),
