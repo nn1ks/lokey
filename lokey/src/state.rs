@@ -3,9 +3,9 @@
 //! This module defines traits and types for typed and type-erased state access.
 //!
 //! The most important traits are:
-//! - [`State<T>`] for direct typed access to values in a state container.
 //! - [`AnyState`] for runtime (type-erased) access.
-//! - [`QueryState`] and [`ToStateQuery`] for query-based access when callers should not depend on
+//! - [`State<T>`] for direct typed access to values in a state container.
+//! - [`QueryState<T>`] and [`ToStateQuery`] for query-based access when callers should not depend on
 //!   the concrete stored type.
 //!
 //! State containers are typically defined with the [`State`](../derive.State.html) derive macro,
