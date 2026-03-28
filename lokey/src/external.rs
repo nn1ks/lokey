@@ -7,7 +7,7 @@ pub mod toggle;
 
 use crate::util::declare_const_for_feature_group;
 use crate::{Address, Device, Transports, internal};
-pub use channel::{Channel, DynChannelRef, Receiver};
+pub use channel::{Channel, DynChannelRef, Observer, Receiver, TryObserver, TryReceiver};
 use core::any::Any;
 use core::future::Future;
 use derive_more::{Display, Error, From};

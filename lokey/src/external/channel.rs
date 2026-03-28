@@ -284,6 +284,7 @@ where
     }
 }
 
+/// Receiver for messages of a specific type from the external channel.
 pub struct TryReceiver<'a, Message, TxMessage>
 where
     Message: external::Message,
@@ -298,6 +299,7 @@ where
     Message: external::Message,
     TxMessage: external::Message,
 {
+    /// Waits for the next message of the specified type and returns it.
     pub async fn next(&mut self) -> Message {
         loop {
             let message = match self.subscriber.next_message().await {
@@ -311,6 +313,7 @@ where
     }
 }
 
+/// Observer for messages of a specific type from the external channel.
 pub struct Observer<'a, Message, TxMessage>
 where
     Message: TryFromMessage<TxMessage>,
@@ -325,6 +328,7 @@ where
     Message: TryFromMessage<TxMessage>,
     TxMessage: Clone,
 {
+    /// Waits for the next message of the specified type and returns it.
     pub async fn next(&mut self) -> Message {
         loop {
             let message = match self.subscriber.next_message().await {
@@ -338,6 +342,7 @@ where
     }
 }
 
+/// Observer for messages of a specific type from the external channel.
 pub struct TryObserver<'a, Message, TxMessage>
 where
     Message: external::Message,
@@ -352,6 +357,7 @@ where
     Message: external::Message,
     TxMessage: external::Message,
 {
+    /// Waits for the next message of the specified type and returns it.
     pub async fn next(&mut self) -> Message {
         loop {
             let message = match self.subscriber.next_message().await {
