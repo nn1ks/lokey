@@ -72,7 +72,9 @@ export default defineConfig({
           { text: 'Components', link: '/concepts/components' },
           { text: 'MCUs', link: '/concepts/mcus' },
           { text: 'External Transports', link: '/concepts/external-transports' },
+          { text: 'External Channel', link: '/concepts/external-channel' },
           { text: 'Internal Transports', link: '/concepts/internal-transports' },
+          { text: 'Internal Channel', link: '/concepts/internal-channel' },
           { text: 'State', link: '/concepts/state' },
           { text: 'Context', link: '/concepts/context' },
         ]
