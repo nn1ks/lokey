@@ -137,12 +137,12 @@ where
     /// Creates a new receiver for messages of the specified type.
     pub fn receiver<M>(
         &self,
-    ) -> Result<Receiver<'_, M, Transport::TxMessage>, MaximumReceiversReached>
+    ) -> Result<Receiver<'_, M, Transport::RxMessage>, MaximumReceiversReached>
     where
-        M: TryFromMessage<Transport::TxMessage>,
+        M: TryFromMessage<Transport::RxMessage>,
     {
         let subscriber = self
-            .tx_channel
+            .rx_channel
             .subscriber()
             .map_err(|_| MaximumReceiversReached)?;
         Ok(Receiver {
@@ -155,17 +155,17 @@ where
     /// type is not supported.
     pub fn try_receiver<M>(
         &self,
-    ) -> Result<TryReceiver<'_, M, Transport::TxMessage>, TryReceiverError>
+    ) -> Result<TryReceiver<'_, M, Transport::RxMessage>, TryReceiverError>
     where
         M: Message,
     {
-        if !Transport::TxMessage::has_inner_message::<M>() {
+        if !Transport::RxMessage::has_inner_message::<M>() {
             return Err(TryReceiverError::UnsupportedMessageType(
                 UnsupportedMessageType,
             ));
         }
         let subscriber = self
-            .tx_channel
+            .rx_channel
             .subscriber()
             .map_err(|_| MaximumReceiversReached)?;
         Ok(TryReceiver {
@@ -256,19 +256,19 @@ impl<'a, Transport: external::Transport> From<&'a Channel<Transport>> for DynCha
 }
 
 /// Receiver for messages of a specific type from the external channel.
-pub struct Receiver<'a, Message, TxMessage>
+pub struct Receiver<'a, Message, RxMessage>
 where
-    Message: TryFromMessage<TxMessage>,
-    TxMessage: Clone,
+    Message: TryFromMessage<RxMessage>,
+    RxMessage: Clone,
 {
-    subscriber: Subscriber<'a, CriticalSectionRawMutex, TxMessage, 1, RECEIVER_SLOTS, 1>,
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, RxMessage, 1, RECEIVER_SLOTS, 1>,
     phantom: PhantomData<Message>,
 }
 
-impl<Message, TxMessage> Receiver<'_, Message, TxMessage>
+impl<Message, RxMessage> Receiver<'_, Message, RxMessage>
 where
-    Message: TryFromMessage<TxMessage>,
-    TxMessage: Clone,
+    Message: TryFromMessage<RxMessage>,
+    RxMessage: Clone,
 {
     /// Waits for the next message of the specified type and returns it.
     pub async fn next(&mut self) -> Message {
@@ -285,19 +285,19 @@ where
 }
 
 /// Receiver for messages of a specific type from the external channel.
-pub struct TryReceiver<'a, Message, TxMessage>
+pub struct TryReceiver<'a, Message, RxMessage>
 where
     Message: external::Message,
-    TxMessage: external::Message,
+    RxMessage: external::Message,
 {
-    subscriber: Subscriber<'a, CriticalSectionRawMutex, TxMessage, 1, RECEIVER_SLOTS, 1>,
+    subscriber: Subscriber<'a, CriticalSectionRawMutex, RxMessage, 1, RECEIVER_SLOTS, 1>,
     phantom: PhantomData<Message>,
 }
 
-impl<Message, TxMessage> TryReceiver<'_, Message, TxMessage>
+impl<Message, RxMessage> TryReceiver<'_, Message, RxMessage>
 where
     Message: external::Message,
-    TxMessage: external::Message,
+    RxMessage: external::Message,
 {
     /// Waits for the next message of the specified type and returns it.
     pub async fn next(&mut self) -> Message {
