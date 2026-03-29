@@ -2,6 +2,7 @@ use super::{Event, Message, TransportConfig};
 use crate::BleStack;
 use crate::external::{InitMessageService, RxMessageService, TxMessageService};
 use arrayvec::ArrayVec;
+use bt_hci::param::BdAddr;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
@@ -22,9 +23,9 @@ use trouble_host::gatt::{GattConnection, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
     AdStructure, Advertisement, AdvertisementParameters, AttributeServer, AttributeTable,
     BR_EDR_NOT_SUPPORTED, BluetoothUuid16, DefaultPacketPool, LE_GENERAL_DISCOVERABLE,
-    RequestedConnParams,
+    RequestedConnParams, SecurityLevel,
 };
-use trouble_host::{BleHostError, BondInformation};
+use trouble_host::{BleHostError, BondInformation, Identity, IdentityResolvingKey, LongTermKey};
 
 // TODO: Don't hardcode maximum number of bond infos
 const MAX_NUM_BOND_INFOS: usize = 10;
@@ -158,17 +159,16 @@ where
         let scan_data = [0; 31];
 
         let mut bond_infos = ArrayVec::<_, MAX_NUM_BOND_INFOS>::new();
-        for _ in 0..num_profiles.get() {
-            // match mcu.storage().fetch::<BondInformation>(i).await {
-            //     Ok(v) => bond_infos.push(v),
-            //     Err(e) => {
-            //         #[cfg(feature = "defmt")]
-            //         let e = defmt::Debug2Format(&e);
-            //         error!("Failed to read bond info from flash: {}", e);
-            //         bond_infos.push(None);
-            //     }
-            // }
-            bond_infos.push(None::<BondInformationWrapper>);
+        for i in 0..num_profiles.get() {
+            match storage.fetch::<StoredBondInformation>(i).await {
+                Ok(v) => bond_infos.push(v),
+                Err(e) => {
+                    #[cfg(feature = "defmt")]
+                    let e = defmt::Debug2Format(&e);
+                    error!("Failed to read bond info from flash: {}", e);
+                    bond_infos.push(None);
+                }
+            }
         }
         #[cfg(feature = "defmt")]
         info!("Stored bond infos: {}", defmt::Debug2Format(&bond_infos));
@@ -195,21 +195,15 @@ where
 
                 let profile_index = active_profile_index.load(Ordering::SeqCst);
 
-                // for bond_info in ble_stack.get_bond_information() {
-                //     warn!("BOND_INFO: Some({})", bond_info);
-                //     if let Err(e) = ble_stack.remove_bond_information(bond_info.address) {
-                //         error!("Failed to remove bond info: {}", e);
-                //     }
-                // }
                 let scannable = match &bond_infos.lock().await[profile_index as usize] {
                     Some(bond_info) => {
                         #[cfg(feature = "defmt")]
                         debug!("Adding existing bond info: {}", bond_info);
                         #[cfg(not(feature = "defmt"))]
                         debug!("Adding existing bond info: {:?}", bond_info);
-                        // if let Err(e) = ble_stack.add_bond_information(bond_info.clone()) {
-                        //     error!("Failed to add bond info: {}", e);
-                        // }
+                        if let Err(e) = ble_stack.add_bond_information(bond_info.0.clone()) {
+                            error!("Failed to add bond info: {}", e);
+                        }
                         false
                     }
                     None => {
@@ -306,6 +300,9 @@ where
                         continue;
                     }
                 };
+                if let Err(e) = new_connection.raw().set_bondable(true) {
+                    error!("Failed to set connection as bondable: {}", e);
+                }
                 *connection.write().await = Some(new_connection);
 
                 info!("BLE connected");
@@ -331,42 +328,68 @@ where
                                 .await;
                             break;
                         }
-                        // TODO
-                        // GattConnectionEvent::Bonded { bond_info } => {
-                        //     debug!("Received Bonded event");
-                        //     let store_new_bond_info = match &bond_infos.lock().await
-                        //         [profile_index as usize]
-                        //     {
-                        //         Some(stored_bond_info) => {
-                        //             if stored_bond_info.ltk != bond_info.ltk {
-                        //                 warn!(
-                        //                     "LTK of new bond does not match LTK of stored bond, disconnecting..."
-                        //                 );
-                        //                 connection.raw().disconnect();
-                        //                 self.internal_channel
-                        //                     .send(Event::Disconnected { device_address });
-                        //                 break;
-                        //             } else {
-                        //                 // Store new bond info if the address changed
-                        //                 stored_bond_info.address != bond_info.address
-                        //             }
-                        //         }
-                        //         None => true,
-                        //     };
-                        //     if store_new_bond_info {
-                        //         // debug!("Writing bond info to flash");
-                        //         // if let Err(e) = mcu.storage().store(profile_index, &bond_info).await {
-                        //         //     #[cfg(feature = "defmt")]
-                        //         //     let e = defmt::Debug2Format(&e);
-                        //         //     error!("Failed to write bond info to flash: {}", e);
-                        //         // }
-                        //         debug!("Adding bond info to stack");
-                        //         if let Err(e) = ble_stack.add_bond_information(bond_info.clone()) {
-                        //             error!("Failed to add bond info to stack: {}", e);
-                        //         }
-                        //         bond_infos.lock().await[profile_index as usize] = Some(bond_info);
-                        //     }
-                        // }
+                        GattConnectionEvent::PairingComplete {
+                            security_level,
+                            bond,
+                        } => {
+                            debug!(
+                                "Received PairingComplete event with security level {}",
+                                security_level
+                            );
+                            let Some(bond) = bond else {
+                                debug!("No bond information received");
+                                continue;
+                            };
+                            let store_new_bond_info = match &bond_infos.lock().await
+                                [profile_index as usize]
+                            {
+                                Some(stored_bond_info) => {
+                                    if stored_bond_info.0.ltk != bond.ltk {
+                                        warn!(
+                                            "LTK of new bond does not match LTK of stored bond, disconnecting..."
+                                        );
+                                        connection.raw().disconnect();
+                                        self.internal_channel
+                                            .send(Event::Disconnected { device_address })
+                                            .await;
+                                        break;
+                                    } else {
+                                        // Store new bond info if the address changed
+                                        stored_bond_info.0.identity.bd_addr != bond.identity.bd_addr
+                                    }
+                                }
+                                None => true,
+                            };
+                            if store_new_bond_info {
+                                debug!("Writing bond info to flash");
+                                if let Err(e) = storage
+                                    .store(profile_index, StoredBondInformation::from_ref(&bond))
+                                    .await
+                                {
+                                    #[cfg(feature = "defmt")]
+                                    let e = defmt::Debug2Format(&e);
+                                    error!("Failed to write bond info to flash: {}", e);
+                                }
+                                debug!("Adding bond info to stack");
+                                if let Err(e) = ble_stack.add_bond_information(bond.clone()) {
+                                    error!("Failed to add bond info to stack: {}", e);
+                                }
+                                bond_infos.lock().await[profile_index as usize] =
+                                    Some(StoredBondInformation(bond));
+                            }
+                        }
+                        GattConnectionEvent::PairingFailed(error) => {
+                            error!("Pairing failed: {}", error);
+                        }
+                        GattConnectionEvent::PassKeyDisplay(pass_key) => {
+                            debug!("Received PassKeyDisplay event: {}", pass_key.value());
+                        }
+                        GattConnectionEvent::PassKeyConfirm(pass_key) => {
+                            debug!("Received PassKeyConfirm event: {}", pass_key.value());
+                        }
+                        GattConnectionEvent::PassKeyInput => {
+                            debug!("Received PassKeyInput event");
+                        }
                         GattConnectionEvent::Gatt { event } => {
                             debug!("Received GATT event");
                             let result = if connection
@@ -394,11 +417,15 @@ where
                         GattConnectionEvent::ConnectionParamsUpdated { .. } => {
                             debug!("Received ConnectionParamsUpdated event");
                         }
+                        GattConnectionEvent::RequestConnectionParams(v) => {
+                            debug!("Received RequestConnectionParams event: {:?}", v);
+                        }
+                        GattConnectionEvent::DataLengthUpdated { .. } => {
+                            debug!("Received DataLengthUpdated event");
+                        }
                         GattConnectionEvent::PhyUpdated { .. } => {
                             debug!("Received PhyUpdated event");
                         }
-                        // TODO: remove
-                        _ => {}
                     }
                 }
                 self.internal_channel
@@ -502,9 +529,8 @@ where
                             );
                         } else {
                             debug!("Removing bond info for profile {}", profile_index);
-                            if let Err(e) = storage
-                                .remove::<BondInformationWrapper>(profile_index)
-                                .await
+                            if let Err(e) =
+                                storage.remove::<StoredBondInformation>(profile_index).await
                             {
                                 #[cfg(feature = "defmt")]
                                 let e = defmt::Debug2Format(&e);
@@ -522,9 +548,7 @@ where
                     Message::ClearActive => {
                         debug!("Removing bond info for active profile");
                         let profile_index = active_profile_index.load(Ordering::SeqCst);
-                        if let Err(e) = storage
-                            .remove::<BondInformationWrapper>(profile_index)
-                            .await
+                        if let Err(e) = storage.remove::<StoredBondInformation>(profile_index).await
                         {
                             #[cfg(feature = "defmt")]
                             let e = defmt::Debug2Format(&e);
@@ -539,7 +563,7 @@ where
                     Message::ClearAll => {
                         debug!("Removing all bond infos");
                         for i in 0..num_profiles.get() {
-                            if let Err(e) = storage.remove::<BondInformationWrapper>(i).await {
+                            if let Err(e) = storage.remove::<StoredBondInformation>(i).await {
                                 #[cfg(feature = "defmt")]
                                 let e = defmt::Debug2Format(&e);
                                 error!("Failed to remove bond info: {}", e);
@@ -601,11 +625,19 @@ where
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[allow(dead_code)] // TODO: remove
-struct BondInformationWrapper(BondInformation);
+#[repr(transparent)]
+struct StoredBondInformation(BondInformation);
 
-impl storage::Entry for BondInformationWrapper {
-    type Size = typenum::U22;
+impl StoredBondInformation {
+    fn from_ref(bond_info: &BondInformation) -> &Self {
+        // SAFETY: StoredBondInformation is #[repr(transparent)] and has the same layout as
+        // BondInformation
+        unsafe { core::mem::transmute::<&BondInformation, &StoredBondInformation>(bond_info) }
+    }
+}
+
+impl storage::Entry for StoredBondInformation {
+    type Size = typenum::U40;
     type TagParams = u8;
 
     fn tag(params: Self::TagParams) -> [u8; 8] {
@@ -616,19 +648,104 @@ impl storage::Entry for BondInformationWrapper {
     where
         Self: Sized,
     {
-        let _ = bytes;
-        todo!()
-        // let bytes = bytes.into_array::<22>();
-        // let ltk = LongTermKey::from_le_bytes(bytes[..16].try_into().unwrap());
-        // let address = BdAddr::new(bytes[16..].try_into().unwrap());
-        // Some(BondInformation::new(address, ltk))
+        let bytes = bytes.into_array::<40>();
+
+        let has_irk = bytes[0] & 0b01 != 0;
+        let is_bonded = bytes[0] & 0b10 != 0;
+
+        let ltk = LongTermKey::from_le_bytes(bytes[1..17].try_into().unwrap());
+
+        let address = BdAddr::new(bytes[17..23].try_into().unwrap());
+        let irk =
+            has_irk.then(|| IdentityResolvingKey::from_le_bytes(bytes[23..39].try_into().unwrap()));
+        let identity = Identity {
+            bd_addr: address,
+            irk,
+        };
+
+        let security_level = match bytes[39] {
+            0 => SecurityLevel::NoEncryption,
+            1 => SecurityLevel::Encrypted,
+            2 => SecurityLevel::EncryptedAuthenticated,
+            v => {
+                error!("Unknown security level in bond info: {}", v);
+                return None;
+            }
+        };
+
+        Some(StoredBondInformation(BondInformation::new(
+            identity,
+            ltk,
+            security_level,
+            is_bonded,
+        )))
     }
 
     fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        todo!()
-        // let mut bytes = [0; 22];
-        // bytes[..16].copy_from_slice(&self.ltk.to_le_bytes());
-        // bytes[16..].copy_from_slice(&self.address.into_inner());
-        // GenericArray::from_array(bytes)
+        let mut bytes = [0; 40];
+
+        bytes[0] = self.0.identity.irk.is_some() as u8 | (self.0.is_bonded as u8) << 1;
+
+        bytes[1..17].copy_from_slice(&self.0.ltk.to_le_bytes());
+
+        bytes[17..23].copy_from_slice(&self.0.identity.bd_addr.into_inner());
+        if let Some(irk) = &self.0.identity.irk {
+            bytes[23..39].copy_from_slice(&irk.to_le_bytes());
+        }
+
+        bytes[39] = match self.0.security_level {
+            SecurityLevel::NoEncryption => 0,
+            SecurityLevel::Encrypted => 1,
+            SecurityLevel::EncryptedAuthenticated => 2,
+        };
+
+        bytes.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bond_info_serialization1() {
+        let bond_info = BondInformation::new(
+            Identity {
+                bd_addr: BdAddr::new([1, 2, 3, 4, 5, 6]),
+                irk: Some(IdentityResolvingKey::from_le_bytes([7; 16])),
+            },
+            LongTermKey::from_le_bytes([8; 16]),
+            SecurityLevel::EncryptedAuthenticated,
+            true,
+        );
+        let stored = StoredBondInformation(bond_info.clone());
+        let bytes = storage::Entry::to_bytes(&stored);
+        let deserialized = <StoredBondInformation as storage::Entry>::from_bytes(&bytes).unwrap();
+        assert_eq!(stored.0.identity.bd_addr, deserialized.0.identity.bd_addr);
+        assert_eq!(stored.0.identity.irk, deserialized.0.identity.irk);
+        assert_eq!(stored.0.ltk, deserialized.0.ltk);
+        assert_eq!(stored.0.security_level, deserialized.0.security_level);
+        assert_eq!(stored.0.is_bonded, deserialized.0.is_bonded);
+    }
+
+    #[test]
+    fn bond_info_serialization2() {
+        let bond_info = BondInformation::new(
+            Identity {
+                bd_addr: BdAddr::new([21, 22, 23, 24, 25, 26]),
+                irk: None,
+            },
+            LongTermKey::from_le_bytes([42; 16]),
+            SecurityLevel::NoEncryption,
+            false,
+        );
+        let stored = StoredBondInformation(bond_info.clone());
+        let bytes = storage::Entry::to_bytes(&stored);
+        let deserialized = <StoredBondInformation as storage::Entry>::from_bytes(&bytes).unwrap();
+        assert_eq!(stored.0.identity.bd_addr, deserialized.0.identity.bd_addr);
+        assert_eq!(stored.0.identity.irk, deserialized.0.identity.irk);
+        assert_eq!(stored.0.ltk, deserialized.0.ltk);
+        assert_eq!(stored.0.security_level, deserialized.0.security_level);
+        assert_eq!(stored.0.is_bonded, deserialized.0.is_bonded);
     }
 }
