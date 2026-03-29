@@ -71,6 +71,7 @@ export default defineConfig({
           { text: 'Devices', link: '/concepts/devices' },
           { text: 'Components', link: '/concepts/components' },
           { text: 'MCUs', link: '/concepts/mcus' },
+          { text: 'Storage', link: '/concepts/storage' },
           { text: 'External Transports', link: '/concepts/external-transports' },
           { text: 'External Channel', link: '/concepts/external-channel' },
           { text: 'Internal Transports', link: '/concepts/internal-transports' },
