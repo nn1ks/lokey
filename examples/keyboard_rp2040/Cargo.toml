@@ -29,7 +29,7 @@ defmt = [
 cortex-m-rt = "0.7.0"
 defmt = { version = "1.0.1", optional = true }
 defmt-rtt = { version = "1.1.0", optional = true }
-embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "nightly"] }
+embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread"] }
 embassy-rp = "0.9.0"
 embassy-time = "0.5.0"
 lokey = { path = "../../lokey", features = ["internal-receiver-slots-8", "external-receiver-slots-8", "external-observer-slots-8"] }

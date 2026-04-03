@@ -1,9 +1,6 @@
 #![no_main]
 #![no_std]
-#![feature(impl_trait_in_assoc_type)]
-#![feature(future_join)]
 
-use core::future::join;
 use embassy_executor::Spawner;
 use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
 use lokey::{Context, Device};
@@ -63,32 +60,12 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
         ],
     );
 
-    let scanner_future = context.enable(Scanner::<MatrixConfig, NUM_KEYS>::new());
-    let layout_future = context.enable(layout);
-
-    let blink_future = context.enable(Blink::new());
+    let scanner = Scanner::<MatrixConfig, NUM_KEYS>::new();
 
     let hooks = (BootHook, BleAdvertisementHook, BleProfileHook);
-    let led_array_future = context.enable(LedArray::<4, _>::new(context.as_dyn(), hooks));
+    let led_array = LedArray::<4, _>::new(context.as_dyn(), hooks);
 
-    join!(
-        scanner_future,
-        layout_future,
-        blink_future,
-        led_array_future
-    )
-    .await;
-
-    // _spawner.must_spawn(task());
-    // #[embassy_executor::task]
-    // async fn task() {
-    //     loop {
-    //         defmt::info!(
-    //             "Heap usage: ({}/{})",
-    //             HEAP.used(),
-    //             HEAP.free() + HEAP.used()
-    //         );
-    //         embassy_time::Timer::after_secs(2).await;
-    //     }
-    // }
+    context
+        .enable_all((layout, scanner, Blink::new(), led_array))
+        .await;
 }

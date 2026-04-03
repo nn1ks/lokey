@@ -1,9 +1,6 @@
 #![no_main]
 #![no_std]
-#![feature(impl_trait_in_assoc_type)]
-#![feature(future_join)]
 
-use core::future::join;
 #[cfg(feature = "defmt")]
 use defmt_rtt as _;
 use embassy_executor::Spawner;
@@ -106,33 +103,14 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
         [Transparent]
     );
 
-    let layout_future = context.enable(layout);
-
-    let scanner_future = context.enable(Scanner::<DirectPinsConfig, NUM_KEYS>::with_config(
-        DirectPinsConfig {
-            debounce_key_press: Debounce::Defer {
-                duration: Duration::from_millis(30),
-            },
-            debounce_key_release: Debounce::Defer {
-                duration: Duration::from_millis(30),
-            },
+    let scanner = Scanner::<DirectPinsConfig, NUM_KEYS>::with_config(DirectPinsConfig {
+        debounce_key_press: Debounce::Defer {
+            duration: Duration::from_millis(30),
         },
-    ));
+        debounce_key_release: Debounce::Defer {
+            duration: Duration::from_millis(30),
+        },
+    });
 
-    let blink_future = context.enable(Blink::new());
-
-    join!(layout_future, scanner_future, blink_future).await;
-
-    // spawner.spawn(task()).unwrap();
-    // #[embassy_executor::task]
-    // async fn task() {
-    //     loop {
-    //         defmt::info!(
-    //             "Heap usage: ({}/{})",
-    //             HEAP.used(),
-    //             HEAP.free() + HEAP.used()
-    //         );
-    //         embassy_time::Timer::after_secs(2).await;
-    //     }
-    // }
+    context.enable_all((layout, scanner, Blink::new())).await;
 }
