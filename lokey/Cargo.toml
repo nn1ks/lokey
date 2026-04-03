@@ -84,7 +84,7 @@ typeid = "1.0.3"
 typenum = "1.17.0"
 
 [dev-dependencies]
-embassy-executor = { version = "0.9.1", features = ["arch-std", "executor-thread"] }
+embassy-executor = { version = "0.10.0", features = ["platform-std", "executor-thread"] }
 
 [package.metadata.docs.rs]
 features = ["macros", "defmt"]

@@ -211,7 +211,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             async fn __run_mcu(mcu: &'static <#device_type_path as ::lokey::Device>::Mcu, context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>) {
                 ::lokey::Mcu::run(mcu, context).await;
             }
-            spawner.must_spawn(__run_mcu(mcu, context));
+            spawner.spawn(__run_mcu(mcu, context).unwrap());
 
             #[::embassy_executor::task]
             async fn __run_internal_channel(
@@ -220,7 +220,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
             ) {
                 channel.run(storage).await;
             }
-            spawner.must_spawn(__run_internal_channel(internal_channel, storage));
+            spawner.spawn(__run_internal_channel(internal_channel, storage).unwrap());
 
             #[::embassy_executor::task]
             async fn __run_external_channel(
@@ -230,7 +230,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let message_override = #message_override;
                 channel.run(storage, message_override).await;
             }
-            spawner.must_spawn(__run_external_channel(external_channel, storage));
+            spawner.spawn(__run_external_channel(external_channel, storage).unwrap());
 
             #function
 
