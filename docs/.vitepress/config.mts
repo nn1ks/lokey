@@ -87,6 +87,7 @@ export default defineConfig({
           { text: 'Writing a Custom Component', link: '/guides/writing-a-custom-component' },
           { text: 'Adding Support for a Device', link: '/guides/adding-support-for-a-device' },
           { text: 'Adding Support for an MCU', link: '/guides/adding-support-for-an-mcu' },
+          { text: 'Flashing Firmware', link: '/guides/flashing-firmware' },
         ]
       },
       {
