@@ -21,11 +21,9 @@ impl Action for MouseButton {
             error!("MouseButton action requires MouseReport state");
             return;
         };
-        let report = report
-            .modify_and_clone(|report| {
-                report.buttons.insert(*self);
-            })
-            .await;
+        let report = report.modify_and_get(|report| {
+            report.buttons.insert(*self);
+        });
         let _ = context.external_channel.try_send(report).await;
     }
 
@@ -39,11 +37,9 @@ impl Action for MouseButton {
             error!("MouseButton action requires MouseReport state");
             return;
         };
-        let report = report
-            .modify_and_clone(|report| {
-                report.buttons.remove(*self);
-            })
-            .await;
+        let report = report.modify_and_get(|report| {
+            report.buttons.remove(*self);
+        });
         let _ = context.external_channel.try_send(report).await;
     }
 }
@@ -64,9 +60,7 @@ async fn send_mouse_report<D, T, S, F>(
                 error!("MoveMouseX action requires MouseReport state");
                 return;
             };
-            let report = report
-                .modify_and_clone(|report| update_report(report))
-                .await;
+            let report = report.modify_and_get(|report| update_report(report));
             let _ = context.external_channel.try_send(report).await;
         };
         let fut2 = Timer::after(interval);

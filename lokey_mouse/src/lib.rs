@@ -13,8 +13,8 @@ pub mod ble;
 #[cfg(feature = "usb")]
 pub mod usb;
 
+use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::mutex::{Mutex, MutexGuard};
 use enumset::{EnumSet, EnumSetType};
 use lokey::external::Message;
 
@@ -87,26 +87,47 @@ impl MouseReport {
     }
 }
 
-#[derive(Default)]
+/// State type for a mouse report.
+///
+/// This type contains a [`MouseReport`] and provides methods for accessing it and modifying it via
+/// interior mutability.
 pub struct MouseReportState {
     inner: Mutex<CriticalSectionRawMutex, MouseReport>,
 }
 
+impl Default for MouseReportState {
+    fn default() -> Self {
+        Self::new(MouseReport::default())
+    }
+}
+
 impl MouseReportState {
+    /// Creates a new [`MouseReportState`] with the specified initial mouse report.
     pub fn new(mouse_report: MouseReport) -> Self {
         Self {
             inner: Mutex::new(mouse_report),
         }
     }
 
-    pub async fn lock(&self) -> MutexGuard<'_, CriticalSectionRawMutex, MouseReport> {
-        self.inner.lock().await
+    /// Gets a clone of the current mouse report.
+    pub fn get(&self) -> MouseReport {
+        self.inner.lock(|v| v.clone())
     }
 
-    pub async fn modify_and_clone(&self, f: impl FnOnce(&mut MouseReport)) -> MouseReport {
-        let mut report = self.lock().await;
+    /// Sets the current mouse report.
+    pub fn set(&self, mouse_report: MouseReport) {
+        // SAFETY: This method is guaranteed to never be called within another `lock` or `lock_mut`
+        //         method as the lock methods are not exposed in the public API of MouseReportState.
+        unsafe { self.inner.lock_mut(|report| *report = mouse_report) };
+    }
+
+    /// Modifies the current mouse report by applying the specified function to it and returns a
+    /// clone of the modified report.
+    pub fn modify_and_get(&self, f: impl FnOnce(&mut MouseReport)) -> MouseReport {
+        let mut report = self.get();
         f(&mut report);
-        report.clone()
+        self.set(report.clone());
+        report
     }
 }
 

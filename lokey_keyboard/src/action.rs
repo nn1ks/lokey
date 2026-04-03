@@ -263,11 +263,9 @@ impl Action for Key {
                 return;
             }
         };
-        let keyboard_report = report
-            .modify_and_clone(|keyboard_report| {
-                keyboard_report.keys.insert(*self);
-            })
-            .await;
+        let keyboard_report = report.modify_and_get(|keyboard_report| {
+            keyboard_report.keys.insert(*self);
+        });
         if let Err(e) = context.external_channel.try_send(keyboard_report).await {
             error!("Failed to send keyboard report: {:?}", e);
         }
@@ -286,11 +284,9 @@ impl Action for Key {
                 return;
             }
         };
-        let keyboard_report = report
-            .modify_and_clone(|keyboard_report| {
-                keyboard_report.keys.remove(*self);
-            })
-            .await;
+        let keyboard_report = report.modify_and_get(|keyboard_report| {
+            keyboard_report.keys.remove(*self);
+        });
         if let Err(e) = context.external_channel.try_send(keyboard_report).await {
             error!("Failed to send keyboard report: {:?}", e);
         }
@@ -479,7 +475,7 @@ impl<A: Action> Action for Sticky<A> {
         S: AnyState,
     {
         let previous_keyboard_report = match context.state.try_get::<KeyboardReportState>() {
-            Some(report) => report.lock().await.clone(),
+            Some(report) => report.get(),
             None => {
                 error!("Sticky action requires KeyboardReportState");
                 return;

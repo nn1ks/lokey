@@ -25,9 +25,9 @@ use core::future::Future;
 pub use debounce::Debounce;
 pub use direct_pins::{DirectPins, DirectPinsConfig};
 use embassy_futures::join::{join, join_array};
+use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_sync::mutex::{Mutex, MutexGuard};
 use enumset::EnumSet;
 #[doc(hidden)]
 pub use generic_array; // Re-exported for use in the `layout!` macro.
@@ -308,25 +308,47 @@ impl KeyboardReport {
     }
 }
 
-#[derive(Default)]
+/// State type for a keyboard report.
+///
+/// This type contains a [`KeyboardReport`] and provides methods for accessing it and modifying it
+/// via interior mutability.
 pub struct KeyboardReportState {
     inner: Mutex<CriticalSectionRawMutex, KeyboardReport>,
 }
 
+impl Default for KeyboardReportState {
+    fn default() -> Self {
+        Self::new(KeyboardReport::default())
+    }
+}
+
 impl KeyboardReportState {
+    /// Creates a new [`KeyboardReportState`] with the specified initial keyboard report.
     pub fn new(keyboard_report: KeyboardReport) -> Self {
         Self {
             inner: Mutex::new(keyboard_report),
         }
     }
 
-    pub async fn lock(&self) -> MutexGuard<'_, CriticalSectionRawMutex, KeyboardReport> {
-        self.inner.lock().await
+    /// Gets a clone of the current keyboard report.
+    pub fn get(&self) -> KeyboardReport {
+        self.inner.lock(|v| v.clone())
     }
 
-    pub async fn modify_and_clone(&self, f: impl FnOnce(&mut KeyboardReport)) -> KeyboardReport {
-        let mut report = self.lock().await;
+    /// Sets the current keyboard report.
+    pub fn set(&self, keyboard_report: KeyboardReport) {
+        // SAFETY: This method is guaranteed to never be called within another `lock` or `lock_mut`
+        //         method as the lock methods are not exposed in the public API of
+        //         KeyboardReportState.
+        unsafe { self.inner.lock_mut(|report| *report = keyboard_report) };
+    }
+
+    /// Modifies the current keyboard report by applying the specified function to it and returns a
+    /// clone of the modified report.
+    pub fn modify_and_get(&self, f: impl FnOnce(&mut KeyboardReport)) -> KeyboardReport {
+        let mut report = self.get();
         f(&mut report);
-        report.clone()
+        self.set(report.clone());
+        report
     }
 }
