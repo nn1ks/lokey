@@ -80,8 +80,8 @@ Another option is to run the components in separate Embassy tasks:
 ```rust
 #[lokey::device]
 async fn main(context: Context<MyDevice, MyTransport, MyState>, spawner: Spawner) {
-    spawner.spawn(enable_example_component1(context)).unwrap();
-    spawner.spawn(enable_example_component2(context)).unwrap();
+    spawner.spawn(enable_example_component1(context).unwrap());
+    spawner.spawn(enable_example_component2(context).unwrap());
 }
 
 #[embassy_executor::task]
