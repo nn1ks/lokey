@@ -95,11 +95,9 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'Introduction', link: '/keyboard/introduction' },
-          { text: 'Layout', link: '/keyboard/layout' },
-          { text: 'Actions', link: '/keyboard/actions' },
           { text: 'Scanning', link: '/keyboard/scanning' },
-          { text: 'Debouncing', link: '/keyboard/debouncing' },
-          { text: 'Key Overrides', link: '/keyboard/key-overrides' },
+          { text: 'Actions', link: '/keyboard/actions' },
+          { text: 'Layout', link: '/keyboard/layout' },
           { text: 'Comparison with Alternatives', link: '/keyboard/comparison-with-alternatives' },
         ]
       },
