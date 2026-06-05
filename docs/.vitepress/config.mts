@@ -25,6 +25,10 @@ export default defineConfig({
   lastUpdated: true,
 
   markdown: {
+    theme: {
+      light: "gruvbox-light-hard",
+      dark: "gruvbox-dark-hard",
+    },
     config: (md) => {
       md.use(footnote)
     }

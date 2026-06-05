@@ -242,6 +242,11 @@
   }
 }
 
+/* Hide theme background of code blocks */
+pre.shiki {
+  background: none !important;
+}
+
 /**
  * Fonts
  * -------------------------------------------------------------------------- */
