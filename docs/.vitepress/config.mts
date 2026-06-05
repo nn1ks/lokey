@@ -84,9 +84,9 @@ export default defineConfig({
         text: 'Guides',
         collapsed: false,
         items: [
-          { text: 'Writing a Custom Component', link: '/guides/writing-a-custom-component' },
-          { text: 'Adding Support for a Device', link: '/guides/adding-support-for-a-device' },
-          { text: 'Adding Support for an MCU', link: '/guides/adding-support-for-an-mcu' },
+          { text: '[TODO] Writing a Custom Component', link: '/guides/writing-a-custom-component' },
+          { text: '[TODO] Adding Support for a Device', link: '/guides/adding-support-for-a-device' },
+          { text: '[TODO] Adding Support for an MCU', link: '/guides/adding-support-for-an-mcu' },
           { text: 'Flashing Firmware', link: '/guides/flashing-firmware' },
         ]
       },
@@ -112,7 +112,7 @@ export default defineConfig({
         text: 'MIDI Controller',
         collapsed: false,
         items: [
-          { text: 'Introduction', link: '/midi-controller/introduction' },
+          { text: '[TODO] Introduction', link: '/midi-controller/introduction' },
         ]
       },
     ],
