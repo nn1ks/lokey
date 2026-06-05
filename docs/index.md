@@ -3,8 +3,9 @@
 layout: home
 
 hero:
+  # name: "Lokey - A firmware framework for input devices"
   name: "Lokey"
-  text: "A firmware framework for input devices"
+  text: " — A firmware framework for input devices"
   tagline: "Easily create modular firmware for keyboards, mice, MIDI controllers, and more."
   image:
     src: /logo.svg

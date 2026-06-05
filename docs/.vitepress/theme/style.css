@@ -148,21 +148,57 @@
   border-right: 1px solid var(--vp-c-divider);
 }
 
+.container {
+  text-align: start !important;
+}
+
+.actions {
+  justify-content: start !important;
+}
+
 .heading {
-  font-family: "Junicode";
+  font-family: "Instrument Serif";
+  display: unset !important;
 }
 
 .heading .name {
+  font-size: 38px;
   font-weight: 700;
+  font-style: italic;
+  line-height: 46px;
 }
 
 .heading .text {
+  font-size: 38px;
   font-weight: 400;
+  line-height: 46px;
+}
+
+@media (min-width: 960px) {
+  .heading .name {
+    font-size: 56px;
+    line-height: 64px;
+  }
+
+  .heading .text {
+    font-size: 56px;
+    line-height: 64px;
+  }
+}
+
+.tagline {
+  padding-top: 12px !important;
+}
+
+@media (min-width: 640px) {
+  .tagline {
+    padding-top: 12px !important;
+  }
 }
 
 /* Make image smaller */
 .VPHero .image-src {
-  padding: 36px;
+  padding: 46px;
 }
 
 @media (min-width: 960px) {
@@ -173,7 +209,6 @@
 
 /* Make image align to the right when on desktop */
 @media (min-width: 960px) {
-
   .VPHero .image-bg,
   .VPHero .image-src {
     top: unset;
@@ -183,26 +218,41 @@
   }
 }
 
+.image-container {
+  height: 280px !important;
+  width: 280px !important;
+}
+
+@media (min-width: 960px) {
+  .image-container {
+    height: 100%;
+    width: 100%;
+  }
+}
+
 /**
  * Fonts
  * -------------------------------------------------------------------------- */
 
-/* Junicode */
+/* Instrument Serif */
 
 @font-face {
-  font-family: "Junicode";
+  font-family: "Instrument Serif";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: local("Junicode"),
-    url("/fonts/Junicode/junicode-regular.otf") format("opentype");
+  src:
+    local("Instrument Serif"),
+    url("/fonts/Instrument_Serif/InstrumentSerif-Regular.ttf")
+      format("truetype");
 }
 
 @font-face {
-  font-family: "Junicode";
-  font-style: normal;
-  font-weight: 700;
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
   font-display: swap;
-  src: local("Junicode Bold"),
-    url("/fonts/Junicode/junicode-bold.otf") format("opentype");
+  src:
+    local("Instrument Serif"),
+    url("/fonts/Instrument_Serif/InstrumentSerif-Italic.ttf") format("truetype");
 }
