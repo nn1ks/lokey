@@ -160,20 +160,22 @@
 .VPHero .heading {
   font-family: "Instrument Serif";
   display: unset !important;
-  word-spacing: 0.12em;
+  word-spacing: 0.2em;
 }
 
 .VPHero .heading .name {
-  font-size: 38px;
+  font-size: 40px;
   font-weight: 700;
   font-style: italic;
   line-height: 46px;
+  letter-spacing: 0;
 }
 
 .VPHero .heading .text {
-  font-size: 38px;
+  font-size: 40px;
   font-weight: 400;
   line-height: 46px;
+  letter-spacing: 0;
 }
 
 @media (min-width: 960px) {
