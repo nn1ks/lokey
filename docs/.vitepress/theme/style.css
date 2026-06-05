@@ -160,6 +160,7 @@
 .VPHero .heading {
   font-family: "Instrument Serif";
   display: unset !important;
+  word-spacing: 0.12em;
 }
 
 .VPHero .heading .name {

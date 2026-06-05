@@ -237,13 +237,13 @@ async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawne
     grid-template-columns: 1fr 560px 1fr;
     align-items: center;
     gap: 0;
-    padding: 80px 0;
+    padding: 50px 0;
   }
 
   .feature-illustration {
     width: 200px;
     margin-bottom: 0;
-    padding: 10px;
+    padding: 20px;
   }
 
   .feature-illustration path,
