@@ -148,50 +148,50 @@
   border-right: 1px solid var(--vp-c-divider);
 }
 
-.container {
+.VPHero .container {
   text-align: start !important;
 }
 
-.actions {
+.VPHero .actions {
   justify-content: start !important;
 }
 
-.heading {
+.VPHero .heading {
   font-family: "Instrument Serif";
   display: unset !important;
 }
 
-.heading .name {
+.VPHero .heading .name {
   font-size: 38px;
   font-weight: 700;
   font-style: italic;
   line-height: 46px;
 }
 
-.heading .text {
+.VPHero .heading .text {
   font-size: 38px;
   font-weight: 400;
   line-height: 46px;
 }
 
 @media (min-width: 960px) {
-  .heading .name {
+  .VPHero .heading .name {
     font-size: 56px;
     line-height: 64px;
   }
 
-  .heading .text {
+  .VPHero .heading .text {
     font-size: 56px;
     line-height: 64px;
   }
 }
 
-.tagline {
+.VPHero .tagline {
   padding-top: 12px !important;
 }
 
 @media (min-width: 640px) {
-  .tagline {
+  .VPHero .tagline {
     padding-top: 12px !important;
   }
 }
@@ -218,13 +218,13 @@
   }
 }
 
-.image-container {
+.VPHero .image-container {
   height: 280px !important;
   width: 280px !important;
 }
 
 @media (min-width: 960px) {
-  .image-container {
+  .VPHero .image-container {
     height: 100%;
     width: 100%;
   }
