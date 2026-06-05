@@ -3,7 +3,6 @@
 layout: home
 
 hero:
-  # name: "Lokey - A firmware framework for input devices"
   name: "Lokey"
   text: " — A firmware framework for input devices"
   tagline: "Easily create modular firmware for keyboards, mice, MIDI controllers, and more."
@@ -31,15 +30,16 @@ hero:
 
 use embassy_executor::Spawner;
 use lokey::Context;
-use lokey_keyboard::{Key, MatrixConfig, layout};
+use lokey_keyboard::{Key, Scanner, layout};
 use lokey_my_device::{MyDevice, MyTransports, MyState};
 
 #[lokey::device]
 async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+    let scanner = Scanner::new();
     let layout = layout!(
         [Key::A, Key::B, Key::C]
     );
-    context.enable_all((layout, MatrixConfig::default())).await;
+    context.enable_all((scanner, layout)).await;
 }
 ```
 
