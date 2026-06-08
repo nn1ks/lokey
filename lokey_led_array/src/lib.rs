@@ -19,15 +19,17 @@ use generic_array::GenericArray;
 use lokey::util::{unwrap, warn};
 use lokey::{Address, Component, DynContext, internal};
 use portable_atomic::AtomicU32;
+use postcard::experimental::max_size::MaxSize;
 use pwm::PwmChannel;
 use seq_macro::seq;
+use serde::{Deserialize, Serialize};
 
 // TODO: Make configurable
 const ACTION_SLOTS: usize = 8;
 
 static ACTION_ID: AtomicU32 = AtomicU32::new(0);
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, MaxSize)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[non_exhaustive]
 pub struct ActionId {
@@ -44,6 +46,7 @@ impl ActionId {
     }
 }
 
+#[derive(Serialize, Deserialize, MaxSize)]
 pub enum Action {
     Individual {
         indices_bitmask: u64,
@@ -66,6 +69,7 @@ pub enum Action {
     },
 }
 
+#[derive(Serialize, Deserialize, MaxSize)]
 pub struct Message {
     pub action_id: ActionId,
     pub action: Action,
@@ -87,9 +91,8 @@ impl Message {
     }
 }
 
-// TODO
 impl internal::Message for Message {
-    type Size = typenum::U0; // TODO
+    type Size = typenum::U33;
 
     const TAG: [u8; 4] = [0x77, 0xaf, 0xc7, 0x3d];
 
@@ -97,14 +100,13 @@ impl internal::Message for Message {
     where
         Self: Sized,
     {
-        let _ = bytes;
-        None
-        // bitcode::decode(bytes).ok()
+        postcard::from_bytes(&bytes).ok()
     }
 
     fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        GenericArray::default()
-        // bitcode::encode(self).try_into().unwrap()
+        let mut buf = GenericArray::default();
+        postcard::to_slice(self, &mut buf).expect("buffer is too small");
+        buf
     }
 }
 
@@ -491,6 +493,16 @@ mod ble {
                             .internal_channel
                             .send(Message::new(action_id.clone(), action))
                             .await;
+                        if let Some(current_action_id) = current_action_id {
+                            let new_action_id = ActionId::new(context.address);
+                            let action = Action::Stop {
+                                action_id: current_action_id,
+                            };
+                            context
+                                .internal_channel
+                                .send(Message::new(new_action_id, action))
+                                .await;
+                        }
                         current_action_id = Some(action_id);
                     }
                     external::Event::StoppedAdvertising { scannable: true } => {
@@ -533,5 +545,17 @@ mod ble {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialized_max_size() {
+        assert_eq!(ActionId::POSTCARD_MAX_SIZE, 11);
+        assert_eq!(Action::POSTCARD_MAX_SIZE, 15);
+        assert_eq!(Message::POSTCARD_MAX_SIZE, 33);
     }
 }
