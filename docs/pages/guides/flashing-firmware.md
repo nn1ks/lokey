@@ -7,7 +7,8 @@ The firmware can be flashed to your device either via a debug probe or via a boo
 The firmware can be flashed via a debug probe (e.g. CMSIS-DAP, ST-Link, J-Link) using the [probe-rs](https://probe.rs/) tool. Before flashing, the debug probe has to be connected to the microcontroller and the host computer. Then the following command can be used to flash the firmware:
 
 ```
-probe-rs run --chip <CHIP_NAME>
+cargo build --release
+probe-rs run --chip <CHIP_NAME> target/<target>/release/<binary_name>
 ```
 
 Lokey firmware projects usually also configure the cargo runner, which allows flashing the firmware using the following command as an alternative:
