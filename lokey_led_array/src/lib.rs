@@ -455,7 +455,7 @@ impl Hook for BootHook {
     async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
         Timer::after_millis(50).await;
         let action_id = ActionId::new(context.address);
-        let action = Action::SlideBackwards {
+        let action = Action::SlideForwards {
             duration_ms: 800,
             count: Some(1),
         };
