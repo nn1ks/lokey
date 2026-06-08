@@ -77,8 +77,10 @@ futures-util = { version = "0.3.32", default-features = false, features = ["asyn
 generic-array = "1.3.4"
 lokey_macros = { path = "../lokey_macros", version = "0.0.1", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
+postcard = { version = "1.1.3", features = ["experimental-derive"], default-features = false }
 seq-macro = "0.3.6"
 sequential-storage = "7.1.0"
+serde = { version = "1.0.228", features = ["derive"], default-features = false }
 static_cell = "2.1.0"
 typeid = "1.0.3"
 typenum = "1.17.0"

@@ -283,7 +283,9 @@ pub use lokey_macros::device;
 #[doc(hidden)]
 pub use mcu::DummyMcu; // This is only used for doc tests
 pub use mcu::Mcu;
+use postcard::experimental::max_size::MaxSize;
 use seq_macro::seq;
+use serde::{Deserialize, Serialize};
 use state::DynState;
 pub use state::{AnyState, QueryState, State};
 #[doc(hidden)]
@@ -411,7 +413,7 @@ where
 }
 
 /// A unique, stable per-device address.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, MaxSize)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Address(pub [u8; 6]);
 
@@ -515,3 +517,13 @@ macro_rules! impl_component_collection_for_tuples {
 }
 
 impl_component_collection_for_tuples!(16);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn address_serialized_max_size() {
+        assert_eq!(Address::POSTCARD_MAX_SIZE, 6);
+    }
+}
