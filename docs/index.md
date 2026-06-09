@@ -156,7 +156,7 @@ const SVG_PER_LETTER = [
 ]
 
 const NUM_CHANGES = 3;
-const INTERVAL_MS = 300;
+const INTERVAL_MS = 800;
 
 async function start(title) {
   const text = title.textContent || '';
