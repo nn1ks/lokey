@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.0"
+   id="glyph_e"
+   x="0px"
+   y="0px"
+   width="63.476562000000001px"
+   height="121px"
+   sodipodi:docname="e1.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="33.847624"
+     inkscape:cx="50.815975"
+     inkscape:cy="63.638145"
+     inkscape:window-width="3072"
+     inkscape:window-height="1659"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="glyph_e" />
+  <g
+     id="e"
+     transform="matrix(0.75687901,0,0,0.75687901,0.8433858,24.480541)">
+    <path
+       style="fill:currentColor;stroke-width:0px"
+       d="m 53.759766,79.150391 q 1.904296,0 1.904296,1.757812 0,1.31836 -1.708984,3.125 -7.714844,7.910156 -21.142578,7.910156 -12.060547,0 -20.3125,-7.27539 -8.544922,-7.56836 -8.544922,-19.140625 0,-11.816407 7.714844,-19.433594 8.154297,-8.105469 21.679687,-8.105469 10.839844,0 18.212891,6.591797 7.958984,7.080078 7.958984,18.603516 0,1.660156 -0.09766,3.515625 c -10.742187,0 -24.169922,0 -32.226562,0 0,5.236816 0,15.710449 0,20.947265 q 3.320312,0.683594 7.470703,0.683594 8.789062,0 14.990234,-5.810547 Q 50.92773,81.25 51.46484,80.517578 52.587887,79.150391 53.759762,79.150391 Z M 40.722656,42.480469 q -3.173828,-0.927735 -7.177734,-0.927735 -4.003906,0 -6.347656,0.53711 c 0,7.014974 0,15.783692 0,21.044922 3.381348,0 10.144042,0 13.52539,0 0,-5.163574 0,-15.490723 0,-20.654297 z"
+       id="path_e_0" />
+  </g>
+</svg>

@@ -144,6 +144,111 @@ async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawne
 </section>
 
 
+<script setup>
+import { onMounted } from 'vue'
+
+const SVG_PER_LETTER = [
+  ["/title_svg/l1.svg", "/title_svg/l2.svg", "/title_svg/l3.svg"],
+  ["/title_svg/o1.svg", "/title_svg/o2.svg", "/title_svg/o3.svg"],
+  ["/title_svg/k1.svg", "/title_svg/k2.svg", "/title_svg/k3.svg"],
+  ["/title_svg/e1.svg", "/title_svg/e2.svg", "/title_svg/e3.svg"],
+  ["/title_svg/y1.svg", "/title_svg/y2.svg", "/title_svg/y2.svg"],
+]
+
+const NUM_CHANGES = 3;
+const INTERVAL_MS = 300;
+
+async function start(title) {
+  const text = title.textContent || '';
+
+  // Pre-load all SVGs
+  const svgCache = [];
+  for (let i = 0; i < text.length; i++) {
+    const letterSvgs = [];
+    for (const path of SVG_PER_LETTER[i]) {
+      const response = await fetch(path);
+      let svgText = await response.text();
+      const w = svgText.match(/width="([\d.]+)px"/);
+      const h = svgText.match(/height="([\d.]+)px"/);
+      if (w && h) {
+        svgText = svgText
+          .replace(/width="[\d.]+px"/, '')
+          .replace(/height="[\d.]+px"/, '')
+          .replace('<svg', `<svg viewBox="0 0 ${w[1]} ${h[1]}"`);
+      }
+      letterSvgs.push(svgText);
+    }
+    svgCache.push(letterSvgs);
+  }
+
+  // Lock to exact content width, then hide the original text
+  title.style.width = 'max-content';
+  const totalWidth = title.getBoundingClientRect().width;
+  title.style.position = 'relative';
+  title.style.visibility = 'hidden';
+
+  // Absolutely-positioned overlay with inline SVGs
+  const overlay = document.createElement('span');
+  overlay.style.position = 'absolute';
+  overlay.style.inset = '0';
+  overlay.style.visibility = 'visible';
+
+  const containers = [];
+  const step = totalWidth / text.length;
+  for (let i = 0; i < text.length; i++) {
+    const container = document.createElement('span');
+    container.className = 'title-svg';
+    container.style.position = 'absolute';
+    container.style.height = '1.2em';
+    container.style.left = (i * step) + 'px';
+    container.style.top = '50%';
+    container.style.transform = 'translateY(-50%)';
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.innerHTML = svgCache[i][0];
+    overlay.appendChild(container);
+    containers.push({ el: container, svgs: svgCache[i] });
+  }
+  title.appendChild(overlay);
+
+  let ticks = 0;
+  let svgIndex = 0;
+
+  function cycle() {
+    if (ticks >= NUM_CHANGES) {
+      clearInterval(interval);
+      overlay.remove();
+      title.style.visibility = '';
+      title.style.position = '';
+      title.style.width = '';
+      return;
+    }
+    containers.forEach(({ el, svgs }) => {
+      el.innerHTML = svgs[svgIndex];
+    });
+    svgIndex++;
+    ticks++;
+  }
+
+  cycle();
+  const interval = setInterval(cycle, INTERVAL_MS);
+}
+
+onMounted(async () => {
+  const title = document.querySelector('.heading .name');
+  if (title) await start(title);
+});
+</script>
+
+<style>
+.title-svg svg {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+</style>
+
 <style scoped>
 .features-section {
   padding: 40px 0;
