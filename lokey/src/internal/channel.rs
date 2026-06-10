@@ -16,18 +16,24 @@ use typenum::Unsigned;
 //   - Don't convert local messages to bytes and then convert it back to a message
 //   - Make a pub sub channel that only sends the relevant messages to the receivers
 
+const CAPACITY: usize = 10;
+const NUM_PUBS: usize = 2;
+
 /// Internal channel for communication between components and devices.
 pub struct Channel<Transport> {
     transport: Transport,
     rx_channel: PubSubChannel<
         CriticalSectionRawMutex,
         ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
-        1,
+        CAPACITY,
         RECEIVER_SLOTS,
-        2,
+        NUM_PUBS,
     >,
-    tx_channel:
-        channel::Channel<CriticalSectionRawMutex, ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>, 1>,
+    tx_channel: channel::Channel<
+        CriticalSectionRawMutex,
+        ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
+        CAPACITY,
+    >,
 }
 
 impl<Transport: internal::Transport> Channel<Transport> {
@@ -112,12 +118,15 @@ pub struct DynChannelRef<'a> {
     rx_channel: &'a PubSubChannel<
         CriticalSectionRawMutex,
         ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
-        1,
+        CAPACITY,
         RECEIVER_SLOTS,
-        2,
+        NUM_PUBS,
     >,
-    tx_channel:
-        &'a channel::Channel<CriticalSectionRawMutex, ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>, 1>,
+    tx_channel: &'a channel::Channel<
+        CriticalSectionRawMutex,
+        ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
+        CAPACITY,
+    >,
 }
 
 impl DynChannelRef<'_> {
@@ -161,9 +170,9 @@ pub struct Receiver<'a, Message> {
         'a,
         CriticalSectionRawMutex,
         ArrayVec<u8, MAX_MESSAGE_SIZE_WITH_TAG>,
-        1,
+        CAPACITY,
         RECEIVER_SLOTS,
-        2,
+        NUM_PUBS,
     >,
     _phantom: PhantomData<Message>,
 }
