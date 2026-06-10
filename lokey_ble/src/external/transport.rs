@@ -196,6 +196,15 @@ where
 
                 let profile_index = active_profile_index.load(Ordering::SeqCst);
 
+                for bond_information in ble_stack.get_bond_information() {
+                    if let Err(e) = ble_stack.remove_bond_information(bond_information.identity) {
+                        #[cfg(feature = "defmt")]
+                        error!("Failed to remove bond information from BLE stack: {}", e);
+                        #[cfg(not(feature = "defmt"))]
+                        error!("Failed to remove bond information from BLE stack: {:?}", e);
+                    }
+                }
+
                 let scannable = match &bond_infos.lock().await[profile_index as usize] {
                     Some(bond_info) => {
                         #[cfg(feature = "defmt")]
