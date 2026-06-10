@@ -163,8 +163,6 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
         connect_params: Default::default(),
     };
 
-    Timer::after_secs(5).await;
-
     let run = async {
         loop {
             if let Err(e) = ble_host_runner.lock().await.run().await {
