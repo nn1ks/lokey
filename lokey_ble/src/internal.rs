@@ -6,7 +6,7 @@ use embassy_futures::join::join;
 use embassy_futures::select::{select, select3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::Timer;
+use embassy_time::{Duration, TimeoutError, Timer, WithTimeout};
 use lokey::internal::MAX_MESSAGE_SIZE_WITH_TAG;
 use lokey::util::{debug, error, info, unwrap};
 use lokey::{Address, internal, storage};
@@ -191,13 +191,20 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
             };
             let client =
                 // TODO: Set MAX_SERVICES to the number of services
-                match GattClient::<_, DefaultPacketPool, 1>::new(ble_stack, &connection).await {
-                    Ok(v) => v,
-                    Err(e) => {
+                match GattClient::<_, DefaultPacketPool, 1>::new(ble_stack, &connection)
+                    .with_timeout(Duration::from_secs(1))
+                    .await
+                {
+                    Ok(Ok(v)) => v,
+                    Ok(Err(e)) => {
                         #[cfg(feature = "defmt")]
                         let e = defmt::Debug2Format(&e);
                         error!("Failed to create GATT client: {}", e);
                         Timer::after_secs(1).await;
+                        continue;
+                    }
+                    Err(TimeoutError) => {
+                        error!("Reached timeout while creating GATT client");
                         continue;
                     }
                 };
