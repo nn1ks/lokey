@@ -248,7 +248,7 @@ mod ble {
         type Controller = SoftdeviceController<'static>;
 
         fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {
-            &self.ble_stack
+            self.ble_stack
         }
 
         fn ble_host_central(
