@@ -21,10 +21,12 @@ use static_cell::StaticCell;
 use {
     embassy_nrf::mode::Async,
     embassy_nrf::rng::Rng,
+    embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+    embassy_sync::mutex::Mutex,
     nrf_sdc::SoftdeviceController,
     rand_chacha::ChaCha12Rng,
     rand_chacha::rand_core::SeedableRng,
-    trouble_host::prelude::DefaultPacketPool,
+    trouble_host::prelude::{Central, DefaultPacketPool, Peripheral, Runner},
     trouble_host::{HostResources, Stack},
 };
 
@@ -53,7 +55,22 @@ bind_interrupts!(struct Irqs {
 pub struct Nrf {
     mpsl: &'static MultiprotocolServiceLayer<'static>,
     #[cfg(feature = "ble")]
-    ble_stack: Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
+    ble_stack: &'static Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
+    #[cfg(feature = "ble")]
+    ble_host_central: Mutex<
+        CriticalSectionRawMutex,
+        Central<'static, SoftdeviceController<'static>, DefaultPacketPool>,
+    >,
+    #[cfg(feature = "ble")]
+    ble_host_peripheral: Mutex<
+        CriticalSectionRawMutex,
+        Peripheral<'static, SoftdeviceController<'static>, DefaultPacketPool>,
+    >,
+    #[cfg(feature = "ble")]
+    ble_host_runner: Mutex<
+        CriticalSectionRawMutex,
+        Runner<'static, SoftdeviceController<'static>, DefaultPacketPool>,
+    >,
 }
 
 impl Mcu for Nrf {
@@ -105,15 +122,36 @@ impl Mcu for Nrf {
             static RESOURCES: StaticCell<HostResources<DefaultPacketPool, 2, 4, 72>> =
                 StaticCell::new();
             let resources = RESOURCES.init(HostResources::new());
-            trouble_host::new(sdc, resources)
+            let ble_stack = trouble_host::new(sdc, resources)
                 .set_random_address(ble::device_address_to_ble_address(&address))
-                .set_random_generator_seed(&mut rng2)
+                .set_random_generator_seed(&mut rng2);
+
+            static BLE_STACK: StaticCell<
+                Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
+            > = StaticCell::new();
+            BLE_STACK.init(ble_stack)
+        };
+
+        #[cfg(feature = "ble")]
+        let (ble_host_central, ble_host_peripheral, ble_host_runner) = {
+            let ble_host = ble_stack.build();
+            (
+                Mutex::new(ble_host.central),
+                Mutex::new(ble_host.peripheral),
+                Mutex::new(ble_host.runner),
+            )
         };
 
         Self {
             mpsl,
             #[cfg(feature = "ble")]
             ble_stack,
+            #[cfg(feature = "ble")]
+            ble_host_central,
+            #[cfg(feature = "ble")]
+            ble_host_peripheral,
+            #[cfg(feature = "ble")]
+            ble_host_runner,
         }
     }
 
@@ -172,12 +210,14 @@ mod ble {
     use super::Nrf;
     use embassy_nrf::mode::Async;
     use embassy_nrf::rng::Rng;
+    use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+    use embassy_sync::mutex::Mutex;
     use lokey::Address;
     use lokey_ble::BleStack;
     use nrf_mpsl::MultiprotocolServiceLayer;
     use nrf_sdc::SoftdeviceController;
     use trouble_host::Stack;
-    use trouble_host::prelude::{AddrKind, BdAddr, DefaultPacketPool};
+    use trouble_host::prelude::{AddrKind, BdAddr, Central, DefaultPacketPool, Peripheral, Runner};
 
     pub fn build_sdc<'d, const N: usize>(
         p: nrf_sdc::Peripherals<'d>,
@@ -209,6 +249,27 @@ mod ble {
 
         fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {
             &self.ble_stack
+        }
+
+        fn ble_host_central(
+            &self,
+        ) -> &Mutex<CriticalSectionRawMutex, Central<'static, Self::Controller, DefaultPacketPool>>
+        {
+            &self.ble_host_central
+        }
+
+        fn ble_host_peripheral(
+            &self,
+        ) -> &Mutex<CriticalSectionRawMutex, Peripheral<'static, Self::Controller, DefaultPacketPool>>
+        {
+            &self.ble_host_peripheral
+        }
+
+        fn ble_host_runner(
+            &self,
+        ) -> &Mutex<CriticalSectionRawMutex, Runner<'static, Self::Controller, DefaultPacketPool>>
+        {
+            &self.ble_host_runner
         }
     }
 }

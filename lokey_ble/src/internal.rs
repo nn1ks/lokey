@@ -144,7 +144,8 @@ impl<Mcu: BleStack + 'static> internal::Transport for Transport<Mcu> {
 
 async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &'static [Address]) {
     let ble_stack = mcu.ble_stack();
-    let mut host = ble_stack.build();
+    let ble_host_central = mcu.ble_host_central();
+    let ble_host_runner = mcu.ble_host_runner();
 
     let filter_accept_list = peripheral_addresses
         .iter()
@@ -166,7 +167,7 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
 
     let run = async {
         loop {
-            if let Err(e) = host.runner.run().await {
+            if let Err(e) = ble_host_runner.lock().await.run().await {
                 #[cfg(feature = "defmt")]
                 let e = defmt::Debug2Format(&e);
                 error!("BLE run error: {}", e);
@@ -178,7 +179,7 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
     let connect = async {
         loop {
             debug!("Looking for BLE connection to peripheral");
-            let connection = match host.central.connect(&config).await {
+            let connection = match ble_host_central.lock().await.connect(&config).await {
                 Ok(v) => v,
                 Err(e) => {
                     #[cfg(feature = "defmt")]
@@ -317,8 +318,8 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
 }
 
 async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Address) {
-    let ble_stack = mcu.ble_stack();
-    let mut host = ble_stack.build();
+    let ble_host_peripheral = mcu.ble_host_peripheral();
+    let ble_host_runner = mcu.ble_host_runner();
 
     let adv_params = AdvertisementParameters::default();
     let adv = Advertisement::ConnectableNonscannableDirected {
@@ -329,7 +330,7 @@ async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Add
 
     let run = async {
         loop {
-            if let Err(e) = host.runner.run().await {
+            if let Err(e) = ble_host_runner.lock().await.run().await {
                 #[cfg(feature = "defmt")]
                 let e = defmt::Debug2Format(&e);
                 error!("BLE run error: {}", e);
@@ -341,7 +342,12 @@ async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Add
     let connect = async {
         loop {
             info!("Starting BLE advertisement");
-            let advertiser = match host.peripheral.advertise(&adv_params, adv).await {
+            let advertiser = match ble_host_peripheral
+                .lock()
+                .await
+                .advertise(&adv_params, adv)
+                .await
+            {
                 Ok(v) => v,
                 Err(e) => {
                     #[cfg(feature = "defmt")]

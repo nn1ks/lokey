@@ -15,10 +15,13 @@ keywords = ["firmware"]
 default-target = "thumbv7em-none-eabihf"
 
 [features]
+default = ["nrf52840"]
+
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
   "embassy-nrf/defmt",
+  "embassy-sync?/defmt",
   "embassy-usb?/defmt",
   "lokey/defmt",
   "lokey_ble?/defmt",
@@ -36,6 +39,7 @@ usb = [
 
 ## Enables support for Bluetooth Low Energy (BLE).
 ble = [
+  "dep:embassy-sync",
   "dep:lokey_ble",
   "dep:trouble-host",
   "dep:rand_chacha",
@@ -51,11 +55,13 @@ nrf52840 = [
   "nrf-mpsl?/nrf52840",
   "nrf-sdc?/nrf52840",
 ]
+embassy-sync = ["dep:embassy-sync"]
 
 [dependencies]
 defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 embassy-nrf = { version = "0.9.0", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"] }
+embassy-sync = { version = "0.7.2", optional = true }
 embassy-usb = { version = "0.6.0", optional = true }
 lokey = { path = "../lokey" }
 lokey_ble = { path = "../lokey_ble", optional = true }

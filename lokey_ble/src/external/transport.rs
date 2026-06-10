@@ -114,11 +114,12 @@ where
         };
 
         let ble_stack = self.mcu.ble_stack();
-        let mut host = ble_stack.build();
+        let ble_host_peripheral = self.mcu.ble_host_peripheral();
+        let ble_host_runner = self.mcu.ble_host_runner();
 
         let run = async {
             loop {
-                if let Err(e) = host.runner.run().await {
+                if let Err(e) = ble_host_runner.lock().await.run().await {
                     #[cfg(feature = "defmt")]
                     let e = defmt::Debug2Format(&e);
                     error!("BLE run error: {}", e);
@@ -223,7 +224,7 @@ where
                     .await;
 
                 let advertiser = match select(
-                    host.peripheral.advertise(&adv_params, adv),
+                    ble_host_peripheral.lock().await.advertise(&adv_params, adv),
                     cancel_advertisement.wait(),
                 )
                 .await
