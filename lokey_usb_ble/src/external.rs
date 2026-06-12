@@ -1,4 +1,4 @@
-use embassy_futures::join::join;
+use embassy_futures::join::join4;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
@@ -109,7 +109,7 @@ where
         }
     }
 
-    async fn run<Storage>(&self, _: &'static Storage)
+    async fn run<Storage>(&self, storage: &'static Storage)
     where
         Storage: storage::Storage,
     {
@@ -155,7 +155,13 @@ where
             }
         };
 
-        join(handle_activation_request, handle_internal_messages).await;
+        join4(
+            handle_activation_request,
+            handle_internal_messages,
+            self.usb_transport.run(storage),
+            self.ble_transport.run(storage),
+        )
+        .await;
     }
 
     async fn send(&self, message: Self::TxMessage) {
