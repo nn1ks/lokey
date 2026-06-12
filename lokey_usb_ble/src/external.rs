@@ -122,9 +122,12 @@ where
                     Either::Second(()) => TransportSelection::Ble,
                 };
                 info!("Setting active transport to {}", transport_selection);
-                let mut active = self.active.lock().await;
-                let previous_transport_selection = *active;
-                *active = transport_selection;
+                let previous_transport_selection = {
+                    let mut active = self.active.lock().await;
+                    let v = *active;
+                    *active = transport_selection;
+                    v
+                };
                 if self.deactivate_unused_transport
                     && previous_transport_selection != transport_selection
                 {
@@ -156,16 +159,16 @@ where
     }
 
     async fn send(&self, message: Self::TxMessage) {
-        let active = self.active.lock().await;
-        match *active {
+        let active = self.active.lock().await.clone();
+        match active {
             TransportSelection::Usb => self.usb_transport.send(message).await,
             TransportSelection::Ble => self.ble_transport.send(message).await,
         }
     }
 
     async fn receive(&self) -> Self::RxMessage {
-        let active = self.active.lock().await;
-        match *active {
+        let active = self.active.lock().await.clone();
+        match active {
             TransportSelection::Usb => self.usb_transport.receive().await,
             TransportSelection::Ble => self.ble_transport.receive().await,
         }
@@ -173,14 +176,14 @@ where
 
     async fn set_active(&self, value: bool) -> bool {
         if value && self.deactivate_unused_transport {
-            let active = self.active.lock().await;
+            let active = self.active.lock().await.clone();
             let usb_supported = self
                 .usb_transport
-                .set_active(*active == TransportSelection::Usb)
+                .set_active(active == TransportSelection::Usb)
                 .await;
             let ble_supported = self
                 .ble_transport
-                .set_active(*active == TransportSelection::Ble)
+                .set_active(active == TransportSelection::Ble)
                 .await;
             usb_supported || ble_supported
         } else {
