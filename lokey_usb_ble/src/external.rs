@@ -165,7 +165,7 @@ where
     }
 
     async fn send(&self, message: Self::TxMessage) {
-        let active = self.active.lock().await.clone();
+        let active = *self.active.lock().await;
         match active {
             TransportSelection::Usb => self.usb_transport.send(message).await,
             TransportSelection::Ble => self.ble_transport.send(message).await,
@@ -173,7 +173,7 @@ where
     }
 
     async fn receive(&self) -> Self::RxMessage {
-        let active = self.active.lock().await.clone();
+        let active = *self.active.lock().await;
         match active {
             TransportSelection::Usb => self.usb_transport.receive().await,
             TransportSelection::Ble => self.ble_transport.receive().await,
@@ -182,7 +182,7 @@ where
 
     async fn set_active(&self, value: bool) -> bool {
         if value && self.deactivate_unused_transport {
-            let active = self.active.lock().await.clone();
+            let active = *self.active.lock().await;
             let usb_supported = self
                 .usb_transport
                 .set_active(active == TransportSelection::Usb)
