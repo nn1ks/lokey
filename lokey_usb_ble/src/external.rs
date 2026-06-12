@@ -7,6 +7,8 @@ use embassy_time::Duration;
 use generic_array::GenericArray;
 use lokey::util::{error, info, unwrap};
 use lokey::{Address, external, internal, storage};
+use lokey_ble::BleStack;
+use lokey_usb::CreateDriver;
 use trouble_host::prelude::{BluetoothUuid16, appearance};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -50,32 +52,20 @@ impl internal::Message for Message {
     }
 }
 
-pub struct Transport<Usb, Ble> {
-    usb_transport: Usb,
-    ble_transport: Ble,
+pub struct Transport<Mcu: 'static, TxMessage, RxMessage> {
+    usb_transport: lokey_usb::external::Transport<Mcu, TxMessage, RxMessage>,
+    ble_transport: lokey_ble::external::Transport<Mcu, TxMessage, RxMessage>,
     active: Mutex<CriticalSectionRawMutex, TransportSelection>,
     activation_request: Signal<CriticalSectionRawMutex, ()>,
     deactivate_unused_transport: bool,
     internal_channel: internal::DynChannelRef<'static>,
 }
 
-impl<Usb, Ble, Mcu, TxMessage, RxMessage> external::Transport for Transport<Usb, Ble>
+impl<Mcu, TxMessage, RxMessage> external::Transport for Transport<Mcu, TxMessage, RxMessage>
 where
-    Usb: external::Transport<
-            Config = lokey_usb::external::TransportConfig,
-            Mcu = Mcu,
-            TxMessage = TxMessage,
-            RxMessage = RxMessage,
-        >,
-    Ble: external::Transport<
-            Config = lokey_ble::external::TransportConfig,
-            Mcu = Mcu,
-            TxMessage = TxMessage,
-            RxMessage = RxMessage,
-        >,
-    Mcu: 'static,
-    TxMessage: external::Message,
-    RxMessage: external::Message,
+    Mcu: 'static + CreateDriver + BleStack,
+    TxMessage: external::Message + lokey_usb::external::TxMessage + lokey_ble::external::TxMessage,
+    RxMessage: external::Message + lokey_usb::external::RxMessage + lokey_ble::external::RxMessage,
 {
     type Config = TransportConfig;
     type Mcu = Mcu;
@@ -91,10 +81,20 @@ where
     where
         U: internal::Transport<Mcu = Self::Mcu>,
     {
-        let usb_transport =
-            Usb::create(config.to_usb_config(), mcu, address, internal_channel).await;
-        let ble_transport =
-            Ble::create(config.to_ble_config(), mcu, address, internal_channel).await;
+        let usb_transport = lokey_usb::external::Transport::create(
+            config.to_usb_config(),
+            mcu,
+            address,
+            internal_channel,
+        )
+        .await;
+        let ble_transport = lokey_ble::external::Transport::create(
+            config.to_ble_config(),
+            mcu,
+            address,
+            internal_channel,
+        )
+        .await;
 
         let active = Mutex::new(TransportSelection::Ble);
         let activation_request = Signal::new();
