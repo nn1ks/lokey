@@ -41,7 +41,7 @@ usb = ["dep:embassy-usb", "dep:usbd-hid", "dep:lokey-usb"]
 ## Enables the external message service for the BLE (Bluetooth Low Energy) transport.
 ble = ["dep:trouble-host", "dep:usbd-hid", "dep:lokey-ble"]
 
-## Enables actions to switch between USB and BLE output when using the external transport from [`lokey-usb-ble`].
+## Enables actions to switch between USB and BLE output when using the external transport from [`lokey_usb_ble`].
 usb-ble = ["dep:lokey-usb-ble"]
 
 [dependencies]
