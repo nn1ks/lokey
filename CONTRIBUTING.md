@@ -35,20 +35,20 @@ This repository is organized as a Cargo workspace with multiple crates. The entr
 **Crates:**
 
 - **`lokey`** – Core crate
-- **`lokey_macros`** – Macro crate for `lokey`
-- **`lokey_usb`** – Feature crate for USB transports
-- **`lokey_usb_macros`** – Macro crate for `lokey_usb`
-- **`lokey_ble`** – Feature crate for BLE transports
-- **`lokey_ble_macros`** – Macro crate for `lokey_ble`
-- **`lokey_usb_ble`** – Feature crate for a combined USB and BLE transport
-- **`lokey_nrf`** – Feature crate for nRF microcontroller support
-- **`lokey_rp`** – Feature crate for Raspberry Pi RP2040 and RP235x microcontroller support
-- **`lokey_keyboard`** – Feature crate for keyboard-related functionality
-- **`lokey_keyboard_macros`** – Macro crate for `lokey_keyboard`
-- **`lokey_mouse`** – Feature crate for mouse-related functionality
-- **`lokey_midi`** – Feature crate for MIDI controllers
-- **`lokey_layer`** – Feature crate for managing layers
-- **`lokey_led_array`** – Feature crate for a LED array component
+- **`lokey-macros`** – Macro crate for `lokey`
+- **`lokey-usb`** – Feature crate for USB transports
+- **`lokey-usb-macros`** – Macro crate for `lokey-usb`
+- **`lokey-ble`** – Feature crate for BLE transports
+- **`lokey-ble-macros`** – Macro crate for `lokey-ble`
+- **`lokey-usb-ble`** – Feature crate for a combined USB and BLE transport
+- **`lokey-nrf`** – Feature crate for nRF microcontroller support
+- **`lokey-rp`** – Feature crate for Raspberry Pi RP2040 and RP235x microcontroller support
+- **`lokey-keyboard`** – Feature crate for keyboard-related functionality
+- **`lokey-keyboard-macros`** – Macro crate for `lokey-keyboard`
+- **`lokey-mouse`** – Feature crate for mouse-related functionality
+- **`lokey-midi`** – Feature crate for MIDI controllers
+- **`lokey-layer`** – Feature crate for managing layers
+- **`lokey-led-array`** – Feature crate for a LED array component
 
 **Miscellaneous:**
 
@@ -80,9 +80,9 @@ cargo fmt
 Run clippy and make sure no warnings or errors are produced:
 
 ```sh
-cargo clippy --workspace --exclude lokey_nrf --exclude lokey_rp --all-features
-cargo clippy -p lokey_nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
-cargo clippy -p lokey_rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
+cargo clippy --workspace --exclude lokey-nrf --exclude lokey-rp --all-features
+cargo clippy -p lokey-nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
+cargo clippy -p lokey-rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
 ```
 
 > [!NOTE]
@@ -93,9 +93,9 @@ cargo clippy -p lokey_rp --features "defmt usb rp2040" --target thumbv6m-none-ea
 The unit tests and doc tests can be run with the following commands:
 
 ```sh
-cargo test --workspace --exclude lokey_nrf --exclude lokey_rp --all-features
-cargo test -p lokey_nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
-cargo test -p lokey_rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
+cargo test --workspace --exclude lokey-nrf --exclude lokey-rp --all-features
+cargo test -p lokey-nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
+cargo test -p lokey-rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
 ```
 
 > [!NOTE]
