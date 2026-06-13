@@ -38,6 +38,10 @@
 
           # Docs website
           nodejs
+          package-version-server
+
+          # Nix
+          nixd
         ];
       in {
         # `nix develop`
