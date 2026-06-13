@@ -2,25 +2,25 @@
 resolver = "2"
 members = [
     "lokey",
-    "lokey_macros",
-    "lokey_usb",
-    "lokey_usb_macros",
-    "lokey_ble",
-    "lokey_ble_macros",
-    "lokey_usb_ble",
-    "lokey_nrf",
-    "lokey_rp",
-    "lokey_keyboard",
-    "lokey_keyboard_macros",
-    "lokey_mouse",
-    "lokey_midi",
-    "lokey_layer",
-    "lokey_led_array",
+    "lokey-macros",
+    "lokey-usb",
+    "lokey-usb-macros",
+    "lokey-ble",
+    "lokey-ble-macros",
+    "lokey-usb-ble",
+    "lokey-nrf",
+    "lokey-rp",
+    "lokey-keyboard",
+    "lokey-keyboard-macros",
+    "lokey-mouse",
+    "lokey-midi",
+    "lokey-layer",
+    "lokey-led-array",
 ]
 exclude = [
-    "examples/lokey_blink",
-    "examples/keyboard_nrf52840",
-    "examples/keyboard_rp2040"
+    "examples/lokey-blink",
+    "examples/keyboard-nrf52840",
+    "examples/keyboard-rp2040"
 ]
 
 [profile.release]

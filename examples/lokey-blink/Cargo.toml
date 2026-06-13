@@ -1,0 +1,27 @@
+[package]
+name = "lokey-blink"
+version = "0.0.0"
+edition = "2024"
+authors = ["Niklas Sauter <niklas@n1ks.net>"]
+repository = "https://github.com/nn1ks/lokey"
+license = "Apache-2.0 OR MIT"
+description = "LED blink component for the lokey framework"
+categories = ["embedded", "no-std"]
+
+[features]
+defmt = [
+    "dep:defmt",
+    "embassy-sync/defmt",
+    "embassy-time/defmt",
+    "embedded-hal/defmt-03",
+    "lokey/defmt",
+]
+
+[dependencies]
+arrayvec = { version = "0.7.6", default-features = false }
+defmt = { version = "1.0.1", optional = true }
+document-features = "0.2.11"
+embassy-sync = "0.7.2"
+embassy-time = "0.5.0"
+embedded-hal = "1.0.0"
+lokey = { path = "../../lokey" }

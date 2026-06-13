@@ -1,0 +1,50 @@
+cargo-features = ["per-package-target"]
+
+[package]
+name = "keyboard-nrf52840"
+version = "0.0.0"
+edition = "2024"
+
+default-target = "thumbv7em-none-eabihf"
+
+[features]
+default = ["defmt"]
+
+defmt = [
+    "dep:defmt",
+    "dep:defmt-rtt",
+    "embassy-executor/defmt",
+    "embassy-nrf/defmt",
+    "embassy-sync/defmt",
+    "embassy-time/defmt",
+    "lokey/defmt",
+    "lokey-ble/defmt",
+    "lokey-blink/defmt",
+    "lokey-keyboard/defmt",
+    "lokey-layer/defmt",
+    "lokey-led-array/defmt",
+    "lokey-nrf/defmt",
+    "lokey-usb/defmt",
+    "lokey-usb-ble/defmt",
+    "panic-probe/print-defmt",
+]
+
+[dependencies]
+cortex-m-rt = "0.7.0"
+defmt = { version = "1.0.1", optional = true }
+defmt-rtt = { version = "1.1.0", optional = true }
+embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread"] }
+embassy-nrf = { version = "0.9.0", features = ["nrf52840"] }
+embassy-sync = "0.7.2"
+embassy-time = "0.5.0"
+lokey = { path = "../../lokey", features = ["internal-receiver-slots-8", "external-receiver-slots-8", "external-observer-slots-8"] }
+lokey-ble = { path = "../../lokey-ble" }
+lokey-blink = { path = "../lokey-blink" }
+lokey-keyboard = { path = "../../lokey-keyboard", features = ["usb", "ble"] }
+lokey-layer = { path = "../../lokey-layer" }
+lokey-led-array = { path = "../../lokey-led-array", features = ["ble", "nrf52840"] }
+lokey-nrf = { path = "../../lokey-nrf", features = ["nrf52840", "usb", "ble"] }
+lokey-usb = { path = "../../lokey-usb" }
+lokey-usb-ble = { path = "../../lokey-usb-ble" }
+panic-probe = "1.0.0"
+typenum = { version = "1.19.0", features = ["const-generics"] }

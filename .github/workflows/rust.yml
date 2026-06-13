@@ -62,7 +62,7 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           cargo test -p lokey --verbose --target ${{ matrix.target }}
-  lokey_usb:
+  lokey-usb:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -82,7 +82,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo build -p lokey_usb --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo build -p lokey-usb --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -90,14 +90,14 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_usb --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo clippy -p lokey-usb --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_usb --verbose --target ${{ matrix.target }}
-  lokey_ble:
+          cargo test -p lokey-usb --verbose --target ${{ matrix.target }}
+  lokey-ble:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -117,7 +117,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo build -p lokey_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo build -p lokey-ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -125,14 +125,14 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo clippy -p lokey-ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_ble --verbose --target ${{ matrix.target }}
-  lokey_usb_ble:
+          cargo test -p lokey-ble --verbose --target ${{ matrix.target }}
+  lokey-usb-ble:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -152,7 +152,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo build -p lokey_usb_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo build -p lokey-usb-ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -160,14 +160,14 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_usb_ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo clippy -p lokey-usb-ble --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_usb_ble --verbose --target ${{ matrix.target }}
-  lokey_nrf:
+          cargo test -p lokey-usb-ble --verbose --target ${{ matrix.target }}
+  lokey-nrf:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -191,7 +191,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo build -p lokey_nrf --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo build -p lokey-nrf --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -199,13 +199,13 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo clippy -p lokey_nrf --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo clippy -p lokey-nrf --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run doc tests
         run: |
-          cargo test -p lokey_nrf --verbose --doc --target ${{ matrix.target }} --features "${{ matrix.mcu_features }}"
-  lokey_rp:
+          cargo test -p lokey-nrf --verbose --doc --target ${{ matrix.target }} --features "${{ matrix.mcu_features }}"
+  lokey-rp:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -229,7 +229,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo build -p lokey_rp --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo build -p lokey-rp --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -237,13 +237,13 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo clippy -p lokey_rp --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo clippy -p lokey-rp --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run doc tests
         run: |
-          cargo test -p lokey_rp --verbose --doc --target ${{ matrix.target }} --features "${{ matrix.mcu_features }}"
-  lokey_keyboard:
+          cargo test -p lokey-rp --verbose --doc --target ${{ matrix.target }} --features "${{ matrix.mcu_features }}"
+  lokey-keyboard:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -263,7 +263,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo build -p lokey_keyboard --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo build -p lokey-keyboard --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -271,14 +271,14 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_keyboard --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo clippy -p lokey-keyboard --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_keyboard --verbose --target ${{ matrix.target }} --features "usb ble usb-ble"
-  lokey_mouse:
+          cargo test -p lokey-keyboard --verbose --target ${{ matrix.target }} --features "usb ble usb-ble"
+  lokey-mouse:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -298,7 +298,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo build -p lokey_mouse --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo build -p lokey-mouse --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -306,14 +306,14 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_mouse --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo clippy -p lokey-mouse --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_mouse --verbose --target ${{ matrix.target }} --features "keyboard-actions usb ble"
-  lokey_midi:
+          cargo test -p lokey-mouse --verbose --target ${{ matrix.target }} --features "keyboard-actions usb ble"
+  lokey-midi:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -333,7 +333,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo build -p lokey_midi --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo build -p lokey-midi --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -341,14 +341,14 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_midi --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo clippy -p lokey-midi --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_midi --verbose --target ${{ matrix.target }} --features "keyboard-actions usb ble"
-  lokey_layer:
+          cargo test -p lokey-midi --verbose --target ${{ matrix.target }} --features "keyboard-actions usb ble"
+  lokey-layer:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -368,7 +368,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo build -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo build -p lokey-layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -376,14 +376,14 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features\""
-            cargo clippy -p lokey_layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            cargo clippy -p lokey-layer --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
             echo "::endgroup::"
           done
       - name: Run tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_layer --verbose --target ${{ matrix.target }}
-  lokey_led_array:
+          cargo test -p lokey-layer --verbose --target ${{ matrix.target }}
+  lokey-led-array:
     runs-on: ubuntu-latest
     if: always()
     strategy:
@@ -410,7 +410,7 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo build -p lokey_led_array --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo build -p lokey-led-array --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run clippy
@@ -418,26 +418,26 @@ jobs:
           export IFS=";"
           for features in $FEATURE_COMBINATIONS; do
             echo "::group::Features: \"$features ${{ matrix.mcu_features }}\""
-            cargo clippy -p lokey_led_array --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
+            cargo clippy -p lokey-led-array --verbose --target ${{ matrix.target }} --no-default-features --features "$features ${{ matrix.mcu_features }}"
             echo "::endgroup::"
           done
       - name: Run doc tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey_led_array --verbose --target ${{ matrix.target }} --features "ble"
+          cargo test -p lokey-led-array --verbose --target ${{ matrix.target }} --features "ble"
   examples:
     runs-on: ubuntu-latest
     if: always()
     strategy:
       fail-fast: false
       matrix:
-        example: [lokey_blink, keyboard_nrf52840, keyboard_rp2040]
+        example: [lokey-blink, keyboard-nrf52840, keyboard-rp2040]
         include:
-          - example: lokey_blink
+          - example: lokey-blink
             feature_combinations: ";defmt"
-          - example: keyboard_nrf52840
+          - example: keyboard-nrf52840
             feature_combinations: ";defmt"
-          - example: keyboard_rp2040
+          - example: keyboard-rp2040
             feature_combinations: ";defmt"
     env:
       FEATURE_COMBINATIONS: "${{ matrix.feature_combinations }}"
