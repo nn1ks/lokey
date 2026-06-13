@@ -1,0 +1,34 @@
+{
+  "load_direnv": "shell_hook",
+  "languages": {
+    "CSS": {
+      "tab_size": 2,
+      "hard_tabs": false,
+    },
+    "Markdown": {
+      "tab_size": 2,
+      "hard_tabs": false,
+    },
+  },
+  "lsp": {
+    "rust-analyzer": {
+      "binary": {
+        "path": "rust-analyzer",
+      },
+      "initialization_options": {
+        "check": {
+          "command": "clippy",
+        },
+        "cargo": {
+          "features": "all",
+        },
+        "linkedProjects": [
+          "Cargo.toml",
+          "examples/lokey_blink/Cargo.toml",
+          "examples/keyboard_nrf52840/Cargo.toml",
+          "examples/keyboard_rp2040/Cargo.toml",
+        ],
+      },
+    },
+  },
+}
