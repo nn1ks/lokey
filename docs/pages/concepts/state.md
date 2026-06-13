@@ -34,7 +34,7 @@ let my_value = State::<MyValue>::get(context.state);
 
 Queries are useful when callers should depend on a lightweight view instead of the exact stored type.
 
-This is especially helpful for generic state entries. For example, [`LayerManager`](https://docs.rs/lokey_layer/latest/lokey_layer/struct.LayerManager.html) has const generics, but keyboard actions typically only need a stable query interface. In that case, the caller can work with [`LayerManagerQuery`](https://docs.rs/lokey_layer/latest/lokey_layer/struct.LayerManagerQuery.html) instead of the exact `LayerManager<N>` type.
+This is especially helpful for generic state entries. For example, [`LayerManager`](https://docs.rs/lokey-layer/latest/lokey_layer/struct.LayerManager.html) has const generics, but keyboard actions typically only need a stable query interface. In that case, the caller can work with [`LayerManagerQuery`](https://docs.rs/lokey-layer/latest/lokey_layer/struct.LayerManagerQuery.html) instead of the exact `LayerManager<N>` type.
 
 To make a field queryable:
 

@@ -87,4 +87,4 @@ The following storage implementations are provided:
 - [`lokey::storage::DefaultStorage`](https://docs.rs/lokey/latest/lokey/storage/struct.DefaultStorage.html) – A flash-backed map storage implementation
 - [`lokey::storage::EmptyStorage`](https://docs.rs/lokey/latest/lokey/storage/struct.EmptyStorage.html) – A no-op storage useful for devices that do not require persistent storage
 
-Crates that provide MCU support (for example `lokey_nrf` and `lokey_rp`) typically expose a `DefaultStorageDriver` that creates a `DefaultStorage` configured for the chip's flash layout.
+Crates that provide MCU support (for example `lokey-nrf` and `lokey-rp`) typically expose a `DefaultStorageDriver` that creates a `DefaultStorage` configured for the chip's flash layout.

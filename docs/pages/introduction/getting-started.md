@@ -10,21 +10,21 @@ Before starting to work with the lokey framework, it is important to understand 
 
 - **Feature crates**
 
-    Feature crates provide specific functionality or a related group of capabilities. These crates are named `lokey_<feature>`.
+    Feature crates provide specific functionality or a related group of capabilities. These crates are named `lokey-<feature>`.
 
     ::: info EXAMPLES
-    - The [`lokey_usb`](https://docs.rs/lokey_usb) crate contains an external transport for sending messages over USB.
-    - The [`lokey_nrf`](https://docs.rs/lokey_nrf) crate adds support for the nRF series of microcontrollers.
-    - The [`lokey_keyboard`](https://docs.rs/lokey_keyboard) crate contains implementations for key scanning, keyboard layouts, and other keyboard-related features.
-    - The [`lokey_layer`](https://docs.rs/lokey_layer) crate contains functionality for managing layers.
+    - The [`lokey-usb`](https://docs.rs/lokey-usb) crate contains an external transport for sending messages over USB.
+    - The [`lokey-nrf`](https://docs.rs/lokey-nrf) crate adds support for the nRF series of microcontrollers.
+    - The [`lokey-keyboard`](https://docs.rs/lokey-keyboard) crate contains implementations for key scanning, keyboard layouts, and other keyboard-related features.
+    - The [`lokey-layer`](https://docs.rs/lokey-layer) crate contains functionality for managing layers.
     :::
 
 - **Device crates**
 
-    Device crates add support for a specific device or a group of devices. These crates are named `lokey_device_<device_name>`.
+    Device crates add support for a specific device or a group of devices. These crates are named `lokey-device-<device_name>`.
 
     ::: info EXAMPLES
-    - A crate `lokey_device_corne` would add support for the [Corne keyboard](https://github.com/foostan/crkbd) by defining a device type (or two, since it is a split keyboard) and implementing the relevant keyboard components (e.g. by specifying which keys are connected to which pins of the microcontroller).
+    - A crate `lokey-device-corne` would add support for the [Corne keyboard](https://github.com/foostan/crkbd) by defining a device type (or two, since it is a split keyboard) and implementing the relevant keyboard components (e.g. by specifying which keys are connected to which pins of the microcontroller).
     :::
 
 - **Binary crates**

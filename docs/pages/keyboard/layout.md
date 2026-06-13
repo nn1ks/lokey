@@ -1,6 +1,6 @@
 # Layout
 
-The [`Layout`](https://docs.rs/lokey_keyboard/latest/lokey_keyboard/struct.Layout.html) component maps keys to actions and executes those actions when the corresponding keys are pressed, as reported by the [`Scanner`](https://docs.rs/lokey_keyboard/latest/lokey_keyboard/struct.Scanner.html) component.
+The [`Layout`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/struct.Layout.html) component maps keys to actions and executes those actions when the corresponding keys are pressed, as reported by the [`Scanner`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/struct.Scanner.html) component.
 
 ::: info
 The `Layout` component only needs to be used if the device is supposed to handle actions and, for example, send key codes to the host. If the device never connects to the host (e.g., the peripheral part of a split keyboard), only the `Scanner` component is needed.
@@ -8,7 +8,7 @@ The `Layout` component only needs to be used if the device is supposed to handle
 
 ## Defining a Layout
 
-A layout can be created either using the [`Layout::new`](https://docs.rs/lokey_keyboard/latest/lokey_keyboard/struct.Layout.html#method.new) method or by using the [`layout!`](https://docs.rs/lokey_keyboard/latest/lokey_keyboard/macro.layout.html) macro.
+A layout can be created either using the [`Layout::new`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/struct.Layout.html#method.new) method or by using the [`layout!`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/macro.layout.html) macro.
 
 ### Example
 

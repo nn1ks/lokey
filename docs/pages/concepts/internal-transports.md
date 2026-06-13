@@ -68,4 +68,4 @@ where
 The following internal transport implementations are provided:
 
 - [`lokey::internal::empty::Transport`](https://docs.rs/lokey/latest/lokey/internal/empty/struct.Transport.html) – Internal transport that does nothing
-- [`lokey_ble::internal::Transport`](https://docs.rs/lokey_ble/latest/lokey_ble/internal/struct.Transport.html) – BLE (Bluetooth Low Energy) internal transport
+- [`lokey_ble::internal::Transport`](https://docs.rs/lokey-ble/latest/lokey_ble/internal/struct.Transport.html) – BLE (Bluetooth Low Energy) internal transport
