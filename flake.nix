@@ -8,8 +8,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, utils, fenix }:
-    utils.lib.eachDefaultSystem(system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      utils,
+      fenix,
+    }:
+    utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -43,7 +50,8 @@
           # Nix
           nixd
         ];
-      in {
+      in
+      {
         # `nix develop`
         devShell = pkgs.mkShell {
           inherit buildInputs;
