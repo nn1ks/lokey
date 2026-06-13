@@ -63,7 +63,7 @@ Picture was generated with the command:
     cargo depgraph --build-deps --workspace-only --all-features | dot -Tpng > dependency_graph.png
 -->
 
-![Dependency Graph](dependency_graph.png)
+![Dependency Graph](dependency-graph.png)
 
 - Solid line: required dependency
 - Dotted line: optional dependency
