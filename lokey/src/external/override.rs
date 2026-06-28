@@ -258,7 +258,7 @@ where
             match InnerTxMessage::try_from_message(message.clone()) {
                 Ok(message) => {
                     message_override
-                        .override_message(message, &sender.inner_message_sender)
+                        .override_message(message, sender.inner_message_sender)
                         .await;
                     sender.inner_message_sender.send_end().await;
                 }
@@ -314,7 +314,7 @@ where
             loop {
                 match final_channel.receive().await {
                     Message::End => break,
-                    Message::TxMessage(v) => sender.send(v.into()).await,
+                    Message::TxMessage(v) => sender.send(v).await,
                 }
             }
         };
