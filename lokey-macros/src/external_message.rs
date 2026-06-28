@@ -146,6 +146,21 @@ fn external_message_derive_enum(
                 ::core::result::Result::Err(#crate_path::external::MismatchedMessageType)
             }
         }
+
+        #(impl #crate_path::external::TryFromMessage<#ident> for #variant_types {
+            fn try_from_message(value: #ident) -> Result<Self, #crate_path::external::MismatchedMessageType> {
+                match value {
+                    #ident::#variant_names(v) => Ok(v),
+                    _ => Err(#crate_path::external::MismatchedMessageType),
+                }
+            }
+        })*
+
+        #(impl ::core::convert::From<#variant_types> for #ident {
+            fn from(value: #variant_types) -> Self {
+                #ident::#variant_names(value)
+            }
+        })*
     }
     .into()
 }
