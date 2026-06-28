@@ -18,7 +18,7 @@ pub fn state_derive(item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_error]
-#[proc_macro_derive(ExternalMessage)]
+#[proc_macro_derive(ExternalMessage, attributes(external_message))]
 pub fn external_message_derive(item: TokenStream) -> TokenStream {
     external_message::external_message_derive(item)
 }

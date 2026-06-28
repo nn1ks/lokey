@@ -1,40 +1,66 @@
+use darling::FromDeriveInput;
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::spanned::Spanned;
 use syn::{DeriveInput, parse_macro_input};
 
+#[derive(FromDeriveInput)]
+#[darling(attributes(external_message))]
+struct ExternalMessageArgs {
+    #[darling(default, rename = "crate")]
+    crate_: Option<syn::Path>,
+}
+
 pub fn external_message_derive(item: TokenStream) -> TokenStream {
-    let DeriveInput { ident, data, .. } = parse_macro_input!(item);
-    match data {
-        syn::Data::Enum(data_enum) => external_message_derive_enum(ident, data_enum),
-        syn::Data::Struct(_) => external_message_derive_struct(ident),
-        syn::Data::Union(_) => external_message_derive_struct(ident),
+    let input: DeriveInput = parse_macro_input!(item);
+    let args = match ExternalMessageArgs::from_derive_input(&input) {
+        Ok(args) => args,
+        Err(e) => return e.write_errors().into(),
+    };
+
+    let crate_path: TokenStream2 = args
+        .crate_
+        .as_ref()
+        .map(|p| quote! { #p })
+        .unwrap_or_else(|| quote! { ::lokey });
+
+    match input.data {
+        syn::Data::Enum(data_enum) => {
+            external_message_derive_enum(input.ident, data_enum, crate_path)
+        }
+        syn::Data::Struct(_) => external_message_derive_struct(input.ident, crate_path),
+        syn::Data::Union(_) => external_message_derive_struct(input.ident, crate_path),
     }
 }
 
-fn external_message_derive_struct(ident: syn::Ident) -> TokenStream {
+fn external_message_derive_struct(ident: syn::Ident, crate_path: TokenStream2) -> TokenStream {
     quote! {
-        impl ::lokey::external::Message for #ident {
-            fn has_inner_message<M: ::lokey::external::Message>() -> bool {
+        impl #crate_path::external::Message for #ident {
+            fn has_inner_message<M: #crate_path::external::Message>() -> bool {
                 false
             }
 
-            fn inner_message<M: ::lokey::external::Message>(&self) -> ::core::option::Option<&M> {
+            fn inner_message<M: #crate_path::external::Message>(&self) -> ::core::option::Option<&M> {
                 ::core::option::Option::None
             }
 
-            fn try_from_inner_message(value: &dyn ::core::any::Any) -> ::core::result::Result<Self, ::lokey::external::MismatchedMessageType>
+            fn try_from_inner_message(value: &dyn ::core::any::Any) -> ::core::result::Result<Self, #crate_path::external::MismatchedMessageType>
             where
                 Self: ::core::marker::Sized,
             {
-                ::core::result::Result::Err(::lokey::external::MismatchedMessageType)
+                ::core::result::Result::Err(#crate_path::external::MismatchedMessageType)
             }
         }
     }
     .into()
 }
 
-fn external_message_derive_enum(ident: syn::Ident, data_enum: syn::DataEnum) -> TokenStream {
+fn external_message_derive_enum(
+    ident: syn::Ident,
+    data_enum: syn::DataEnum,
+    crate_path: TokenStream2,
+) -> TokenStream {
     let variant_names = data_enum
         .variants
         .iter()
@@ -74,16 +100,16 @@ fn external_message_derive_enum(ident: syn::Ident, data_enum: syn::DataEnum) -> 
     let variant_types = variant_fields.iter().map(|f| &f.ty).collect::<Vec<_>>();
 
     quote! {
-        impl ::lokey::external::Message for #ident {
-            fn has_inner_message<M: ::lokey::external::Message>() -> bool {
+        impl #crate_path::external::Message for #ident {
+            fn has_inner_message<M: #crate_path::external::Message>() -> bool {
                 false
                 #(
                     || ::core::any::TypeId::of::<M>() == ::core::any::TypeId::of::<#variant_types>()
-                    || <#variant_types as ::lokey::external::Message>::has_inner_message::<M>()
+                    || <#variant_types as #crate_path::external::Message>::has_inner_message::<M>()
                 )*
             }
 
-            fn inner_message<M: ::lokey::external::Message>(&self) -> ::core::option::Option<&M> {
+            fn inner_message<M: #crate_path::external::Message>(&self) -> ::core::option::Option<&M> {
                 #(
                     if ::core::any::TypeId::of::<M>() == ::core::any::TypeId::of::<#variant_types>() {
                         if let Self::#variant_names(v) = self {
@@ -94,7 +120,7 @@ fn external_message_derive_enum(ident: syn::Ident, data_enum: syn::DataEnum) -> 
                 match self {
                     #(
                         Self::#variant_names(v) => {
-                            if let ::core::option::Option::Some(v) = <#variant_types as ::lokey::external::Message>::inner_message::<M>(v) {
+                            if let ::core::option::Option::Some(v) = <#variant_types as #crate_path::external::Message>::inner_message::<M>(v) {
                                 return ::core::option::Option::Some(v);
                             }
                         }
@@ -103,7 +129,7 @@ fn external_message_derive_enum(ident: syn::Ident, data_enum: syn::DataEnum) -> 
                 ::core::option::Option::None
             }
 
-            fn try_from_inner_message(value: &dyn ::core::any::Any) -> ::core::result::Result<Self, ::lokey::external::MismatchedMessageType>
+            fn try_from_inner_message(value: &dyn ::core::any::Any) -> ::core::result::Result<Self, #crate_path::external::MismatchedMessageType>
             where
                 Self: ::core::marker::Sized,
             {
@@ -113,11 +139,11 @@ fn external_message_derive_enum(ident: syn::Ident, data_enum: syn::DataEnum) -> 
                     }
                 )*
                 #(
-                    if let ::core::result::Result::Ok(v) = <#variant_types as ::lokey::external::Message>::try_from_inner_message(value) {
+                    if let ::core::result::Result::Ok(v) = <#variant_types as #crate_path::external::Message>::try_from_inner_message(value) {
                         return ::core::result::Result::Ok(Self::#variant_names(v));
                     }
                 )*
-                ::core::result::Result::Err(::lokey::external::MismatchedMessageType)
+                ::core::result::Result::Err(#crate_path::external::MismatchedMessageType)
             }
         }
     }
