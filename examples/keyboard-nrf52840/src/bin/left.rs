@@ -8,12 +8,12 @@ use lokey_blink::Blink;
 use lokey_keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, Layer, NoOp, ToggleExternalTransport,
 };
-use lokey_keyboard::{Key, KeyOverride, KeyOverrideEntry, MatrixConfig, Scanner, layout};
+use lokey_keyboard::{Key, KeyOverride, MatrixConfig, Scanner, layout};
 use lokey_layer::LayerId;
 use lokey_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, LedArray};
 
-fn key_override() -> KeyOverride<1> {
-    KeyOverride::new([KeyOverrideEntry::new(Key::LShift | Key::A, Key::E)])
+fn key_override() -> KeyOverride {
+    KeyOverride::new(Key::LShift | Key::A, Key::E)
 }
 
 #[lokey::device(message_override = key_override())]

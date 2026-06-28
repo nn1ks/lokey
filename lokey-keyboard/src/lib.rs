@@ -33,7 +33,7 @@ use enumset::EnumSet;
 pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
-pub use key_override::{KeyOverride, KeyOverrideEntry};
+pub use key_override::KeyOverride;
 use lokey::util::{debug, error, unwrap};
 use lokey::{AnyState, Component, Context, Device, DynContext, Transports, external, internal};
 /// Macro for building a [`Layout`].
