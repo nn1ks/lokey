@@ -13,9 +13,9 @@ pub mod ble;
 #[cfg(feature = "usb")]
 pub mod usb;
 
-use lokey::external::Message;
+use lokey::external::ExternalMessage;
 
-#[derive(Debug, Clone, PartialEq, Eq, Message)]
+#[derive(Debug, Clone, PartialEq, Eq, ExternalMessage)]
 pub struct MidiMessage(pub wmidi::MidiMessage<'static>, pub CableNumber);
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]

@@ -22,22 +22,22 @@ use derive_more::{Display, Error, From};
 /// # Example
 ///
 /// ```
-/// use lokey::external::Message;
+/// use lokey::external::ExternalMessage;
 ///
-/// #[derive(Clone, Message)]
+/// #[derive(Clone, ExternalMessage)]
 /// pub struct KeyboardEvent;
 ///
-/// #[derive(Clone, Message)]
+/// #[derive(Clone, ExternalMessage)]
 /// pub struct MouseEvent;
 ///
-/// #[derive(Clone, Message)]
+/// #[derive(Clone, ExternalMessage)]
 /// pub enum DeviceEvent {
 ///     Keyboard(KeyboardEvent),
 ///     Mouse(MouseEvent),
 /// }
 /// ```
 #[cfg(feature = "macros")]
-pub use lokey_macros::ExternalMessage as Message;
+pub use lokey_macros::ExternalMessage;
 pub use r#override::{IdentityOverride, MessageSender, Override, OverrideSet};
 
 declare_const_for_feature_group!(

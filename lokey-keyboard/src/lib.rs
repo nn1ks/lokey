@@ -34,8 +34,9 @@ pub use generic_array; // Re-exported for use in the `layout!` macro.
 use generic_array::GenericArray;
 pub use key::{HidReportByte, Key};
 pub use key_override::KeyOverride;
+use lokey::external::ExternalMessage;
 use lokey::util::{debug, error, unwrap};
-use lokey::{AnyState, Component, Context, Device, DynContext, Transports, external, internal};
+use lokey::{AnyState, Component, Context, Device, DynContext, Transports, internal};
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -261,7 +262,7 @@ impl internal::Message for Message {
 
 pub type KeySet = EnumSet<Key>;
 
-#[derive(Debug, Clone, external::Message)]
+#[derive(Debug, Clone, ExternalMessage)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct KeyboardReport {
     pub keys: KeySet,

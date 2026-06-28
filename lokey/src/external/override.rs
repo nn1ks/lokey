@@ -402,7 +402,7 @@ impl<TxMessage> Override for IdentityOverride<TxMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::external::Message as ExternalMessage;
+    use crate::external::ExternalMessage;
     use embassy_futures::block_on;
     use embassy_time::{Duration, TimeoutError, WithTimeout};
 

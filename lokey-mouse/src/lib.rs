@@ -16,7 +16,7 @@ pub mod usb;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use enumset::{EnumSet, EnumSetType};
-use lokey::external::Message;
+use lokey::external::ExternalMessage;
 
 /// The report sent by the device to represent the state of the mouse.
 ///
@@ -40,7 +40,7 @@ use lokey::external::Message;
 /// // Reset mouse buttons
 /// report.buttons.clear();
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Message)]
+#[derive(Debug, Clone, PartialEq, Eq, ExternalMessage)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct MouseReport {
     pub buttons: EnumSet<MouseButton>,
