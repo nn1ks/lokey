@@ -86,7 +86,9 @@ typeid = "1.0.3"
 typenum = "1.17.0"
 
 [dev-dependencies]
+critical-section = { version = "1.2.0", features = ["std"] }
 embassy-executor = { version = "0.10.0", features = ["platform-std", "executor-thread"] }
+embassy-time = { version = "0.5.0", features = ["std", "generic-queue-64"] }
 
 [package.metadata.docs.rs]
 features = ["macros", "defmt"]

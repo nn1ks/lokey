@@ -38,7 +38,7 @@ use derive_more::{Display, Error, From};
 /// ```
 #[cfg(feature = "macros")]
 pub use lokey_macros::ExternalMessage as Message;
-pub use r#override::{IdentityOverride, MessageSender, Override};
+pub use r#override::{IdentityOverride, MessageSender, Override, OverrideSet};
 
 declare_const_for_feature_group!(
     /// The maximum number of receivers for the external channel.
@@ -167,7 +167,7 @@ pub trait TryFromMessage<T>: Sized {
     fn try_from_message(value: T) -> Result<Self, MismatchedMessageType>;
 }
 
-impl<T: Message> TryFromMessage<T> for T {
+impl<T> TryFromMessage<T> for T {
     /// Identity conversion for equal source and target message types.
     fn try_from_message(value: T) -> Result<Self, MismatchedMessageType> {
         Ok(value)
