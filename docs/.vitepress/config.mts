@@ -1,8 +1,10 @@
 import { defineConfig } from 'vitepress'
-import footnote from 'markdown-it-footnote'
+import vitepressMermaidConfig from '@unify-js/vitepress-mermaid/config'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  extends: vitepressMermaidConfig,
+
   title: 'Lokey',
   description: 'A firmware framework for input devices',
 
