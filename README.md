@@ -1,22 +1,12 @@
-<div align="center">
-  <img src="logo.png" width="100"/>
-  <h1>Lokey</h1>
-</div>
 
-<div align="center">
+# Lokey
 
 [![Website](https://img.shields.io/badge/website-408240)](https://lokey.rs)
 [![Crate](https://img.shields.io/crates/v/lokey?logo=rust)](https://crates.io/crates/lokey)
 [![Docs](https://img.shields.io/static/v1?label=docs&message=latest&color=yellow&logo=docs.rs)](https://docs.rs/lokey)
 [![License](https://img.shields.io/crates/l/lokey)](https://github.com/nn1ks/lokey#license)
 
-</div>
-
-<div align="center">
 Lokey is a firmware framework for input devices written in Rust.
-</div>
-
----
 
 Refer to the website for more information: https://lokey.rs
 
