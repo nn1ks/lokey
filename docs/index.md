@@ -153,7 +153,7 @@ const SVG_PER_LETTER = [
   ["/title_svg/o1.svg", "/title_svg/o2.svg", "/title_svg/o3.svg"],
   ["/title_svg/k1.svg", "/title_svg/k2.svg", "/title_svg/k3.svg"],
   ["/title_svg/e1.svg", "/title_svg/e2.svg", "/title_svg/e3.svg"],
-  ["/title_svg/y1.svg", "/title_svg/y2.svg", "/title_svg/y2.svg"],
+  ["/title_svg/y1.svg", "/title_svg/y2.svg", "/title_svg/y3.svg"],
 ]
 
 const NUM_CHANGES = 3;
