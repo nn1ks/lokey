@@ -1,10 +1,10 @@
 {
-    "rust-analyzer.check.command": "clippy",
-    "rust-analyzer.cargo.features": "all",
-    "rust-analyzer.linkedProjects": [
-        "Cargo.toml",
-        "examples/lokey_blink/Cargo.toml",
-        "examples/keyboard_nrf52840/Cargo.toml",
-        "examples/keyboard_rp2040/Cargo.toml",
-    ],
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.cargo.features": "all",
+  "rust-analyzer.linkedProjects": [
+    "Cargo.toml",
+    "examples/lokey-blink/Cargo.toml",
+    "examples/keyboard-nrf52840/Cargo.toml",
+    "examples/keyboard-rp2040/Cargo.toml",
+  ],
 }
