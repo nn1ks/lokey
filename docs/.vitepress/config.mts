@@ -31,9 +31,6 @@ export default defineConfig({
       light: "gruvbox-light-hard",
       dark: "gruvbox-dark-hard",
     },
-    config: (md) => {
-      md.use(footnote)
-    }
   },
 
   themeConfig: {
