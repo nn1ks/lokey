@@ -1,0 +1,56 @@
+---
+title: Getting Started
+---
+
+## What is Lokey?
+
+Lokey is a framework for developing firmware for a variety of input devices.
+
+Keyboards, mice, and MIDI controllers are supported out of the box, but the framework can also be extended to other kinds of input devices.
+
+Lokey is written in [Rust](https://rust-lang.org) and built on top of [Embassy](https://embassy.dev). It is designed to be modular, so you can combine features and adapt them to different hardware targets. It also aims to keep APIs user-friendly, making firmware code easier to build and maintain.
+
+<Callout title="WARNING" type="warn">
+  Lokey is still in an early stage of development. The information described on this site may change as the framework evolves.
+</Callout>
+
+## Overview
+
+Before starting to work with the lokey framework, it is important to understand how the crates are structured.
+
+- **Core crate**
+
+    The core crate [`lokey`](https://docs.rs/lokey) is used as a dependency for all other crates in the framework. It contains functionality and abstraction layers that are useful to different kinds of input devices, such as Components, Transports, States, and more.
+
+- **Feature crates**
+
+    Feature crates provide specific functionality or a related group of capabilities. These crates are named `lokey-<feature>`.
+
+    <Callout title="EXAMPLES" type="info">
+    - The [`lokey-usb`](https://docs.rs/lokey-usb) crate contains an external transport for sending messages over USB.
+    - The [`lokey-nrf`](https://docs.rs/lokey-nrf) crate adds support for the nRF series of microcontrollers.
+    - The [`lokey-keyboard`](https://docs.rs/lokey-keyboard) crate contains implementations for key scanning, keyboard layouts, and other keyboard-related features.
+    - The [`lokey-layer`](https://docs.rs/lokey-layer) crate contains functionality for managing layers.
+    </Callout>
+
+- **Device crates**
+
+    Device crates add support for a specific device or a group of devices. These crates are named `lokey-device-<device_name>`.
+
+    <Callout title="EXAMPLES" type="info">
+    - A crate `lokey-device-corne` would add support for the [Corne keyboard](https://github.com/foostan/crkbd) by defining a device type (or two, since it is a split keyboard) and implementing the relevant keyboard components (e.g. by specifying which keys are connected to which pins of the microcontroller).
+    </Callout>
+
+- **Binary crates**
+
+    Binary crates are used to build the firmware for a concrete device setup, pulling together the chosen components, device definitions, and configuration settings. The name of these crates does not matter because they usually only contain personalized settings such as keyboard layouts and therefore should not be uploaded to crates.io. Unlike the previously mentioned crate types, these crates are *not* libraries.
+
+---
+
+<Callout title="INFO" type="info">
+  While you are not required to structure your own implementations this way (for example, you could have a single crate containing components, device support, and configurations), it is generally a good idea to follow the structure described above. Doing so helps preserve the framework’s modularity and can also improve compile times.
+</Callout>
+
+## Rust version
+
+Currently a nightly version of Rust is required. The rust code doesn't actually use any nightly features, but the nightly cargo feature "per-package-target" is used.

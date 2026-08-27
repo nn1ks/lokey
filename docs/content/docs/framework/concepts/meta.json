@@ -1,0 +1,18 @@
+{
+  "title": "Concepts",
+  "collapsible": true,
+  "defaultOpen": true,
+  "pages": [
+    "devices",
+    "components",
+    "mcus",
+    "storage",
+    "external-transports",
+    "external-channel",
+    "overrides",
+    "internal-transports",
+    "internal-channel",
+    "state",
+    "context"
+  ]
+}

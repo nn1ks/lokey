@@ -1,0 +1,11 @@
+{
+  "title": "Lokey Editor",
+  "description": "GUI for configuring Lokey devices",
+  "icon": "SquarePen",
+  "root": true,
+  "collapsible": true,
+  "defaultOpen": true,
+  "pages": [
+    "getting-started"
+  ]
+}

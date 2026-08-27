@@ -1,0 +1,108 @@
+---
+title: Overrides
+---
+
+An **override** in Lokey intercepts outgoing messages before they are sent to the host via the [external transport](./external-transports.md), giving firmware code the opportunity to inspect, modify, replace, or suppress individual messages.
+
+At the type level, an override is any type that implements the [`Override`](https://docs.rs/lokey/latest/lokey/external/trait.Override.html) trait.
+
+## How overrides work
+
+When a message passes through the [external channel](./external-channel.md), the configured override interjects before the message reaches the transport. The override receives the original message and a [`MessageSender`](https://docs.rs/lokey/latest/lokey/external/struct.MessageSender.html), which it uses to emit zero or more messages into the transport pipeline.
+
+<Mermaid
+  minWidth="700px"
+  chart={`graph LR
+    A[External Channel] -->|message| B[Override]
+    B -->|messages| C[External Transport]
+    C -->|send| D([Host])`}
+/>
+
+## Configuring an override
+
+Overrides are configured through the `#[lokey::device]` macro using the `message_override` attribute. When omitted, an [`IdentityOverride`](https://docs.rs/lokey/latest/lokey/external/struct.IdentityOverride.html) is used, which simply passes all messages through unchanged.
+
+```rust
+fn my_override() -> MyOverride {
+    // ...
+}
+
+#[lokey::device(message_override = my_override())]
+async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+    // ...
+}
+```
+## Custom override example
+
+The following example shows a custom override that logs each outgoing message before forwarding it:
+
+```rust
+use lokey::external::{MessageSender, Override};
+
+struct LoggingOverride<TxMessage>;
+
+impl<TxMessage: Debug> Override for LoggingOverride<TxMessage> {
+    type TxMessage = TxMessage;
+
+    async fn override_message(
+        &mut self,
+        message: Self::TxMessage,
+        sender: &MessageSender<Self::TxMessage>,
+    ) {
+        // Log the message
+        info!("Sending: {:?}", message);
+
+        // Forward the message
+        sender.send(message).await;
+    }
+}
+```
+
+To use it:
+
+```rust
+#[lokey::device(message_override = LoggingOverride<MyMessage>)]
+async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+    // ...
+}
+```
+
+## `OverrideSet`
+
+[`OverrideSet`](https://docs.rs/lokey/latest/lokey/external/struct.OverrideSet.html) combines multiple overrides into a single override, passing each message through the overrides sequentially.
+
+### Example
+
+```rust
+use lokey::external::{OverrideSet};
+use lokey_keyboard::{Key, KeyOverride};
+
+let key_override1 = KeyOverride::new(Key::A, Key::B);
+let key_override2 = KeyOverride::new(Key::B, Key::C);
+
+let override_set = OverrideSet::new((key_override1, key_override2));
+```
+
+When a message arrives, it is first passed to `key_override1`, whose output is then passed to `key_override2`, whose output is finally sent to the transport.
+
+### Message type compatibility
+
+Each override in the set can work with a different message type, as long as each override's `TxMessage` implements [`Into<TxMessage>`](https://doc.rust-lang.org/core/convert/trait.Into.html) and [`TryFromMessage<TxMessage>`](https://docs.rs/lokey/latest/lokey/external/trait.TryFromMessage.html) for the set's `TxMessage`. This means you can, for example, combine an override that handles keyboard reports with one that handles mouse reports when the transport uses a combined message enum:
+
+```rust
+#[derive(ExternalMessage)]
+enum CombinedMessage {
+    Keyboard(KeyboardReport),
+    Mouse(MouseReport),
+}
+
+let keyboard_override = KeyboardOverride;
+let mouse_override = MouseOverride;
+
+let override_set = OverrideSet::<CombinedMessage, _>::new((
+    keyboard_override,
+    mouse_override,
+));
+```
+
+Each override only receives the messages it can handle. Messages not matching an override's type are passed through unchanged.

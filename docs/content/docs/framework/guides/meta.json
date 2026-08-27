@@ -1,0 +1,11 @@
+{
+  "title": "Guides",
+  "collapsible": true,
+  "defaultOpen": true,
+  "pages": [
+    "writing-a-custom-component",
+    "adding-support-for-a-device",
+    "adding-support-for-an-mcu",
+    "flashing-firmware"
+  ]
+}

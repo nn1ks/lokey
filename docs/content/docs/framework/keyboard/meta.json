@@ -1,0 +1,12 @@
+{
+  "title": "Keyboard",
+  "collapsible": true,
+  "defaultOpen": true,
+  "pages": [
+    "introduction",
+    "scanning",
+    "actions",
+    "layout",
+    "comparison-with-alternatives"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Introduction",
+  "collapsible": true,
+  "defaultOpen": true,
+  "pages": [
+    "getting-started",
+    "supported-hardware",
+    "api-documentation",
+    "troubleshooting"
+  ]
+}
