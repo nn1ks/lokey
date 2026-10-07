@@ -1,8 +1,6 @@
 use crate::MidiMessage;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::mutex::Mutex;
 use embassy_usb::Builder;
-use embassy_usb::class::midi::{MidiClass, Receiver, Sender};
+use embassy_usb::class::midi::{MidiClass, Sender};
 use embassy_usb::driver::Driver;
 use lokey::util::error;
 use lokey_usb::external::{InitTxMessageService, TxMessage, TxMessageService};
@@ -81,9 +79,7 @@ impl TxMessage for MidiMessage {
 }
 
 pub struct MidiMessageService<'d, D: Driver<'d>> {
-    midi_sender: Mutex<CriticalSectionRawMutex, Sender<'d, D>>,
-    // TODO: Use midi_receiver for RxMessageService
-    _midi_receiver: Mutex<CriticalSectionRawMutex, Receiver<'d, D>>,
+    midi_sender: Sender<'d, D>,
 }
 
 impl<'d, D: Driver<'d>> InitTxMessageService<'d, D> for MidiMessageService<'d, D> {
@@ -98,11 +94,9 @@ impl<'d, D: Driver<'d>> InitTxMessageService<'d, D> for MidiMessageService<'d, D
     ) -> (Self, Self::RxMessageServiceContainer) {
         // TODO: Make parameters configurable (n_in_jacks, n_out_jacks, max_packet_size)
         let midi_class = MidiClass::new(builder, 1, 1, 64);
-        let (midi_sender, midi_receiver) = midi_class.split();
-        let service = Self {
-            midi_sender: Mutex::new(midi_sender),
-            _midi_receiver: Mutex::new(midi_receiver),
-        };
+        let (midi_sender, _midi_receiver) = midi_class.split();
+        // TODO: return midi_receiver as RxMessageService
+        let service = Self { midi_sender };
         (service, ())
     }
 }
@@ -140,14 +134,12 @@ fn serialize_midi_message(
 }
 
 impl<'d, D: Driver<'d>> TxMessageService<MidiMessage> for MidiMessageService<'d, D> {
-    async fn send(&self, message: MidiMessage) {
-        let midi_sender = &mut *self.midi_sender.lock().await;
-
+    async fn send(&mut self, message: MidiMessage) {
         let Some((buf, len)) = serialize_midi_message(&message) else {
             return;
         };
 
-        if let Err(e) = midi_sender.write_packet(&buf[..len]).await {
+        if let Err(e) = self.midi_sender.write_packet(&buf[..len]).await {
             error!("Failed to write MIDI message: {}", e);
         }
     }

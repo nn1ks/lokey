@@ -1,6 +1,4 @@
 use crate::MouseReport;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::mutex::Mutex;
 use embassy_usb::Builder;
 use embassy_usb::class::hid::{HidBootProtocol, HidSubclass, HidWriter, State as HidState};
 use embassy_usb::driver::Driver;
@@ -15,7 +13,7 @@ impl TxMessage for MouseReport {
 const MOUSE_REPORT_SIZE: usize = 5;
 
 pub struct MouseReportService<'d, D: Driver<'d>> {
-    hid_writer: Mutex<CriticalSectionRawMutex, HidWriter<'d, D, MOUSE_REPORT_SIZE>>,
+    hid_writer: HidWriter<'d, D, MOUSE_REPORT_SIZE>,
 }
 
 impl<'d, D: Driver<'d>> InitTxMessageService<'d, D> for MouseReportService<'d, D> {
@@ -39,18 +37,15 @@ impl<'d, D: Driver<'d>> InitTxMessageService<'d, D> for MouseReportService<'d, D
             hid_boot_protocol: HidBootProtocol::None,
         };
 
-        let hid_writer = HidWriter::<_, MOUSE_REPORT_SIZE>::new(builder, params, hid_config);
         let service = Self {
-            hid_writer: Mutex::new(hid_writer),
+            hid_writer: HidWriter::<_, MOUSE_REPORT_SIZE>::new(builder, params, hid_config),
         };
         (service, ())
     }
 }
 
 impl<'d, D: Driver<'d>> TxMessageService<MouseReport> for MouseReportService<'d, D> {
-    async fn send(&self, message: MouseReport) {
-        let hid_writer = &mut *self.hid_writer.lock().await;
-
+    async fn send(&mut self, message: MouseReport) {
         let hid_mouse_report = message.to_hid_report();
 
         let mut buf = [0; MOUSE_REPORT_SIZE];
@@ -64,7 +59,7 @@ impl<'d, D: Driver<'d>> TxMessageService<MouseReport> for MouseReportService<'d,
             }
         };
 
-        if let Err(e) = hid_writer.write(&buf[..len]).await {
+        if let Err(e) = self.hid_writer.write(&buf[..len]).await {
             #[cfg(feature = "defmt")]
             let e = defmt::Debug2Format(&e);
             error!("Failed to write HID report: {}", e);

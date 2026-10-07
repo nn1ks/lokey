@@ -67,11 +67,11 @@ pub trait InitRxMessageService<'d, D: Driver<'d>>: Sized {
 }
 
 pub trait TxMessageService<T: Message> {
-    fn send(&self, message: T) -> impl Future<Output = ()>;
+    fn send(&mut self, message: T) -> impl Future<Output = ()>;
 }
 
 pub trait RxMessageService<T: Message> {
-    fn receive(&self) -> impl Future<Output = T>;
+    fn receive(&mut self) -> impl Future<Output = T>;
 }
 
 impl<'d, D: Driver<'d>> InitTxMessageService<'d, D> for () {
@@ -103,13 +103,13 @@ impl<'d, D: Driver<'d>> InitRxMessageService<'d, D> for () {
 }
 
 impl TxMessageService<NoMessage> for () {
-    async fn send(&self, message: NoMessage) {
+    async fn send(&mut self, message: NoMessage) {
         match message {}
     }
 }
 
 impl RxMessageService<NoMessage> for () {
-    async fn receive(&self) -> NoMessage {
+    async fn receive(&mut self) -> NoMessage {
         core::future::pending().await
     }
 }

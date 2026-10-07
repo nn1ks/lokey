@@ -135,7 +135,7 @@ pub fn tx_message_derive(item: TokenStream) -> TokenStream {
         }
 
         impl<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> ::lokey_usb::external::TxMessageService<#ident> for #message_service_ident<'d, D> {
-            async fn send(&self, message: #ident) {
+            async fn send(&mut self, message: #ident) {
                 match message {
                     #(#ident::#variant_names(v) => self.services.#field_indices.send(v).await),*
                 }
