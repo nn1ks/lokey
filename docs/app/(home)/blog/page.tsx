@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import { getBlogPosts } from '@/lib/source';
+import Link from "next/link";
+import { getBlogPosts } from "@/lib/source";
 
 export default function Home() {
   const posts = getBlogPosts();
@@ -15,7 +15,11 @@ export default function Home() {
             className="block py-4 transition-colors hover:underline"
           >
             <h2 className="text-xl font-semibold">{post.data.title}</h2>
-            <p className="mt-0.5 text-fd-muted-foreground">{post.data.date}</p>
+            <p className="mt-0.5 text-fd-muted-foreground">
+              {post.data.date instanceof Date
+                ? post.data.date.toISOString().slice(0, 10)
+                : post.data.date}
+            </p>
           </Link>
         ))}
       </div>
