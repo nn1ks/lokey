@@ -4,7 +4,10 @@ use embassy_usb::driver::Driver;
 use lokey::external::{Message, NoMessage};
 
 pub trait RxMessageServiceContainer<'d> {
+    #[allow(clippy::missing_safety_doc)] // TODO: remove "allow"
     unsafe fn rx_message_service<T: 'd>(&self) -> Option<&T>;
+
+    #[allow(clippy::missing_safety_doc)] // TODO: remove "allow"
     unsafe fn take_rx_message_service<T: 'd>(&mut self) -> Option<T>;
 }
 
@@ -98,7 +101,6 @@ impl<'d, D: Driver<'d>> InitRxMessageService<'d, D> for () {
         _: &'d mut Self::Params,
         _: &mut C,
     ) -> Self {
-        ()
     }
 }
 
