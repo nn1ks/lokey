@@ -5,11 +5,11 @@ use embassy_usb::Builder;
 use embassy_usb::class::hid::{HidBootProtocol, HidSubclass, HidWriter, State as HidState};
 use embassy_usb::driver::Driver;
 use lokey::util::error;
-use lokey_usb::external::{InitMessageService, TxMessage, TxMessageService};
+use lokey_usb::external::{InitTxMessageService, TxMessage, TxMessageService};
 use usbd_hid::descriptor::{AsInputReport, MouseReport as HidMouseReport, SerializedDescriptor};
 
 impl TxMessage for MouseReport {
-    type MessageService<'d, D: Driver<'d>> = MouseReportService<'d, D>;
+    type MessageService<'d, D: Driver<'d> + 'd> = MouseReportService<'d, D>;
 }
 
 const MOUSE_REPORT_SIZE: usize = 5;
@@ -18,14 +18,18 @@ pub struct MouseReportService<'d, D: Driver<'d>> {
     hid_writer: Mutex<CriticalSectionRawMutex, HidWriter<'d, D, MOUSE_REPORT_SIZE>>,
 }
 
-impl<'d, D: Driver<'d>> InitMessageService<'d, D> for MouseReportService<'d, D> {
+impl<'d, D: Driver<'d>> InitTxMessageService<'d, D> for MouseReportService<'d, D> {
     type Params = HidState<'d>;
+    type RxMessageServiceContainer = ();
 
     fn create_params() -> Self::Params {
         HidState::new()
     }
 
-    fn init(builder: &mut Builder<'d, D>, params: &'d mut Self::Params) -> Self {
+    fn init(
+        builder: &mut Builder<'d, D>,
+        params: &'d mut Self::Params,
+    ) -> (Self, Self::RxMessageServiceContainer) {
         let hid_config = embassy_usb::class::hid::Config {
             report_descriptor: HidMouseReport::desc(),
             request_handler: None,
@@ -36,9 +40,10 @@ impl<'d, D: Driver<'d>> InitMessageService<'d, D> for MouseReportService<'d, D> 
         };
 
         let hid_writer = HidWriter::<_, MOUSE_REPORT_SIZE>::new(builder, params, hid_config);
-        Self {
+        let service = Self {
             hid_writer: Mutex::new(hid_writer),
-        }
+        };
+        (service, ())
     }
 }
 

@@ -5,7 +5,7 @@ use embassy_usb::Builder;
 use embassy_usb::class::midi::{MidiClass, Receiver, Sender};
 use embassy_usb::driver::Driver;
 use lokey::util::error;
-use lokey_usb::external::{InitMessageService, TxMessage, TxMessageService};
+use lokey_usb::external::{InitTxMessageService, TxMessage, TxMessageService};
 
 // TODO: A midi message of type SysEx can be larger than 3 bytes. The max message size
 //       should be configurable.
@@ -77,7 +77,7 @@ impl CodeIndexNumber {
 }
 
 impl TxMessage for MidiMessage {
-    type MessageService<'d, D: Driver<'d>> = MidiMessageService<'d, D>;
+    type MessageService<'d, D: Driver<'d> + 'd> = MidiMessageService<'d, D>;
 }
 
 pub struct MidiMessageService<'d, D: Driver<'d>> {
@@ -86,19 +86,24 @@ pub struct MidiMessageService<'d, D: Driver<'d>> {
     _midi_receiver: Mutex<CriticalSectionRawMutex, Receiver<'d, D>>,
 }
 
-impl<'d, D: Driver<'d>> InitMessageService<'d, D> for MidiMessageService<'d, D> {
+impl<'d, D: Driver<'d>> InitTxMessageService<'d, D> for MidiMessageService<'d, D> {
     type Params = ();
+    type RxMessageServiceContainer = ();
 
     fn create_params() -> Self::Params {}
 
-    fn init(builder: &mut Builder<'d, D>, _: &'d mut Self::Params) -> Self {
+    fn init(
+        builder: &mut Builder<'d, D>,
+        _: &'d mut Self::Params,
+    ) -> (Self, Self::RxMessageServiceContainer) {
         // TODO: Make parameters configurable (n_in_jacks, n_out_jacks, max_packet_size)
         let midi_class = MidiClass::new(builder, 1, 1, 64);
         let (midi_sender, midi_receiver) = midi_class.split();
-        Self {
+        let service = Self {
             midi_sender: Mutex::new(midi_sender),
             _midi_receiver: Mutex::new(midi_receiver),
-        }
+        };
+        (service, ())
     }
 }
 
