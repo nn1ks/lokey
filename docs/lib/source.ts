@@ -1,8 +1,9 @@
 import { loader } from 'fumadocs-core/source';
 import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
 import { docsContentRoute, docsImageRoute, docsRoute } from './shared';
-import { defineDocs } from 'fumadocs-mdx/macro';
+import { defineCollections, defineDocs } from 'fumadocs-mdx/macro';
 import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
+import { z } from 'zod';
 
 const docs = defineDocs({
   dir: 'content/docs',
@@ -48,4 +49,30 @@ export async function getLLMText(page: (typeof source)['$inferPage']) {
   return `# ${page.data.title} (${page.url})
 
 ${processed}`;
+}
+
+
+// BLOG
+
+const blogPosts = defineCollections({
+  type: 'doc',
+  dir: 'content/blog',
+  schema: pageSchema.extend({
+    date: z.iso.date().or(z.date()),
+  }),
+})
+
+export const blogSource = loader({
+  baseUrl: '/blog',
+  source: blogPosts.toFumadocsSource(),
+  plugins: [lucideIconsPlugin()],
+});
+
+export function getBlogPosts() {
+  return [...blogSource.getPages()].sort((a, b) => {
+    const dateA = a.data.date instanceof Date ? a.data.date.getTime() : Date.parse(a.data.date);
+    const dateB = b.data.date instanceof Date ? b.data.date.getTime() : Date.parse(b.data.date);
+
+    return dateB - dateA;
+  });
 }
