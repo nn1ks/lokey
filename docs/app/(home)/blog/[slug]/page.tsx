@@ -34,6 +34,11 @@ export default async function Page(props: {
 }
 
 export function generateStaticParams(): { slug: string }[] {
+  // TODO: remove once there is a blog post
+  if (blogSource.getPages().length === 0) {
+    return [{ slug: "__no_posts__" }];
+  }
+
   return blogSource.getPages().map((page) => ({
     slug: page.slugs[0],
   }));
