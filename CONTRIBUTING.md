@@ -103,17 +103,17 @@ cargo test -p lokey-rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
 
 ## Documentation website
 
-The website is built with [VitePress](https://vitepress.dev). It is hosted at https://lokey.rs.
+The website is built with [Fumadocs](https://www.fumadocs.dev). It is hosted at https://lokey.rs.
 
 To run a development server, use the following commands:
 
 ```sh
 cd docs
 npm install
-npm run docs:dev
+npm run dev
 ```
 
-Use `npm run docs:build` for a production build.
+Use `npm run build` for a production build.
 
 ## Pull request guidelines
 
