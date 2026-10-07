@@ -9,7 +9,10 @@ use lokey::external::{self, NoMessage};
 use lokey::util::{debug, info};
 #[cfg(feature = "macros")]
 pub use lokey_usb_macros::TxMessage;
-pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
+pub use message_service::{
+    InitRxMessageService, InitTxMessageService, RxMessageService, RxMessageServiceContainer,
+    SingleMessageServiceContainer, TxMessageService,
+};
 use portable_atomic::AtomicBool;
 pub use transport::Transport;
 
@@ -135,17 +138,19 @@ impl<'a> embassy_usb::Handler for DeviceHandler<'a> {
 }
 
 pub trait TxMessage: external::Message + Sized {
-    type MessageService<'d, D: Driver<'d>>: TxMessageService<Self> + InitMessageService<'d, D>;
+    type MessageService<'d, D: Driver<'d> + 'd>: TxMessageService<Self>
+        + InitTxMessageService<'d, D>;
 }
 
 pub trait RxMessage: external::Message + Sized {
-    type MessageService<'d, D: Driver<'d>>: RxMessageService<Self> + InitMessageService<'d, D>;
+    type MessageService<'d, D: Driver<'d> + 'd>: RxMessageService<Self>
+        + InitRxMessageService<'d, D>;
 }
 
 impl TxMessage for NoMessage {
-    type MessageService<'d, D: Driver<'d>> = ();
+    type MessageService<'d, D: Driver<'d> + 'd> = ();
 }
 
 impl RxMessage for NoMessage {
-    type MessageService<'d, D: Driver<'d>> = ();
+    type MessageService<'d, D: Driver<'d> + 'd> = ();
 }

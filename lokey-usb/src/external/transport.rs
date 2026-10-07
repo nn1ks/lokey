@@ -1,6 +1,7 @@
 use crate::CreateDriver;
 use crate::external::{
-    DeviceHandlerContext, InitMessageService, RxMessageService, TransportConfig, TxMessageService,
+    DeviceHandlerContext, InitRxMessageService, InitTxMessageService, RxMessageService,
+    TransportConfig, TxMessageService,
 };
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join3;
@@ -55,11 +56,11 @@ where
         Storage: storage::Storage,
     {
         let mut tx_message_service_params =
-            <TxMessage::MessageService<'_, Mcu::Driver<'_>> as InitMessageService<
+            <TxMessage::MessageService<'_, Mcu::Driver<'_>> as InitTxMessageService<
                 Mcu::Driver<'_>,
             >>::create_params();
         let mut rx_message_service_params =
-            <RxMessage::MessageService<'_, Mcu::Driver<'_>> as InitMessageService<
+            <RxMessage::MessageService<'_, Mcu::Driver<'_>> as InitRxMessageService<
                 Mcu::Driver<'_>,
             >>::create_params();
 
@@ -87,13 +88,16 @@ where
         builder.handler(&mut device_handler);
 
         #[allow(clippy::missing_transmute_annotations)]
-        let tx_message_service = TxMessage::MessageService::init(&mut builder, unsafe {
-            core::mem::transmute(&mut tx_message_service_params)
-        });
+        let (tx_message_service, mut rx_message_service_container) =
+            TxMessage::MessageService::init(&mut builder, unsafe {
+                core::mem::transmute(&mut tx_message_service_params)
+            });
         #[allow(clippy::missing_transmute_annotations)]
-        let rx_message_service = RxMessage::MessageService::init(&mut builder, unsafe {
-            core::mem::transmute(&mut rx_message_service_params)
-        });
+        let rx_message_service = RxMessage::MessageService::init(
+            &mut builder,
+            unsafe { core::mem::transmute(&mut rx_message_service_params) },
+            &mut rx_message_service_container,
+        );
 
         let mut usb = builder.build();
 

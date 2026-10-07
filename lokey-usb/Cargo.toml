@@ -35,6 +35,7 @@ embassy-usb = { version = "0.6.0", default-features = false }
 lokey = { path = "../lokey", version = "0.0.1" }
 lokey-usb-macros = { path = "../lokey-usb-macros", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
+typeid = "1.0.3"
 
 [package.metadata.docs.rs]
 features = ["defmt"]

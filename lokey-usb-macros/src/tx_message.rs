@@ -5,7 +5,9 @@ use syn::spanned::Spanned;
 use syn::{DeriveInput, parse_macro_input};
 
 pub fn tx_message_derive(item: TokenStream) -> TokenStream {
-    let DeriveInput { ident, data, .. } = parse_macro_input!(item);
+    let DeriveInput {
+        vis, ident, data, ..
+    } = parse_macro_input!(item);
     let data_enum = match data {
         syn::Data::Enum(v) => v,
         syn::Data::Struct(_) => {
@@ -71,36 +73,68 @@ pub fn tx_message_derive(item: TokenStream) -> TokenStream {
     let message_service_ident =
         syn::Ident::new(&format!("{}UsbTxMessageService", ident), Span::call_site());
 
+    let rx_message_service_container_ident = syn::Ident::new(
+        &format!("{}UsbRxMessageServiceContainer", ident),
+        Span::call_site(),
+    );
+
     quote! {
         impl ::lokey_usb::external::TxMessage for #ident {
-            type MessageService<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d>> = #message_service_ident<'d, D>;
+            type MessageService<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> = #message_service_ident<'d, D>;
         }
 
-        struct #message_service_ident<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d>> {
+        #vis struct #message_service_ident<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> {
             services: (#(<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D>),*),
         }
 
-        impl<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d>> ::lokey_usb::external::InitMessageService<'d, D> for #message_service_ident<'d, D> {
-            type Params = (
-                #(<<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D> as ::lokey_usb::external::InitMessageService<'d, D>>::Params),*
-            );
+        #vis struct #rx_message_service_container_ident<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> {
+            services: (#(<<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D> as ::lokey_usb::external::InitTxMessageService<'d, D>>::RxMessageServiceContainer),*),
+        }
 
-            fn create_params() -> Self::Params {
-                (
-                    #(<<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D> as ::lokey_usb::external::InitMessageService<'d, D>>::create_params()),*
-                )
+        impl<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> ::lokey_usb::external::RxMessageServiceContainer<'d> for #rx_message_service_container_ident<'d, D> {
+            unsafe fn rx_message_service<T: 'd>(&self) -> Option<&T> {
+                #(
+                    if let Some(value) = self.services.#field_indices.rx_message_service::<T>() {
+                        return Some(value);
+                    }
+                )*
+                return None;
             }
 
-            fn init(builder: &mut ::lokey_usb::embassy_usb::Builder<'d, D>, params: &'d mut Self::Params) -> Self {
-                Self {
-                    services: (
-                        #(<<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D> as ::lokey_usb::external::InitMessageService<'d, D>>::init(builder, &mut params.#field_indices)),*
-                    ),
-                }
+            unsafe fn take_rx_message_service<T: 'd>(&mut self) -> Option<T> {
+                #(
+                    if let Some(value) = self.services.#field_indices.take_rx_message_service::<T>() {
+                        return Some(value);
+                    }
+                )*
+                return None;
             }
         }
 
-        impl<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d>> ::lokey_usb::external::TxMessageService<#ident> for #message_service_ident<'d, D> {
+        impl<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> ::lokey_usb::external::InitTxMessageService<'d, D> for #message_service_ident<'d, D> {
+            type Params = (
+                #(<<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D> as ::lokey_usb::external::InitTxMessageService<'d, D>>::Params),*
+            );
+            type RxMessageServiceContainer = #rx_message_service_container_ident<'d, D>;
+
+            fn create_params() -> Self::Params {
+                (#(
+                    <<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D> as ::lokey_usb::external::InitTxMessageService<'d, D>>::create_params()
+                ),*)
+            }
+
+            fn init(builder: &mut ::lokey_usb::embassy_usb::Builder<'d, D>, params: &'d mut Self::Params) -> (Self, Self::RxMessageServiceContainer) {
+                let value = (#(
+                    <<#variant_types as ::lokey_usb::external::TxMessage>::MessageService<'d, D> as ::lokey_usb::external::InitTxMessageService<'d, D>>::init(builder, &mut params.#field_indices)
+                ),*);
+                (
+                    Self { services: (#(value.#field_indices.0),*) },
+                    #rx_message_service_container_ident { services: (#(value.#field_indices.1),*) }
+                )
+            }
+        }
+
+        impl<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> ::lokey_usb::external::TxMessageService<#ident> for #message_service_ident<'d, D> {
             async fn send(&self, message: #ident) {
                 match message {
                     #(#ident::#variant_names(v) => self.services.#field_indices.send(v).await),*
