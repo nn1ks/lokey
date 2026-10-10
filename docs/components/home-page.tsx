@@ -148,7 +148,7 @@ export default function HomePage() {
     <div className={`${styles.homePage} mx-auto w-full max-w-6xl px-6 py-16 sm:py-24`}>
       <section className="grid grid-cols-1 items-center gap-12 text-left lg:gap-16 xl:gap-48 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div>
-          <h1 className={`${styles.heading} max-w-4xl text-[2.25rem] tracking-tight text-fd-foreground sm:text-6xl`}>
+          <h1 className={`${styles.heading} max-w-4xl text-fd-foreground`}>
             <span className="heading-name">
               <AnimatedTitle>Lokey</AnimatedTitle>
             </span>

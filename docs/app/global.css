@@ -3,19 +3,19 @@
 @import 'fumadocs-ui/css/preset.css';
 
 @font-face {
-  font-family: 'Instrument Serif';
+  font-family: 'Libre Baskerville';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/Instrument_Serif/InstrumentSerif-Regular.ttf') format('truetype');
+  src: url('/fonts/Libre_Baskerville/LibreBaskerville-Regular.ttf') format('truetype');
 }
 
 @font-face {
-  font-family: 'Instrument Serif';
+  font-family: 'Libre Baskerville';
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/Instrument_Serif/InstrumentSerif-Italic.ttf') format('truetype');
+  src: url('/fonts/Libre_Baskerville/LibreBaskerville-Italic.ttf') format('truetype');
 }
 
 html {

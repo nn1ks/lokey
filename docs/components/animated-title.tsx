@@ -68,10 +68,10 @@ export function AnimatedTitle({ children }: { children: string }) {
         const container = document.createElement('span');
         container.className = 'title-svg';
         container.style.position = 'absolute';
-        container.style.height = '1.2em';
+        container.style.height = '1.4em';
         container.style.left = `${i * step}px`;
         container.style.top = '50%';
-        container.style.transform = 'translateY(-50%)';
+        container.style.transform = 'translateY(calc(-50% - 2px))';
         container.style.display = 'flex';
         container.style.alignItems = 'center';
         container.style.justifyContent = 'center';

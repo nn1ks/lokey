@@ -5,13 +5,12 @@
 }
 
 .heading {
-  font-family: "Instrument Serif", serif;
+  font-family: "Libre Baskerville", serif;
   font-weight: 400;
   font-style: italic;
-  letter-spacing: normal;
-  line-height: 1.05;
-  word-spacing: 0.08rem;
-  font-size: 2.5rem;
+  font-size: var(--text-4xl);
+  line-height: 1.2;
+  word-spacing: 0.15rem;
 }
 
 .headingButtons .primaryButton,
@@ -64,7 +63,7 @@
   grid-row: 1;
   justify-self: end;
   margin: 0;
-  margin-bottom: -60px;
+  margin-bottom: -80px;
   color: var(--color-fd-primary);
 }
 
@@ -90,7 +89,7 @@
 
 .featureLabel {
   display: inline-block;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -99,27 +98,28 @@
 }
 
 .featureTitle {
-  font-family: "Instrument Serif", serif;
-  font-size: 26px;
+  font-family: "Libre Baskerville", serif;
+  font-size: var(--text-2xl);
   font-weight: 400;
   font-style: italic;
   color: var(--color-fd-foreground);
-  margin: 0 0 18px;
+  margin-bottom: 12px;
   line-height: 1.2;
   letter-spacing: 0;
   word-spacing: 0.05em;
+  width: calc(100% - 90px);
 }
 
 .featureDesc {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: var(--text-base);
+  line-height: 1.6;
   color: var(--color-fd-muted-foreground);
   margin: 0;
 }
 
 .featureDesc a {
   color: var(--color-fd-muted-foreground);
-  text-decoration: underline dotted;
+  text-decoration: underline dashed;
   text-underline-offset: 3px;
 }
 
@@ -145,8 +145,7 @@
 
 @media (min-width: 1024px) {
   .heading {
-    font-size: var(--text-6xl);
-    line-height: 1.15;
+    font-size: var(--text-5xl);
   }
 }
 
@@ -195,10 +194,11 @@
   }
 
   .featureTitle {
-    font-size: 32px;
+    font-size: var(--text-3xl);
+    width: 100%;
   }
 
   .featureDesc {
-    font-size: 17px;
+    font-size: var(--text-lg);
   }
 }
