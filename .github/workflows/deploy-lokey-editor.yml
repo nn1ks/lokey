@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./editor
+        working-directory: ./editor/lokey-editor
     permissions:
       contents: read
       deployments: write
