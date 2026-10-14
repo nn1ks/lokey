@@ -1,0 +1,36 @@
+{
+  "name": "lokey-editor-odyn",
+  "version": "0.0.0",
+  "description": "",
+  "license": "MIT OR Apache-2.0",
+  "author": "",
+  "type": "module",
+  "exports": {
+    "./core": {
+      "types": "./src/core.ts",
+      "import": "./src/core.ts"
+    },
+    "./core/message-id": {
+      "types": "./src/core/message-id.ts",
+      "import": "./src/core/message-id.ts"
+    },
+    "./core/device-id": {
+      "types": "./src/core/device-id.ts",
+      "import": "./src/core/device-id.ts"
+    }
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate": "capnp-es ../../lokey-odyn/schema/*.capnp --src-prefix=../../lokey-odyn/schema -ojs,dts:src/generated",
+    "build": "npm run generate && tsc",
+    "typecheck": "tsc --noEmit",
+    "docs": "typedoc"
+  },
+  "dependencies": {
+    "capnp-es": "^0.0.16"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "typedoc": "^0.28.0"
+  }
+}

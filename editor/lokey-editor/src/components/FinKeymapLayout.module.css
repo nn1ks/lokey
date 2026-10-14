@@ -1,0 +1,232 @@
+.key_button_container {
+  position: absolute;
+  top: var(--layout-container-padding);
+  width: 1100px;
+  height: calc(100% - 2 * var(--layout-container-padding));
+}
+
+/* LEFT - COLUMN 1 */
+
+.key_button_container > button:nth-child(1) {
+  top: 115.7px;
+  left: 34.5px;
+  transform: rotate(-12.5deg);
+}
+
+.key_button_container > button:nth-child(21) {
+  top: 182.5px;
+  left: 49.5px;
+  transform: rotate(-12.5deg);
+}
+
+.key_button_container > button:nth-child(41) {
+  top: 249px;
+  left: 64px;
+  transform: rotate(-12.5deg);
+}
+
+/* LEFT - COLUMN 2 */
+
+.key_button_container > button:nth-child(3) {
+  top: 63.7px;
+  left: 119px;
+  transform: rotate(-6deg);
+}
+
+.key_button_container > button:nth-child(23) {
+  top: 131.7px;
+  left: 126.2px;
+  transform: rotate(-6deg);
+}
+
+.key_button_container > button:nth-child(43) {
+  top: 199.5px;
+  left: 133.5px;
+  transform: rotate(-6deg);
+}
+
+/* LEFT - COLUMN 3 */
+
+.key_button_container > button:nth-child(5) {
+  top: 37.2px;
+  left: 203.2px;
+  transform: rotate(-2.25deg);
+}
+
+.key_button_container > button:nth-child(25) {
+  top: 105.5px;
+  left: 206.2px;
+  transform: rotate(-2.25deg);
+}
+
+.key_button_container > button:nth-child(45) {
+  top: 173.5px;
+  left: 209.2px;
+  transform: rotate(-2.25deg);
+}
+
+/* LEFT - COLUMN 4 */
+
+.key_button_container > button:nth-child(7) {
+  top: 58px;
+  left: 285.5px;
+}
+
+.key_button_container > button:nth-child(27) {
+  top: 126px;
+  left: 285.5px;
+}
+
+.key_button_container > button:nth-child(47) {
+  top: 194.5px;
+  left: 285.5px;
+}
+
+/* LEFT - COLUMN 5 */
+
+.key_button_container > button:nth-child(9) {
+  top: 58px;
+  left: 358px;
+}
+
+.key_button_container > button:nth-child(29) {
+  top: 126px;
+  left: 358px;
+}
+
+.key_button_container > button:nth-child(49) {
+  top: 194.5px;
+  left: 358px;
+}
+
+/* LEFT - BUTTON ROW */
+
+.key_button_container > button:nth-child(61) {
+  top: 275px;
+  left: 285.5px;
+}
+
+.key_button_container > button:nth-child(63) {
+  top: 283.3px;
+  left: 366.9px;
+  transform: rotate(12deg);
+}
+
+.key_button_container > button:nth-child(65) {
+  top: 309px;
+  left: 446px;
+  transform: rotate(24deg);
+}
+
+/* RIGHT - COLUMN 6 */
+
+.key_button_container > button:nth-child(11) {
+  top: 58px;
+  left: 679px;
+}
+
+.key_button_container > button:nth-child(31) {
+  top: 126px;
+  left: 679px;
+}
+
+.key_button_container > button:nth-child(51) {
+  top: 194.5px;
+  left: 679px;
+}
+
+/* RIGHT - COLUMN 7 */
+
+.key_button_container > button:nth-child(13) {
+  top: 58px;
+  left: 751.5px;
+}
+
+.key_button_container > button:nth-child(33) {
+  top: 126px;
+  left: 751.5px;
+}
+
+.key_button_container > button:nth-child(53) {
+  top: 194.5px;
+  left: 751.5px;
+}
+
+/* RIGHT - COLUMN 8 */
+
+.key_button_container > button:nth-child(15) {
+  top: 37.2px;
+  left: 833.8px;
+  transform: rotate(2.25deg);
+}
+
+.key_button_container > button:nth-child(35) {
+  top: 105.5px;
+  left: 830.8px;
+  transform: rotate(2.25deg);
+}
+
+.key_button_container > button:nth-child(55) {
+  top: 173.5px;
+  left: 827.8px;
+  transform: rotate(2.25deg);
+}
+
+/* RIGHT - COLUMN 9 */
+
+.key_button_container > button:nth-child(17) {
+  top: 63.7px;
+  left: 918px;
+  transform: rotate(6deg);
+}
+
+.key_button_container > button:nth-child(37) {
+  top: 131.7px;
+  left: 910.8px;
+  transform: rotate(6deg);
+}
+
+.key_button_container > button:nth-child(57) {
+  top: 199.5px;
+  left: 903.5px;
+  transform: rotate(6deg);
+}
+
+/* RIGHT - COLUMN 10 */
+
+.key_button_container > button:nth-child(19) {
+  top: 115.7px;
+  left: 1002.5px;
+  transform: rotate(12.5deg);
+}
+
+.key_button_container > button:nth-child(39) {
+  top: 182.5px;
+  left: 987.5px;
+  transform: rotate(12.5deg);
+}
+
+.key_button_container > button:nth-child(59) {
+  top: 249px;
+  left: 973px;
+  transform: rotate(12.5deg);
+}
+
+/* RIGHT - BUTTON ROW */
+
+.key_button_container > button:nth-child(67) {
+  top: 309px;
+  left: 591px;
+  transform: rotate(-24deg);
+}
+
+.key_button_container > button:nth-child(69) {
+  top: 283.3px;
+  left: 670.1px;
+  transform: rotate(-12deg);
+}
+
+.key_button_container > button:nth-child(71) {
+  top: 275px;
+  left: 751.5px;
+}

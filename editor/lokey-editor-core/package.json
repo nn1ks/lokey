@@ -1,0 +1,123 @@
+{
+  "name": "lokey-editor-core",
+  "version": "0.0.0",
+  "description": "{{desc_of_lib}}",
+  "license": "MIT",
+  "author": "{{me}}",
+  "contributors": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nn1ks/lokey-editor.git"
+  },
+  "homepage": "https://github.com/nn1ks/lokey-editor#readme",
+  "bugs": {
+    "url": "https://github.com/nn1ks/lokey-editor/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "private": false,
+  "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index/index.js",
+  "module": "./dist/index/index.js",
+  "types": "./dist/index/index.d.ts",
+  "browser": {},
+  "exports": {
+    ".": {
+      // "solid": {
+      //   "development": "./dist/index/dev.jsx",
+      //   "import": "./dist/index/index.jsx"
+      // },
+      // "development": {
+      //   "import": {
+      //     "types": "./dist/index/index.d.ts",
+      //     "default": "./dist/index/dev.js"
+      //   }
+      // },
+      // "import": {
+      //   "types": "./dist/index/index.d.ts",
+      //   "default": "./dist/index/index.js"
+      // }
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./components": {
+      "types": "./src/components/index.ts",
+      "import": "./src/components/index.ts"
+    },
+    "./components/keymap": {
+      "types": "./src/components/keymap/index.ts",
+      "import": "./src/components/keymap/index.ts"
+    },
+    "./components/led-array": {
+      "types": "./src/components/led-array/index.ts",
+      "import": "./src/components/led-array/index.ts"
+    },
+    "./components/start": {
+      "types": "./src/components/start/index.ts",
+      "import": "./src/components/start/index.ts"
+    },
+    "./contexts": {
+      "types": "./src/contexts/index.ts",
+      "import": "./src/contexts/index.ts"
+    },
+    "./protocol": {
+      "types": "./src/protocol/index.ts",
+      "import": "./src/protocol/index.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {}
+  },
+  "scripts": {
+    "dev": "vite serve dev",
+    "build": "tsup",
+    "test": "concurrently pnpm:test:*",
+    "test:client": "vitest",
+    "test:ssr": "pnpm run test:client --mode ssr",
+    "prepublishOnly": "pnpm build",
+    "format": "prettier --ignore-path .gitignore -w \"src/**/*.{js,ts,json,css,tsx,jsx}\" \"dev/**/*.{js,ts,json,css,tsx,jsx}\"",
+    "lint": "concurrently pnpm:lint:*",
+    "lint:code": "eslint --ignore-path .gitignore --max-warnings 0 src/**/*.{js,ts,tsx,jsx}",
+    "lint:types": "tsc --noEmit",
+    "update-deps": "pnpm up -Li"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@typescript-eslint/eslint-plugin": "^7.9.0",
+    "@typescript-eslint/parser": "^7.9.0",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.21.3",
+    "esbuild-plugin-solid": "^0.6.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-no-only-tests": "^3.1.0",
+    "jsdom": "^24.0.0",
+    "prettier": "3.0.0",
+    "solid-js": "^1.8.17",
+    "tsup": "^8.0.2",
+    "tsup-preset-solid": "^2.2.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vite-plugin-solid": "^2.10.2",
+    "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "solid"
+  ],
+  "packageManager": "pnpm@9.1.1",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@ark-ui/solid": "^5.39.1",
+    "capnp-es": "^0.0.16",
+    "lokey-editor-odyn": "file:../lokey-editor-odyn",
+    "lucide-solid": "^1.45.0"
+  }
+}

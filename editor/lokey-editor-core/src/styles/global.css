@@ -1,0 +1,38 @@
+@import 'tailwindcss';
+
+@source "../";
+
+:root {
+  color-scheme: light;
+
+  --lokey-accent-color: hsl(50, 100%, 34%);
+  /*--lokey-accent-color-background: hsl(48 100% 78% / 14%);*/
+
+  --header-height: 56px;
+  --page-padding-x: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --lokey-accent-color: hsl(48, 100%, 78%);
+    /*--lokey-accent-color-background: hsl(48 100% 78% / 14%);*/
+  }
+}
+
+@theme inline {
+  --color-accent: var(--lokey-accent-color);
+  --color-focused: #2b7fff;
+  --color-neutral-750: oklch(30% 0 0);
+  --color-neutral-350: oklch(78% 0 0);
+  --color-neutral-150: oklch(95% 0 0);
+}
+
+body {
+  font-family: Inter, sans-serif;
+  @apply bg-white;
+  @apply dark:bg-black;
+  @apply text-neutral-950;
+  @apply dark:text-neutral-50;
+}

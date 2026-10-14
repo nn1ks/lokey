@@ -1,0 +1,48 @@
+@reference "../styles/global.css";
+@reference "tailwindcss";
+
+.root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.root > [data-scope='tabs'][data-part='list'] {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  @apply border-b;
+  @apply border-neutral-300;
+  @apply dark:border-neutral-800;
+}
+
+.root > [data-scope='tabs'][data-part='list'] [data-part='trigger'] {
+  background: none;
+  border: none;
+  font-size: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 9px 12px;
+  @apply text-neutral-500;
+  @apply dark:text-neutral-400;
+}
+
+.root > [data-scope='tabs'][data-part='list'] [data-part='trigger']:not([data-selected]):hover {
+  @apply text-neutral-700;
+  @apply dark:text-neutral-300;
+}
+
+.root > [data-scope='tabs'][data-part='list'] [data-part='trigger'][data-selected] {
+  @apply text-accent;
+  box-shadow: inset 0 -2px 0 0 var(--color-accent);
+}
+
+.root > [data-scope='tabs'][data-part='content'] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.root > [data-scope='tabs'][data-part='content'][data-state='closed'] {
+  display: none;
+}
