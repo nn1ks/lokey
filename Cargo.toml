@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "lokey",
     "lokey-macros",
+    "lokey-odyn",
     "lokey-usb",
     "lokey-usb-macros",
     "lokey-ble",
@@ -12,10 +13,12 @@ members = [
     "lokey-rp",
     "lokey-keyboard",
     "lokey-keyboard-macros",
+    "lokey-keyboard-odyn",
     "lokey-mouse",
     "lokey-midi",
     "lokey-layer",
     "lokey-led-array",
+    "lokey-led-array-odyn",
 ]
 exclude = [
     "examples/lokey-blink",
