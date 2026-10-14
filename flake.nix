@@ -33,6 +33,8 @@
           libusb1
           libusb1.dev
           libclang
+          capnproto
+          capnproto-rust
 
           # Tools
           cargo-release
