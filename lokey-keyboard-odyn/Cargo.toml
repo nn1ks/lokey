@@ -1,0 +1,15 @@
+[package]
+name = "lokey-keyboard-odyn"
+version = "0.0.0"
+edition = "2024"
+authors = ["Niklas Sauter <niklas@n1ks.net>"]
+repository = "https://github.com/nn1ks/lokey"
+license = "Apache-2.0 OR MIT"
+categories = ["embedded", "no-std"]
+keywords = ["firmware"]
+
+[dependencies]
+capnp = { version = "0.27.2", default-features = false, features = ["unaligned"] }
+
+[build-dependencies]
+capnpc = "0.27.0"
