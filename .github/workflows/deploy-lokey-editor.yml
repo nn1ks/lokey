@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install odyn dependencies
+        working-directory: ./editor/lokey-editor-odyn
+        run: npm install
       - name: Install core dependencies
         working-directory: ./editor/lokey-editor-core
         run: npm install
