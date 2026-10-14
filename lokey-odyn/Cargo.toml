@@ -1,0 +1,31 @@
+[package]
+name = "lokey-odyn"
+version = "0.0.0"
+edition = "2024"
+authors = ["Niklas Sauter <niklas@n1ks.net>"]
+repository = "https://github.com/nn1ks/lokey"
+license = "Apache-2.0 OR MIT"
+categories = ["embedded", "no-std"]
+keywords = ["firmware"]
+
+[features]
+default = ["defmt", "component", "usb"]
+defmt = ["dep:defmt", "embassy-sync?/defmt", "embassy-usb?/defmt", "lokey/defmt", "lokey-usb?/defmt"]
+component = []
+usb = ["dep:embassy-sync", "dep:embassy-usb", "dep:lokey-usb"]
+
+max-payload-size-64 = []
+max-payload-size-128 = []
+max-payload-size-256 = []
+
+[dependencies]
+arrayvec = { version = "0.7.8", default-features = false }
+capnp = { version = "0.27.2", default-features = false, features = ["unaligned"] }
+defmt = { version = "1.0.1", optional = true }
+embassy-sync = { version = "0.7.2", default-features = false, optional = true }
+embassy-usb = { version = "0.6.0", default-features = false, optional = true }
+lokey = { path = "../lokey" }
+lokey-usb = { path = "../lokey-usb", optional = true }
+
+[build-dependencies]
+capnpc = "0.27.0"
