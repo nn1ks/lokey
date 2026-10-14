@@ -25,20 +25,6 @@
   "browser": {},
   "exports": {
     ".": {
-      // "solid": {
-      //   "development": "./dist/index/dev.jsx",
-      //   "import": "./dist/index/index.jsx"
-      // },
-      // "development": {
-      //   "import": {
-      //     "types": "./dist/index/index.d.ts",
-      //     "default": "./dist/index/dev.js"
-      //   }
-      // },
-      // "import": {
-      //   "types": "./dist/index/index.d.ts",
-      //   "default": "./dist/index/index.js"
-      // }
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
