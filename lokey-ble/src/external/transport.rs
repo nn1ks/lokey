@@ -695,7 +695,7 @@ impl storage::Entry for StoredBondInformation {
 
     type TagParam = u8;
 
-    const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x68, 0xb6, 0xa9, 0x22, 0xdc, 0xd9, 0xef, 0x10];
+    const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x00, 0x00, 0x00, 0x01];
 
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where

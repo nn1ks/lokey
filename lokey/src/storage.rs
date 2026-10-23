@@ -302,10 +302,10 @@ impl<'a, E: Entry, F: Flash + 'a> Cursor<'a, E, F> {
 }
 
 /// The number of bytes of the base entry tag.
-pub const BASE_TAG_SIZE: usize = 8;
+pub const BASE_TAG_SIZE: usize = 4;
 
 /// The number of bytes of the base entry tag.
-pub type BaseTagSize = typenum::U8;
+pub type BaseTagSize = typenum::U4;
 
 /// The number of bytes of the complete entry tag for the given entry type.
 pub type TagSize<E> = typenum::Sum<<<E as Entry>::TagParam as TagParam>::Size, BaseTagSize>;
