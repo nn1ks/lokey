@@ -1,3 +1,5 @@
+# Build the Lokey Editor web app and deploy it to Cloudflare
+
 name: Deploy Lokey Editor
 
 on:
@@ -17,7 +19,6 @@ jobs:
     permissions:
       contents: read
       deployments: write
-    name: Deploy to Cloudflare Pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
