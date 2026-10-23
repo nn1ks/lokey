@@ -166,9 +166,6 @@ impl Mcu for Nrf {
     }
 }
 
-type WordSize = typenum::U4;
-type EraseSize = typenum::U4096;
-
 pub struct DefaultStorageDriver;
 
 impl StorageDriver for DefaultStorageDriver {
