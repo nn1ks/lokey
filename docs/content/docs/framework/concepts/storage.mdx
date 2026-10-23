@@ -48,18 +48,15 @@ This example implements `Entry` for `MyEntry` as a singleton, meaning there can 
 
 ```rust
 use generic_array::GenericArray;
-use lokey::storage::{Entry, ENTRY_TAG_SIZE};
+use lokey::storage::{Entry, BASE_TAG_SIZE};
 
 struct MyEntry(bool);
 
 impl Entry for MyEntry {
 	type Size = typenum::U1;
-	type TagParams = ();
+	type TagParam = ();
 
-	fn tag(_: Self::TagParams) -> [u8; ENTRY_TAG_SIZE] {
-		// Random tag to uniqule identify this entry
-		[0x31, 0x42, 0xcd, 0x95, 0x94, 0xce, 0xe3, 0x17]
-	}
+	const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x0, 0x0, 0x0, 0x1];
 
 	fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self> {
 		Some(Self(bytes[0] != 0))
@@ -70,16 +67,30 @@ impl Entry for MyEntry {
 	}
 }
 
-// Store the entry
-storage.store((), MyEntry(true)).await?;
-// Calling store again will overwrite the previous value, since the tag is the same
-storage.store((), MyEntry(false)).await?;
 
-// Fetch the entry
-let value = storage.fetch::<MyEntry>(()).await?;
+{
+	let mut write_transaction = storage.write_transaction().await;
+	// Store the entry
+	write_transaction.write((), MyEntry(true)).await?;
+	// Calling store again will overwrite the previous value, since the tag is the same
+	write_transaction.write((), MyEntry(false)).await?;
+	// Commit the changes
+	write_transaction.commit().await?;
+}
 
-// Remove the entry
-storage.remove::<MyEntry>(()).await?;
+{
+	let read_transaction = storage.read_transaction().await;
+	// Fetch the entry
+	let value = read_transaction.read::<MyEntry>(()).await?;
+}
+
+{
+	let mut write_transaction = storage.write_transaction().await;
+	// Remove the entry
+	write_transaction.delete::<MyEntry>(()).await?;
+	// Commit the changes
+	write_transaction.commit().await?;
+}
 ```
 
 ## Provided implementations
