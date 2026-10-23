@@ -101,3 +101,12 @@ The following storage implementations are provided:
 - [`lokey::storage::EmptyStorage`](https://docs.rs/lokey/latest/lokey/storage/struct.EmptyStorage.html) – A no-op storage useful for devices that do not require persistent storage
 
 Crates that provide MCU support (for example `lokey-nrf` and `lokey-rp`) typically expose a `DefaultStorageDriver` that creates a `DefaultStorage` configured for the chip's flash layout.
+
+## Entry tags
+
+Each entry must have a tag that is unique across all entry types. This table lists the already used entry tags. If you created a new entry type, please make sure it does not conflict with any of the listed entry types and [add it to the table](https://github.com/nn1ks/lokey/edit/master/docs/content/docs/framework/concepts/storage.mdx) so there is no conflict between entry types of third-party crates.
+
+|Tag|Entry|Defined in crate|
+|---|---|---|
+|`[0x00, 0x00, 0x00, 0x00]`|*Reserved*|—|
+|`[0x00, 0x00, 0x00, 0x01]`|BLE bond information|[lokey-ble](crates.io/crates/lokey-ble)|
