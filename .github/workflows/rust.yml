@@ -64,6 +64,41 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           cargo test -p lokey --verbose --target ${{ matrix.target }}
+  lokey-odyn:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ""
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey-odyn --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey-odyn --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          cargo test -p lokey-odyn --verbose --target ${{ matrix.target }}
   lokey-usb:
     runs-on: ubuntu-latest
     if: always()
@@ -280,6 +315,41 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           cargo test -p lokey-keyboard --verbose --target ${{ matrix.target }} --features "usb ble usb-ble"
+  lokey-keyboard-odyn:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ""
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey-keyboard-odyn --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey-keyboard-odyn --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          cargo test -p lokey-keyboard-odyn --verbose --target ${{ matrix.target }}
   lokey-mouse:
     runs-on: ubuntu-latest
     if: always()
@@ -427,6 +497,41 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           cargo test -p lokey-led-array --verbose --target ${{ matrix.target }} --features "ble"
+  lokey-led-array-odyn:
+    runs-on: ubuntu-latest
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "thumbv7em-none-eabihf", "thumbv6m-none-eabi"]
+    env:
+      FEATURE_COMBINATIONS: ""
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print rust version
+        run: |
+          rustc --version
+          cargo --version
+      - name: Build
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo build -p lokey-led-array-odyn --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run clippy
+        run: |
+          export IFS=";"
+          for features in $FEATURE_COMBINATIONS; do
+            echo "::group::Features: \"$features\""
+            cargo clippy -p lokey-led-array-odyn --verbose --target ${{ matrix.target }} --no-default-features --features "$features"
+            echo "::endgroup::"
+          done
+      - name: Run tests
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          cargo test -p lokey-led-array-odyn --verbose --target ${{ matrix.target }}
   examples:
     runs-on: ubuntu-latest
     if: always()
