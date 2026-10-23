@@ -12,6 +12,7 @@ use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::peripherals::RNG;
+use lokey::storage::flash::MultiwriteNorFlash;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::util::unwrap;
 use lokey::{Address, AnyState, Context, Device, Mcu, Transports};
@@ -31,13 +32,13 @@ use {
 };
 
 pub struct StorageConfig {
-    pub flash_range: Range<u32>,
+    pub flash_page_range: Range<usize>,
 }
 
 impl Default for StorageConfig {
     fn default() -> Self {
         Self {
-            flash_range: 0x6_0000..0x7_0000,
+            flash_page_range: 0x60..0x70,
         }
     }
 }
@@ -171,14 +172,16 @@ type EraseSize = typenum::U4096;
 pub struct DefaultStorageDriver;
 
 impl StorageDriver for DefaultStorageDriver {
-    type Storage = DefaultStorage<Flash<'static>, WordSize, EraseSize>;
+    type Storage = DefaultStorage<MultiwriteNorFlash<Flash<'static>>>;
     type Mcu = Nrf;
     type Config = StorageConfig;
 
     fn create_storage(mcu: &'static Self::Mcu, config: Self::Config) -> Self::Storage {
         let nvmc = unsafe { embassy_nrf::peripherals::NVMC::steal() };
         let flash = Flash::take(mcu.mpsl, nvmc);
-        DefaultStorage::new(flash, config.flash_range)
+        let flash = MultiwriteNorFlash::new(flash, config.flash_page_range);
+        let random_seed = 0; // TODO
+        DefaultStorage::new(flash, random_seed)
     }
 }
 

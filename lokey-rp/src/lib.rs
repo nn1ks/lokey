@@ -11,17 +11,18 @@
 use core::ops::Range;
 use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
+use lokey::storage::flash::MultiwriteNorFlash;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::{Address, AnyState, Context, Device, Mcu, Transports};
 
 pub struct StorageConfig {
-    pub flash_range: Range<u32>,
+    pub flash_page_range: Range<usize>,
 }
 
 impl Default for StorageConfig {
     fn default() -> Self {
         Self {
-            flash_range: 0..0x1_0000,
+            flash_page_range: 0..0x100,
         }
     }
 }
@@ -48,19 +49,18 @@ impl Mcu for Rp {
 
 type Flash = flash::Flash<'static, FLASH, flash::Async, 0x200000>;
 
-type WordSize = typenum::U4;
-type EraseSize = typenum::U4096;
-
 pub struct DefaultStorageDriver;
 
 impl StorageDriver for DefaultStorageDriver {
-    type Storage = DefaultStorage<Flash, WordSize, EraseSize>;
+    type Storage = DefaultStorage<MultiwriteNorFlash<Flash>>;
     type Mcu = Rp;
     type Config = StorageConfig;
 
     fn create_storage(_: &'static Self::Mcu, config: Self::Config) -> Self::Storage {
         let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() });
-        DefaultStorage::new(flash, config.flash_range)
+        let flash = MultiwriteNorFlash::new(flash, config.flash_page_range);
+        let random_seed = 0; // TODO
+        DefaultStorage::new(flash, random_seed)
     }
 }
 

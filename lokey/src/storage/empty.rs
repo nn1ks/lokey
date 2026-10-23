@@ -1,6 +1,9 @@
-use crate::storage::{Entry, Error, Storage, StorageDriver};
-use core::convert::Infallible;
+use crate::storage::flash::EmptyFlash;
+use crate::storage::{
+    Entry, ReadTransaction, Storage, StorageDriver, ValueDeserializeError, WriteTransaction,
+};
 use core::marker::PhantomData;
+use ekv::flash::Flash;
 
 /// A storage driver to crate an [`EmptyStorage`] instance.
 pub struct EmptyStorageDriver<M> {
@@ -23,27 +26,74 @@ impl<Mcu: 'static> StorageDriver for EmptyStorageDriver<Mcu> {
 pub struct EmptyStorage;
 
 impl Storage for EmptyStorage {
-    type FlashError = Infallible;
+    type Flash = EmptyFlash;
 
-    async fn remove<E: Entry>(
-        &self,
-        _tag_params: E::TagParams,
-    ) -> Result<(), Error<<Self as Storage>::FlashError>> {
+    type ReadTransaction<'a> = EmptyReadTransaction;
+
+    type WriteTransaction<'a> = EmptyWriteTransaction;
+
+    async fn format(&self) -> Result<(), ekv::FormatError<<Self::Flash as Flash>::Error>> {
         Ok(())
     }
 
-    async fn store<E: Entry>(
-        &self,
-        _tag_params: E::TagParams,
-        _entry: &E,
-    ) -> Result<(), Error<<Self as Storage>::FlashError>> {
+    async fn mount(&self) -> Result<(), ekv::MountError<<Self::Flash as Flash>::Error>> {
         Ok(())
     }
 
-    async fn fetch<E: Entry>(
+    async fn read_transaction(&self) -> Self::ReadTransaction<'_> {
+        EmptyReadTransaction
+    }
+
+    async fn write_transaction(&self) -> Self::WriteTransaction<'_> {
+        EmptyWriteTransaction
+    }
+}
+
+/// Read transaction of [`EmptyStorage`].
+pub struct EmptyReadTransaction;
+
+impl<'a> ReadTransaction<'a> for EmptyReadTransaction {
+    type Flash = EmptyFlash;
+
+    async fn read<E: Entry>(
         &self,
-        _tag_params: E::TagParams,
-    ) -> Result<Option<E>, Error<<Self as Storage>::FlashError>> {
-        Ok(None)
+        _: E::TagParam,
+    ) -> Result<E, ValueDeserializeError<ekv::ReadError<<Self::Flash as Flash>::Error>>> {
+        Err(ValueDeserializeError::Other(ekv::ReadError::KeyNotFound))
+    }
+
+    async fn read_all<'b, E: Entry>(
+        &'b self,
+    ) -> Result<super::Cursor<'b, E, Self::Flash>, ekv::ReadError<<Self::Flash as Flash>::Error>>
+    where
+        'a: 'b,
+    {
+        Err(ekv::ReadError::KeyNotFound)
+    }
+}
+
+/// Write transaction of [`EmptyStorage`].
+pub struct EmptyWriteTransaction;
+
+impl<'a> WriteTransaction<'a> for EmptyWriteTransaction {
+    type Flash = EmptyFlash;
+
+    async fn write<E: Entry>(
+        &mut self,
+        _: E::TagParam,
+        _: &E,
+    ) -> Result<(), ekv::WriteError<<Self::Flash as Flash>::Error>> {
+        Ok(())
+    }
+
+    async fn delete<E: Entry>(
+        &mut self,
+        _: E::TagParam,
+    ) -> Result<(), ekv::WriteError<<Self::Flash as Flash>::Error>> {
+        Ok(())
+    }
+
+    async fn commit(self) -> Result<(), ekv::CommitError<<Self::Flash as Flash>::Error>> {
+        Ok(())
     }
 }

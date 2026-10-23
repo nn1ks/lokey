@@ -21,10 +21,10 @@ macros = [
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
+  "ekv/defmt",
   "embassy-executor/defmt",
   "embassy-futures/defmt",
   "embassy-sync/defmt",
-  "sequential-storage/defmt",
 ]
 
 
@@ -70,8 +70,10 @@ arrayvec = { version = "0.7.6", default-features = false }
 defmt = { version = "1.0.1", optional = true }
 derive_more = { version = "2.0.1", default-features = false, features = ["display", "error", "from"] }
 document-features = "0.2.11"
+ekv = { version = "1.0.0", features = ["crc"] }
 embassy-futures = "0.1.1"
 embassy-sync = "0.7.2"
+embassy-sync-0-6 = { package = "embassy-sync", version = "0.6.2" } # Required for ekv
 embedded-storage-async = "0.4.1"
 futures-util = { version = "0.3.32", default-features = false, features = ["async-await-macro"] }
 generic-array = "1.3.4"
@@ -79,7 +81,6 @@ lokey_macros = { path = "../lokey-macros", version = "0.0.1", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 postcard = { version = "1.1.3", features = ["experimental-derive"], default-features = false }
 seq-macro = "0.3.6"
-sequential-storage = "7.1.0"
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
 static_cell = "2.1.0"
 typeid = "1.0.3"
@@ -87,6 +88,7 @@ typenum = "1.17.0"
 
 [dev-dependencies]
 critical-section = { version = "1.2.0", features = ["std"] }
+ekv = { version = "1.0.0", features = ["crc", "std"] }
 embassy-executor = { version = "0.10.0", features = ["platform-std", "executor-thread"] }
 embassy-time = { version = "0.5.0", features = ["std", "generic-queue-64"] }
 

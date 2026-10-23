@@ -89,6 +89,7 @@ pub mod state;
 pub mod storage;
 pub mod util;
 
+use crate::storage::StorageDriver;
 use core::any::Any;
 use core::future::Future;
 /// Derives state trait implementations for a type.
@@ -313,6 +314,8 @@ where
     pub address: Address,
     /// Reference to the initialized MCU instance.
     pub mcu: &'static D::Mcu,
+    /// Reference to the storage.
+    pub storage: &'static <D::StorageDriver as StorageDriver>::Storage,
     /// Channel used to send and receive internal messages.
     pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
     /// Channel used to send and receive external messages.

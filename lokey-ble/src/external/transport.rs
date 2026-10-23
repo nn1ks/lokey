@@ -14,6 +14,7 @@ use embassy_sync::rwlock::RwLock;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use generic_array::GenericArray;
+use lokey::storage::{BASE_TAG_SIZE, ReadTransaction, WriteTransaction};
 use lokey::util::{debug, error, info, unwrap, warn};
 use lokey::{Address, external, internal, storage};
 use portable_atomic::{AtomicBool, AtomicU8};
@@ -160,14 +161,17 @@ where
         let scan_data = [0; 31];
 
         let mut bond_infos = ArrayVec::<_, MAX_NUM_BOND_INFOS>::new();
-        for i in 0..num_profiles.get() {
-            match storage.fetch::<StoredBondInformation>(i).await {
-                Ok(v) => bond_infos.push(v),
-                Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    let e = defmt::Debug2Format(&e);
-                    error!("Failed to read bond info from flash: {}", e);
-                    bond_infos.push(None);
+        {
+            let read_transaction = storage.read_transaction().await;
+            for i in 0..num_profiles.get() {
+                match read_transaction.read::<StoredBondInformation>(i).await {
+                    Ok(v) => bond_infos.push(Some(v)),
+                    Err(e) => {
+                        #[cfg(feature = "defmt")]
+                        let e = defmt::Debug2Format(&e);
+                        error!("Failed to read bond info from flash: {}", e);
+                        bond_infos.push(None);
+                    }
                 }
             }
         }
@@ -372,13 +376,24 @@ where
                             };
                             if store_new_bond_info {
                                 debug!("Writing bond info to flash");
-                                if let Err(e) = storage
-                                    .store(profile_index, StoredBondInformation::from_ref(&bond))
-                                    .await
                                 {
-                                    #[cfg(feature = "defmt")]
-                                    let e = defmt::Debug2Format(&e);
-                                    error!("Failed to write bond info to flash: {}", e);
+                                    let mut write_transaction = storage.write_transaction().await;
+                                    if let Err(e) = write_transaction
+                                        .write(
+                                            profile_index,
+                                            StoredBondInformation::from_ref(&bond),
+                                        )
+                                        .await
+                                    {
+                                        #[cfg(feature = "defmt")]
+                                        let e = defmt::Debug2Format(&e);
+                                        error!("Failed to write bond info to flash: {}", e);
+                                    }
+                                    if let Err(e) = write_transaction.commit().await {
+                                        #[cfg(feature = "defmt")]
+                                        let e = defmt::Debug2Format(&e);
+                                        error!("Failed to commit to database: {}", e);
+                                    }
                                 }
                                 debug!("Adding bond info to stack");
                                 if let Err(e) = ble_stack.add_bond_information(bond.clone()) {
@@ -539,12 +554,21 @@ where
                             );
                         } else {
                             debug!("Removing bond info for profile {}", profile_index);
-                            if let Err(e) =
-                                storage.remove::<StoredBondInformation>(profile_index).await
                             {
-                                #[cfg(feature = "defmt")]
-                                let e = defmt::Debug2Format(&e);
-                                error!("Failed to remove bond info: {}", e);
+                                let mut write_transaction = storage.write_transaction().await;
+                                if let Err(e) = write_transaction
+                                    .delete::<StoredBondInformation>(profile_index)
+                                    .await
+                                {
+                                    #[cfg(feature = "defmt")]
+                                    let e = defmt::Debug2Format(&e);
+                                    error!("Failed to remove bond info: {}", e);
+                                }
+                                if let Err(e) = write_transaction.commit().await {
+                                    #[cfg(feature = "defmt")]
+                                    let e = defmt::Debug2Format(&e);
+                                    error!("Failed to commit to database: {}", e);
+                                }
                             }
                             bond_infos.lock().await[profile_index as usize] = None;
                             if active_profile_index.load(Ordering::SeqCst) == profile_index {
@@ -558,11 +582,21 @@ where
                     Message::ClearActive => {
                         debug!("Removing bond info for active profile");
                         let profile_index = active_profile_index.load(Ordering::SeqCst);
-                        if let Err(e) = storage.remove::<StoredBondInformation>(profile_index).await
                         {
-                            #[cfg(feature = "defmt")]
-                            let e = defmt::Debug2Format(&e);
-                            error!("Failed to remove bond info: {}", e);
+                            let mut write_transaction = storage.write_transaction().await;
+                            if let Err(e) = write_transaction
+                                .delete::<StoredBondInformation>(profile_index)
+                                .await
+                            {
+                                #[cfg(feature = "defmt")]
+                                let e = defmt::Debug2Format(&e);
+                                error!("Failed to remove bond info: {}", e);
+                            }
+                            if let Err(e) = write_transaction.commit().await {
+                                #[cfg(feature = "defmt")]
+                                let e = defmt::Debug2Format(&e);
+                                error!("Failed to commit to database: {}", e);
+                            }
                         }
                         bond_infos.lock().await[profile_index as usize] = None;
                         if let Some(connection) = &*connection.read().await {
@@ -572,13 +606,23 @@ where
                     }
                     Message::ClearAll => {
                         debug!("Removing all bond infos");
-                        for i in 0..num_profiles.get() {
-                            if let Err(e) = storage.remove::<StoredBondInformation>(i).await {
+                        {
+                            let mut write_transaction = storage.write_transaction().await;
+                            for i in 0..num_profiles.get() {
+                                if let Err(e) =
+                                    write_transaction.delete::<StoredBondInformation>(i).await
+                                {
+                                    #[cfg(feature = "defmt")]
+                                    let e = defmt::Debug2Format(&e);
+                                    error!("Failed to remove bond info: {}", e);
+                                }
+                                bond_infos.lock().await[i as usize] = None;
+                            }
+                            if let Err(e) = write_transaction.commit().await {
                                 #[cfg(feature = "defmt")]
                                 let e = defmt::Debug2Format(&e);
-                                error!("Failed to remove bond info: {}", e);
+                                error!("Failed to commit to database: {}", e);
                             }
-                            bond_infos.lock().await[i as usize] = None;
                         }
                         if let Some(connection) = &*connection.read().await {
                             connection.raw().disconnect();
@@ -648,11 +692,10 @@ impl StoredBondInformation {
 
 impl storage::Entry for StoredBondInformation {
     type Size = typenum::U40;
-    type TagParams = u8;
 
-    fn tag(params: Self::TagParams) -> [u8; 8] {
-        [0x68, 0xb6, 0xa9, 0x22, 0xdc, 0xd9, 0xef, params]
-    }
+    type TagParam = u8;
+
+    const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x68, 0xb6, 0xa9, 0x22, 0xdc, 0xd9, 0xef, 0x10];
 
     fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
     where
