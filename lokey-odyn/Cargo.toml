@@ -9,7 +9,6 @@ categories = ["embedded", "no-std"]
 keywords = ["firmware"]
 
 [features]
-default = ["defmt", "component", "usb"]
 defmt = ["dep:defmt", "embassy-sync?/defmt", "embassy-usb?/defmt", "lokey?/defmt", "lokey-usb?/defmt"]
 component = ["dep:lokey"]
 usb = ["dep:embassy-sync", "dep:embassy-usb", "dep:lokey", "dep:lokey-usb"]
