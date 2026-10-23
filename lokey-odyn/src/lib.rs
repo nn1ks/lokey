@@ -6,13 +6,14 @@ mod component;
 pub mod protocol;
 #[cfg(feature = "usb")]
 pub mod usb;
+mod util;
 
 use arrayvec::ArrayVec;
 use capnp::message::{Builder, ReaderOptions, SingleSegmentAllocator, TypedReader};
 use capnp::serialize::{NoAllocSliceSegments, read_message_no_alloc};
 #[cfg(feature = "component")]
 pub use component::OdynCore;
-use lokey::util::declare_const_for_feature_group;
+use util::declare_const_for_feature_group;
 
 declare_const_for_feature_group!(
     MAX_PAYLOAD_SIZE,
