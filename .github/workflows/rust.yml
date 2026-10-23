@@ -79,6 +79,8 @@ jobs:
         run: |
           rustc --version
           cargo --version
+      - name: Install capnpc
+        run: sudo apt-get update && sudo apt-get install -y capnproto
       - name: Build
         run: |
           export IFS=";"
@@ -330,6 +332,8 @@ jobs:
         run: |
           rustc --version
           cargo --version
+      - name: Install capnpc
+        run: sudo apt-get update && sudo apt-get install -y capnproto
       - name: Build
         run: |
           export IFS=";"
@@ -512,6 +516,8 @@ jobs:
         run: |
           rustc --version
           cargo --version
+      - name: Install capnpc
+        run: sudo apt-get update && sudo apt-get install -y capnproto
       - name: Build
         run: |
           export IFS=";"
@@ -554,6 +560,8 @@ jobs:
         run: |
           rustc --version
           cargo --version
+      - name: Install capnpc
+        run: sudo apt-get update && sudo apt-get install -y capnproto
       - name: Check formatting
         run: cargo fmt --verbose --check
         working-directory: examples/${{ matrix.example }}
