@@ -24,4 +24,4 @@ document-features = "0.2.11"
 embassy-sync = "0.8.0"
 embassy-time = "0.5.0"
 embedded-hal = "1.0.0"
-lokey = { path = "../../lokey" }
+lokey = { path = "../../crates/lokey" }

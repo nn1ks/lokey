@@ -23,6 +23,8 @@ defmt = [
     "lokey-keyboard/defmt",
     "lokey-layer/defmt",
     "lokey-led-array/defmt",
+    "lokey-midi/defmt",
+    "lokey-mouse/defmt",
     "lokey-nrf/defmt",
     "lokey-usb/defmt",
     "lokey-usb-ble/defmt",
@@ -37,14 +39,14 @@ embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "execu
 embassy-nrf = { version = "0.11.0", features = ["nrf52840"] }
 embassy-sync = "0.8.0"
 embassy-time = "0.5.0"
-lokey = { path = "../../lokey", features = ["internal-receiver-slots-8", "external-receiver-slots-8", "external-observer-slots-8"] }
-lokey-ble = { path = "../../lokey-ble" }
+lokey = { path = "../../crates/lokey", features = ["internal-receiver-slots-8", "external-receiver-slots-8", "external-observer-slots-8"] }
+lokey-ble = { path = "../../crates/lokey-ble" }
 lokey-blink = { path = "../lokey-blink" }
-lokey-keyboard = { path = "../../lokey-keyboard", features = ["usb", "ble"] }
-lokey-layer = { path = "../../lokey-layer" }
-lokey-led-array = { path = "../../lokey-led-array", features = ["ble", "nrf52840"] }
-lokey-nrf = { path = "../../lokey-nrf", features = ["nrf52840", "usb", "ble"] }
-lokey-usb = { path = "../../lokey-usb" }
-lokey-usb-ble = { path = "../../lokey-usb-ble" }
+lokey-keyboard = { path = "../../crates/lokey-keyboard", features = ["usb", "ble"] }
+lokey-layer = { path = "../../crates/lokey-layer" }
+lokey-led-array = { path = "../../crates/lokey-led-array", features = ["ble", "nrf52840"] }
+lokey-nrf = { path = "../../crates/lokey-nrf", features = ["nrf52840", "usb", "ble"] }
+lokey-usb = { path = "../../crates/lokey-usb" }
+lokey-usb-ble = { path = "../../crates/lokey-usb-ble" }
 panic-probe = "1.0.0"
 typenum = { version = "1.19.0", features = ["const-generics"] }

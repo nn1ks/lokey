@@ -32,11 +32,11 @@ defmt-rtt = { version = "1.1.0", optional = true }
 embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread"] }
 embassy-rp = "0.10.0"
 embassy-time = "0.5.0"
-lokey = { path = "../../lokey", features = ["internal-receiver-slots-8", "external-receiver-slots-8", "external-observer-slots-8"] }
+lokey = { path = "../../crates/lokey", features = ["internal-receiver-slots-8", "external-receiver-slots-8", "external-observer-slots-8"] }
 lokey-blink = { path = "../lokey-blink" }
-lokey-keyboard = { path = "../../lokey-keyboard", features = ["usb"] }
-lokey-layer = { path = "../../lokey-layer" }
-lokey-rp = { path = "../../lokey-rp", features = ["usb", "rp2040"] }
-lokey-usb = { path = "../../lokey-usb" }
+lokey-keyboard = { path = "../../crates/lokey-keyboard", features = ["usb"] }
+lokey-layer = { path = "../../crates/lokey-layer" }
+lokey-rp = { path = "../../crates/lokey-rp", features = ["usb", "rp2040"] }
+lokey-usb = { path = "../../crates/lokey-usb" }
 panic-probe = "1.0.0"
 typenum = "1.19.0"

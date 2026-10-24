@@ -21,7 +21,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "capnp-es ../../lokey-odyn/schema/*.capnp --src-prefix=../../lokey-odyn/schema -ojs,dts:src/generated",
+    "generate": "capnp-es ../../crates/lokey-odyn/schema/*.capnp --src-prefix=../../crates/lokey-odyn/schema -ojs,dts:src/generated",
     "build": "npm run generate && tsc",
     "typecheck": "tsc --noEmit",
     "docs": "typedoc"
