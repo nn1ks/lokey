@@ -55,7 +55,7 @@ impl OdynCore {
                 v if v == protocol::message_id::GET_DEVICE_CAPABILITIES_REQUEST => {
                     let mut buf = [0u8; MAX_PAYLOAD_SIZE];
                     let reader = match decode::<protocol::get_device_capabilities_request::Owned>(
-                        &*message.payload,
+                        &message.payload,
                         &mut buf,
                     ) {
                         Ok(v) => v,
