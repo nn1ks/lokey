@@ -21,7 +21,7 @@ macros = [
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = [
   "dep:defmt",
-  "ekv/defmt",
+  # "ekv/defmt", # FIXME: The defmt feature of ekv conflicts with the std feature that is enabled in dev-dependencies
   "embassy-executor/defmt",
   "embassy-futures/defmt",
   "embassy-sync/defmt",
@@ -88,6 +88,7 @@ typenum = "1.20.1"
 
 [dev-dependencies]
 critical-section = { version = "1.2.0", features = ["std"] }
+defmt = { version = "1.2.0", features = ["unstable-test"] }
 ekv = { version = "1.0.0", features = ["crc", "std"] }
 embassy-executor = { version = "0.10.0", features = ["platform-std", "executor-thread"] }
 embassy-time = { version = "0.5.0", features = ["std", "generic-queue-64"] }
