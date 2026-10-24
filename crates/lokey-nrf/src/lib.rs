@@ -11,7 +11,9 @@
 use core::ops::Range;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
+use embassy_nrf::mode::Async;
 use embassy_nrf::peripherals::RNG;
+use embassy_nrf::rng::Rng;
 use lokey::storage::flash::MultiwriteNorFlash;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::util::unwrap;
@@ -20,8 +22,6 @@ use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
 #[cfg(feature = "ble")]
 use {
-    embassy_nrf::mode::Async,
-    embassy_nrf::rng::Rng,
     embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
     embassy_sync::mutex::Mutex,
     nrf_sdc::SoftdeviceController,
@@ -52,6 +52,7 @@ bind_interrupts!(struct Irqs {
 });
 
 pub struct Nrf {
+    random_storage_seed: u32,
     mpsl: &'static MultiprotocolServiceLayer<'static>,
     #[cfg(feature = "ble")]
     ble_stack: &'static Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
@@ -102,15 +103,17 @@ impl Mcu for Nrf {
             SESSION_MEM.init(SessionMem::new())
         )));
 
+        static RNG_CELL: StaticCell<Rng<'static, Async>> = StaticCell::new();
+        let rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
+
+        let random_storage_seed = rng.blocking_next_u32();
+
         #[cfg(feature = "ble")]
         let ble_stack = {
             let sdc_p = nrf_sdc::Peripherals::new(
                 p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
                 p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
             );
-
-            static RNG_CELL: StaticCell<Rng<'static, Async>> = StaticCell::new();
-            let rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
 
             static SDC_MEM: StaticCell<nrf_sdc::Mem<3920>> = StaticCell::new();
             let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
@@ -137,6 +140,7 @@ impl Mcu for Nrf {
         );
 
         Self {
+            random_storage_seed,
             mpsl,
             #[cfg(feature = "ble")]
             ble_stack,
@@ -170,8 +174,7 @@ impl StorageDriver for DefaultStorageDriver {
         let nvmc = unsafe { embassy_nrf::peripherals::NVMC::steal() };
         let flash = Flash::take(mcu.mpsl, nvmc);
         let flash = MultiwriteNorFlash::new(flash, config.flash_page_range);
-        let random_seed = 0; // TODO
-        DefaultStorage::new(flash, random_seed)
+        DefaultStorage::new(flash, mcu.random_storage_seed)
     }
 }
 

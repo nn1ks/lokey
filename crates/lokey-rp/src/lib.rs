@@ -9,6 +9,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 use core::ops::Range;
+use embassy_rp::clocks::RoscRng;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
 use embassy_rp::{bind_interrupts, flash};
 use lokey::storage::flash::MultiwriteNorFlash;
@@ -65,7 +66,7 @@ impl StorageDriver for DefaultStorageDriver {
     fn create_storage(_: &'static Self::Mcu, config: Self::Config) -> Self::Storage {
         let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() }, Irqs);
         let flash = MultiwriteNorFlash::new(flash, config.flash_page_range);
-        let random_seed = 0; // TODO
+        let random_seed = RoscRng.next_u32();
         DefaultStorage::new(flash, random_seed)
     }
 }
