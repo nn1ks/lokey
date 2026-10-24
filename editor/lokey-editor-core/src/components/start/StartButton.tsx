@@ -3,7 +3,7 @@ import { splitProps } from 'solid-js'
 import type { Component, JSX } from 'solid-js'
 
 export type StartButtonProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
-  icon: Component
+  icon: Component<{ size?: string | number }>
   label: string
 }
 

@@ -24,10 +24,19 @@ export const Header: Component<HeaderProps> = props => {
       >
         <div class="flex items-center gap-2">{props.title}</div>
 
-        <Show when={connection().status === 'connected'}>
-          <Button onClick={() => void disconnect()}>
-            {connection().isDemo ? 'Leave Demo' : 'Disconnect'}
-          </Button>
+        <Show when={connection().status === 'connected' ? connection() : undefined}>
+          {connected => {
+            const isDemo = () => {
+              const state = connected()
+              return state.status === 'connected' && state.isDemo
+            }
+
+            return (
+              <Button onClick={() => void disconnect()}>
+                {isDemo() ? 'Leave Demo' : 'Disconnect'}
+              </Button>
+            )
+          }}
         </Show>
       </header>
       <div class="h-(--header-height)"></div>
