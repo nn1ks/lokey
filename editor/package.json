@@ -1,0 +1,21 @@
+{
+  "name": "lokey-editor-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --workspace-concurrency=1 run build",
+    "build:odyn": "pnpm --filter lokey-editor-odyn run build",
+    "build:core": "pnpm --filter lokey-editor-core run build",
+    "build:app": "pnpm --filter lokey-editor run build",
+    "dev": "pnpm --filter lokey-editor run dev",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "format": "pnpm -r run format"
+  }
+}

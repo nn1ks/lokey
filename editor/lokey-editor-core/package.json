@@ -1,17 +1,16 @@
 {
   "name": "lokey-editor-core",
   "version": "0.0.0",
-  "description": "{{desc_of_lib}}",
+  "description": "Core library of the Lokey Editor",
   "license": "MIT",
-  "author": "{{me}}",
-  "contributors": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nn1ks/lokey-editor.git"
+    "url": "git+https://github.com/nn1ks/lokey.git",
+    "directory": "editor/lokey-editor-core"
   },
-  "homepage": "https://github.com/nn1ks/lokey-editor#readme",
+  "homepage": "https://github.com/nn1ks/lokey#readme",
   "bugs": {
-    "url": "https://github.com/nn1ks/lokey-editor/issues"
+    "url": "https://github.com/nn1ks/lokey/issues"
   },
   "files": [
     "dist"
@@ -62,6 +61,7 @@
     "test": "concurrently pnpm:test:*",
     "test:client": "vitest",
     "test:ssr": "pnpm run test:client --mode ssr",
+    "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm build",
     "format": "prettier --ignore-path .gitignore -w \"src/**/*.{js,ts,json,css,tsx,jsx}\" \"dev/**/*.{js,ts,json,css,tsx,jsx}\"",
     "lint": "concurrently pnpm:lint:*",
@@ -95,15 +95,10 @@
   "keywords": [
     "solid"
   ],
-  "packageManager": "pnpm@9.1.1",
-  "engines": {
-    "node": ">=18",
-    "pnpm": ">=9.0.0"
-  },
   "dependencies": {
     "@ark-ui/solid": "^5.39.1",
     "capnp-es": "^0.0.16",
-    "lokey-editor-odyn": "file:../lokey-editor-odyn",
+    "lokey-editor-odyn": "workspace:*",
     "lucide-solid": "^1.45.0"
   }
 }

@@ -1,10 +1,14 @@
 {
   "name": "lokey-editor-odyn",
   "version": "0.0.0",
-  "description": "",
+  "description": "Cap'n Proto bindings for the Odyn protocol used by the Lokey Editor",
   "license": "MIT OR Apache-2.0",
-  "author": "",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nn1ks/lokey.git",
+    "directory": "editor/lokey-editor-odyn"
+  },
   "exports": {
     "./core": {
       "types": "./src/core.ts",
@@ -20,9 +24,8 @@
     }
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "generate": "capnp-es ../../crates/lokey-odyn/schema/*.capnp --src-prefix=../../crates/lokey-odyn/schema -ojs,dts:src/generated",
-    "build": "npm run generate && tsc",
+    "build": "pnpm run generate && tsc",
     "typecheck": "tsc --noEmit",
     "docs": "typedoc"
   },

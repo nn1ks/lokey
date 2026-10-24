@@ -1,13 +1,14 @@
 {
-  "name": "vite-template-solid",
+  "name": "lokey-editor",
   "version": "0.0.0",
-  "description": "",
+  "description": "Web app for dynamically configuring Lokey devices",
   "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "license": "MIT",
   "devDependencies": {
@@ -19,7 +20,7 @@
   "dependencies": {
     "@ark-ui/solid": "^5.39.1",
     "@tailwindcss/vite": "^4.3.3",
-    "lokey-editor-core": "file:../lokey-editor-core",
+    "lokey-editor-core": "workspace:*",
     "lucide-solid": "^1.45.0",
     "solid-js": "^1.9.5",
     "tailwindcss": "^4.3.3"
