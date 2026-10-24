@@ -3,14 +3,22 @@ name: Rust
 on:
   push:
     branches: [ "master" ]
-    paths-ignore:
-      - docs/**
-      - editor/**
+    paths:
+      - crates/**
+      - examples/**
+      - Cargo.toml
+      - rust-toolchain.toml
+      - rustfmt.toml
+      - .github/workflows/rust.yml
   pull_request:
     branches: [ "master" ]
-    paths-ignore:
-      - docs/**
-      - editor/**
+    paths:
+      - crates/**
+      - examples/**
+      - Cargo.toml
+      - rust-toolchain.toml
+      - rustfmt.toml
+      - .github/workflows/rust.yml
 
 env:
   CARGO_TERM_COLOR: always
