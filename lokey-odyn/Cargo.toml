@@ -21,7 +21,7 @@ max-payload-size-256 = []
 arrayvec = { version = "0.7.8", default-features = false }
 capnp = { version = "0.27.2", default-features = false, features = ["unaligned"] }
 defmt = { version = "1.0.1", optional = true }
-embassy-sync = { version = "0.7.2", default-features = false, optional = true }
+embassy-sync = { version = "0.8.0", default-features = false, optional = true }
 embassy-usb = { version = "0.6.0", default-features = false, optional = true }
 lokey = { path = "../lokey", optional = true }
 lokey-usb = { path = "../lokey-usb", optional = true }

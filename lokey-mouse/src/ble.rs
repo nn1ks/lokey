@@ -74,7 +74,12 @@ impl TxMessageService<MouseReport> for MouseReportService {
             }
         };
         assert_eq!(len, INPUT_MOUSE_SIZE);
-        if let Err(e) = self.hid_service.input_mouse.notify(connection, &buf).await {
+        if let Err(e) = self
+            .hid_service
+            .input_mouse
+            .notify(connection, &buf, true)
+            .await
+        {
             error!("Failed to set input report: {}", e);
         }
     }

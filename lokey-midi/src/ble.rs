@@ -103,6 +103,7 @@ impl TxMessageService<MidiMessage> for MidiMessageService {
             .notify(
                 connection,
                 &ble_midi_packet[..ble_midi_packet_len].try_into().unwrap(),
+                true,
             )
             .await
         {

@@ -2,7 +2,7 @@ use super::{Event, Message, TransportConfig};
 use crate::BleStack;
 use crate::external::{InitMessageService, RxMessageService, TxMessageService};
 use arrayvec::ArrayVec;
-use bt_hci::param::BdAddr;
+use bt_hci::param::{AddrKind, BdAddr};
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
@@ -84,9 +84,8 @@ where
     where
         Storage: storage::Storage,
     {
-        // TODO: use TxMessage::ATTRIBUTE_COUNT and TxMessage::CCCD_MAX
+        // TODO: use TxMessage::ATTRIBUTE_COUNT
         const ATT_MAX: usize = 50;
-        const CCCD_MAX: usize = 50;
 
         let mut table = AttributeTable::<'_, NoopRawMutex, ATT_MAX>::new();
 
@@ -101,14 +100,8 @@ where
         let tx_message_service = TxMessage::MessageService::init(&mut table);
         let rx_message_service = RxMessage::MessageService::init(&mut table);
 
-        let server = AttributeServer::<
-            '_,
-            NoopRawMutex,
-            DefaultPacketPool,
-            ATT_MAX,
-            CCCD_MAX,
-            CONN_MAX,
-        >::new(table);
+        let server =
+            AttributeServer::<'_, NoopRawMutex, DefaultPacketPool, ATT_MAX, CONN_MAX>::new(table);
 
         let Some(num_profiles) = NonZeroU8::new(self.num_profiles) else {
             return;
@@ -143,16 +136,24 @@ where
             AdStructure::CompleteLocalName(self.name.as_bytes()),
         ]);
         if !adv_service_uuids_16_tx.is_empty() {
-            ad_structure_vec.push(AdStructure::ServiceUuids16(&adv_service_uuids_16_tx));
+            ad_structure_vec.push(AdStructure::IncompleteServiceUuids16(
+                &adv_service_uuids_16_tx,
+            ));
         }
         if !adv_service_uuids_16_rx.is_empty() {
-            ad_structure_vec.push(AdStructure::ServiceUuids16(&adv_service_uuids_16_rx));
+            ad_structure_vec.push(AdStructure::IncompleteServiceUuids16(
+                &adv_service_uuids_16_rx,
+            ));
         }
         if !adv_service_uuids_128_tx.is_empty() {
-            ad_structure_vec.push(AdStructure::ServiceUuids128(&adv_service_uuids_128_tx));
+            ad_structure_vec.push(AdStructure::IncompleteServiceUuids128(
+                &adv_service_uuids_128_tx,
+            ));
         }
         if !adv_service_uuids_128_rx.is_empty() {
-            ad_structure_vec.push(AdStructure::ServiceUuids128(&adv_service_uuids_128_rx));
+            ad_structure_vec.push(AdStructure::IncompleteServiceUuids128(
+                &adv_service_uuids_128_rx,
+            ));
         }
 
         let adv_data_len = unwrap!(AdStructure::encode_slice(&ad_structure_vec, &mut adv_data));
@@ -200,14 +201,17 @@ where
 
                 let profile_index = active_profile_index.load(Ordering::SeqCst);
 
-                for bond_information in ble_stack.get_bond_information() {
-                    if let Err(e) = ble_stack.remove_bond_information(bond_information.identity) {
-                        #[cfg(feature = "defmt")]
-                        error!("Failed to remove bond information from BLE stack: {}", e);
-                        #[cfg(not(feature = "defmt"))]
-                        error!("Failed to remove bond information from BLE stack: {:?}", e);
+                ble_stack.with_bond_information(|bond_informations| {
+                    for bond_information in bond_informations {
+                        if let Err(e) = ble_stack.remove_bond_information(bond_information.identity)
+                        {
+                            #[cfg(feature = "defmt")]
+                            error!("Failed to remove bond information from BLE stack: {}", e);
+                            #[cfg(not(feature = "defmt"))]
+                            error!("Failed to remove bond information from BLE stack: {:?}", e);
+                        }
                     }
-                }
+                });
 
                 let scannable = match &bond_infos.lock().await[profile_index as usize] {
                     Some(bond_info) => {
@@ -287,7 +291,7 @@ where
                 self.internal_channel
                     .send(Event::StoppedAdvertising { scannable })
                     .await;
-                let device_address = Address(new_connection.peer_address().into_inner());
+                let device_address = Address(new_connection.peer_address().addr.into_inner());
 
                 if self.min_connection_interval.is_some() || self.max_connection_interval.is_some()
                 {
@@ -369,7 +373,8 @@ where
                                         break;
                                     } else {
                                         // Store new bond info if the address changed
-                                        stored_bond_info.0.identity.bd_addr != bond.identity.bd_addr
+                                        stored_bond_info.0.identity.addr.addr
+                                            != bond.identity.addr.addr
                                     }
                                 }
                                 None => true,
@@ -450,6 +455,24 @@ where
                         }
                         GattConnectionEvent::PhyUpdated { .. } => {
                             debug!("Received PhyUpdated event");
+                        }
+                        GattConnectionEvent::SubratingParamsUpdated { .. } => {
+                            debug!("Received SubratingParamsUpdated event");
+                        }
+                        GattConnectionEvent::FrameSpaceUpdated { .. } => {
+                            debug!("Received FrameSpaceUpdated event");
+                        }
+                        GattConnectionEvent::ConnectionRateChanged { .. } => {
+                            debug!("Received ConnectionRateChanged event");
+                        }
+                        GattConnectionEvent::BondLost => {
+                            debug!("Received BondLost event");
+                        }
+                        GattConnectionEvent::Encrypted { .. } => {
+                            debug!("Received Encrypted event");
+                        }
+                        GattConnectionEvent::OobRequest => {
+                            debug!("Received OobRequest event");
                         }
                     }
                 }
@@ -691,7 +714,7 @@ impl StoredBondInformation {
 }
 
 impl storage::Entry for StoredBondInformation {
-    type Size = typenum::U40;
+    type Size = typenum::U41;
 
     type TagParam = u8;
 
@@ -701,22 +724,32 @@ impl storage::Entry for StoredBondInformation {
     where
         Self: Sized,
     {
-        let bytes = bytes.into_array::<40>();
+        let bytes = bytes.into_array::<41>();
 
         let has_irk = bytes[0] & 0b01 != 0;
         let is_bonded = bytes[0] & 0b10 != 0;
 
         let ltk = LongTermKey::from_le_bytes(bytes[1..17].try_into().unwrap());
 
-        let address = BdAddr::new(bytes[17..23].try_into().unwrap());
+        let address_kind = AddrKind::new(bytes[17]);
+
+        let address = BdAddr::new(bytes[18..24].try_into().unwrap());
         let irk =
-            has_irk.then(|| IdentityResolvingKey::from_le_bytes(bytes[23..39].try_into().unwrap()));
+            has_irk.then(|| IdentityResolvingKey::from_le_bytes(bytes[24..40].try_into().unwrap()));
+        let irk = match irk {
+            Some(Some(v)) => Some(v),
+            Some(None) => {
+                error!("Invalid identity resolving key");
+                return None;
+            }
+            None => None,
+        };
         let identity = Identity {
-            bd_addr: address,
+            addr: trouble_host::Address::new(address_kind, address),
             irk,
         };
 
-        let security_level = match bytes[39] {
+        let security_level = match bytes[40] {
             0 => SecurityLevel::NoEncryption,
             1 => SecurityLevel::Encrypted,
             2 => SecurityLevel::EncryptedAuthenticated,
@@ -735,18 +768,20 @@ impl storage::Entry for StoredBondInformation {
     }
 
     fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        let mut bytes = [0; 40];
+        let mut bytes = [0; 41];
 
         bytes[0] = self.0.identity.irk.is_some() as u8 | (self.0.is_bonded as u8) << 1;
 
         bytes[1..17].copy_from_slice(&self.0.ltk.to_le_bytes());
 
-        bytes[17..23].copy_from_slice(&self.0.identity.bd_addr.into_inner());
+        bytes[17] = self.0.identity.addr.kind.into_inner();
+
+        bytes[18..24].copy_from_slice(&self.0.identity.addr.addr.into_inner());
         if let Some(irk) = &self.0.identity.irk {
-            bytes[23..39].copy_from_slice(&irk.to_le_bytes());
+            bytes[24..40].copy_from_slice(&irk.to_le_bytes());
         }
 
-        bytes[39] = match self.0.security_level {
+        bytes[40] = match self.0.security_level {
             SecurityLevel::NoEncryption => 0,
             SecurityLevel::Encrypted => 1,
             SecurityLevel::EncryptedAuthenticated => 2,
@@ -764,8 +799,11 @@ mod tests {
     fn bond_info_serialization1() {
         let bond_info = BondInformation::new(
             Identity {
-                bd_addr: BdAddr::new([1, 2, 3, 4, 5, 6]),
-                irk: Some(IdentityResolvingKey::from_le_bytes([7; 16])),
+                addr: trouble_host::Address::new(
+                    AddressKind::PUBLIC,
+                    BdAddr::new([1, 2, 3, 4, 5, 6]),
+                ),
+                irk: Some(IdentityResolvingKey::from_le_bytes([7; 16]).unwrap()),
             },
             LongTermKey::from_le_bytes([8; 16]),
             SecurityLevel::EncryptedAuthenticated,
@@ -785,7 +823,10 @@ mod tests {
     fn bond_info_serialization2() {
         let bond_info = BondInformation::new(
             Identity {
-                bd_addr: BdAddr::new([21, 22, 23, 24, 25, 26]),
+                addr: trouble_host::Address::new(
+                    AddressKind::RANDOM,
+                    BdAddr::new([21, 22, 23, 24, 25, 26]),
+                ),
                 irk: None,
             },
             LongTermKey::from_le_bytes([42; 16]),

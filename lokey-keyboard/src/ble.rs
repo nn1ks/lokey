@@ -83,7 +83,7 @@ impl TxMessageService<KeyboardReport> for KeyboardReportService {
         if let Err(e) = self
             .hid_service
             .input_keyboard
-            .notify(connection, &buf)
+            .notify(connection, &buf, true)
             .await
         {
             error!("Failed to set input report: {}", e);

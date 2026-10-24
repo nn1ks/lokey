@@ -42,7 +42,6 @@ ble = [
   "dep:embassy-sync",
   "dep:lokey-ble",
   "dep:trouble-host",
-  "dep:rand_chacha",
 ]
 
 #! #### Microcontrollers
@@ -61,17 +60,16 @@ embassy-sync = ["dep:embassy-sync"]
 defmt = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
 ekv = { version = "1.0.0", features = ["page-size-4096", "align-4"] }
-embassy-nrf = { version = "0.9.0", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"] }
-embassy-sync = { version = "0.7.2", optional = true }
+embassy-nrf = { version = "0.11.0", features = ["gpiote", "time-driver-rtc1", "nfc-pins-as-gpio"] }
+embassy-sync = { version = "0.8.0", optional = true }
 embassy-usb = { version = "0.6.0", optional = true }
 lokey = { path = "../lokey" }
 lokey-ble = { path = "../lokey-ble", optional = true }
 lokey-usb = { path = "../lokey-usb", optional = true }
-nrf-mpsl = { git = "https://github.com/alexmoon/nrf-sdc", rev = "43df6b8b0affeacd9cb4094a3ab4f81576554887", features = ["critical-section-impl"], optional = true }
-nrf-sdc = { git = "https://github.com/alexmoon/nrf-sdc", rev = "43df6b8b0affeacd9cb4094a3ab4f81576554887", features = ["central", "peripheral"], optional = true }
-rand_chacha = { version = "0.3.1", default-features = false, optional = true }
+nrf-mpsl = { version = "0.4.0", features = ["critical-section-impl"], optional = true }
+nrf-sdc = { version = "0.4.0", features = ["central", "peripheral"], optional = true }
 static_cell = "2.1.0"
-trouble-host = { version = "0.6.0", features = ["security"], optional = true }
+trouble-host = { version = "0.8.0", features = ["security"], optional = true }
 typenum = "1.19.0"
 
 [package.metadata.docs.rs]

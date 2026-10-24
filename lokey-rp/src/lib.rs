@@ -9,8 +9,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 use core::ops::Range;
-use embassy_rp::flash;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
+use embassy_rp::{bind_interrupts, flash};
 use lokey::storage::flash::MultiwriteNorFlash;
 use lokey::storage::{DefaultStorage, StorageDriver};
 use lokey::{Address, AnyState, Context, Device, Mcu, Transports};
@@ -26,6 +26,12 @@ impl Default for StorageConfig {
         }
     }
 }
+
+bind_interrupts!(struct Irqs {
+    DMA_IRQ_0 => embassy_rp::dma::InterruptHandler<DMA_CH0>;
+    #[cfg(feature = "usb")]
+    USBCTRL_IRQ => embassy_rp::usb::InterruptHandler<embassy_rp::peripherals::USB>;
+});
 
 #[non_exhaustive]
 pub struct Rp {}
@@ -57,7 +63,7 @@ impl StorageDriver for DefaultStorageDriver {
     type Config = StorageConfig;
 
     fn create_storage(_: &'static Self::Mcu, config: Self::Config) -> Self::Storage {
-        let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() });
+        let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() }, Irqs);
         let flash = MultiwriteNorFlash::new(flash, config.flash_page_range);
         let random_seed = 0; // TODO
         DefaultStorage::new(flash, random_seed)
@@ -66,18 +72,13 @@ impl StorageDriver for DefaultStorageDriver {
 
 #[cfg(feature = "usb")]
 mod usb {
-    use super::Rp;
-    use embassy_rp::bind_interrupts;
+    use super::{Irqs, Rp};
     use lokey_usb::CreateDriver;
 
     impl CreateDriver for Rp {
         type Driver<'d> = embassy_rp::usb::Driver<'d, embassy_rp::peripherals::USB>;
 
         fn create_driver<'d>(&'static self) -> Self::Driver<'d> {
-            bind_interrupts!(struct Irqs {
-                USBCTRL_IRQ => embassy_rp::usb::InterruptHandler<embassy_rp::peripherals::USB>;
-            });
-
             let usbd = unsafe { embassy_rp::peripherals::USB::steal() };
 
             embassy_rp::usb::Driver::new(usbd, Irqs)

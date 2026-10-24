@@ -1,6 +1,5 @@
 use crate::BleStack;
 use arrayvec::ArrayVec;
-use core::mem::transmute;
 use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_futures::join::join;
 use embassy_futures::select::{select, select3};
@@ -149,11 +148,7 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
 
     let filter_accept_list = peripheral_addresses
         .iter()
-        .map(|address| {
-            (AddrKind::RANDOM, unsafe {
-                transmute::<&[u8; 6], &BdAddr>(&address.0)
-            })
-        })
+        .map(|address| trouble_host::Address::new(AddrKind::RANDOM, BdAddr::new(address.0)))
         .collect::<ArrayVec<_, MAX_NUM_PERIPHERALS>>();
     let config = ConnectConfig {
         scan_config: ScanConfig {
@@ -162,6 +157,8 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
         },
         connect_params: Default::default(),
     };
+
+    // Timer::after_secs(2).await;
 
     let run = async {
         loop {
@@ -399,11 +396,12 @@ async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Add
                                     if write_event.handle()
                                         == server.service.message_to_peripheral.handle
                                     {
-                                        debug!(
-                                            "Received message from central: {}",
-                                            write_event.data()
-                                        );
-                                        match ArrayVec::try_from(write_event.data()) {
+                                        write_event.with_data(|_, data| {
+                                            debug!("Received message from central: {}", data)
+                                        });
+                                        match write_event
+                                            .with_data(|_, data| ArrayVec::try_from(data))
+                                        {
                                             Ok(array) => {
                                                 RECV_CHANNEL.send(Message(array)).await;
                                             }
@@ -435,7 +433,7 @@ async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Add
                     if let Err(e) = server
                         .service
                         .message_to_central
-                        .notify(&connection, &message)
+                        .notify(&connection, &message, true)
                         .await
                     {
                         error!("Failed to send value: {}", e);

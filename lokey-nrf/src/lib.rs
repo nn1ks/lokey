@@ -25,8 +25,6 @@ use {
     embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
     embassy_sync::mutex::Mutex,
     nrf_sdc::SoftdeviceController,
-    rand_chacha::ChaCha12Rng,
-    rand_chacha::rand_core::SeedableRng,
     trouble_host::prelude::{Central, DefaultPacketPool, Peripheral, Runner},
     trouble_host::{HostResources, Stack},
 };
@@ -112,11 +110,9 @@ impl Mcu for Nrf {
             );
 
             static RNG_CELL: StaticCell<Rng<'static, Async>> = StaticCell::new();
-            let mut rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
+            let rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
 
-            let mut rng2 = ChaCha12Rng::from_rng(&mut rng).unwrap();
-
-            static SDC_MEM: StaticCell<nrf_sdc::Mem<3848>> = StaticCell::new();
+            static SDC_MEM: StaticCell<nrf_sdc::Mem<3920>> = StaticCell::new();
             let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
             let sdc = unwrap!(ble::build_sdc(sdc_p, rng, mpsl, sdc_mem));
 
@@ -125,7 +121,7 @@ impl Mcu for Nrf {
             let resources = RESOURCES.init(HostResources::new());
             let ble_stack = trouble_host::new(sdc, resources)
                 .set_random_address(ble::device_address_to_ble_address(&address))
-                .set_random_generator_seed(&mut rng2);
+                .build();
 
             static BLE_STACK: StaticCell<
                 Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
@@ -134,14 +130,11 @@ impl Mcu for Nrf {
         };
 
         #[cfg(feature = "ble")]
-        let (ble_host_central, ble_host_peripheral, ble_host_runner) = {
-            let ble_host = ble_stack.build();
-            (
-                Mutex::new(ble_host.central),
-                Mutex::new(ble_host.peripheral),
-                Mutex::new(ble_host.runner),
-            )
-        };
+        let (ble_host_central, ble_host_peripheral, ble_host_runner) = (
+            Mutex::new(ble_stack.central()),
+            Mutex::new(ble_stack.peripheral()),
+            Mutex::new(ble_stack.runner()),
+        );
 
         Self {
             mpsl,
