@@ -46,5 +46,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: editor/lokey-editor
+          packageManager: pnpm
           command: pages deploy dist/ --project-name=lokey-editor
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
