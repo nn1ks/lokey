@@ -1,9 +1,9 @@
-import type { Component } from 'solid-js'
+import type { Component } from "solid-js";
 
 export const PoweredByLokey: Component = () => {
   return (
     <div class="mt-12 w-full text-center italic text-neutral-400 dark:text-neutral-600">
-      Powered by{' '}
+      Powered by{" "}
       <a
         class="
           text-inherit underline decoration-dashed
@@ -16,7 +16,7 @@ export const PoweredByLokey: Component = () => {
         Lokey
       </a>
     </div>
-  )
-}
+  );
+};
 
-export default PoweredByLokey
+export default PoweredByLokey;

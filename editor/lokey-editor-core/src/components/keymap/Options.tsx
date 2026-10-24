@@ -1,16 +1,16 @@
-import { Select, createListCollection } from '@ark-ui/solid/select'
-import { createSignal, For } from 'solid-js'
-import type { Component, JSX } from 'solid-js'
-import { ChevronsUpDownIcon } from 'lucide-solid'
+import { Select, createListCollection } from "@ark-ui/solid/select";
+import { createSignal, For } from "solid-js";
+import type { Component, JSX } from "solid-js";
+import { ChevronsUpDownIcon } from "lucide-solid";
 
 const hostLayoutOptions = [
-  { label: 'English (US)', value: 'english-us' },
-  { label: 'German', value: 'german' },
-]
+  { label: "English (US)", value: "english-us" },
+  { label: "German", value: "german" },
+];
 
-const hostLayoutCollection = createListCollection({ items: hostLayoutOptions })
+const hostLayoutCollection = createListCollection({ items: hostLayoutOptions });
 
-const OptionsButtonList: Component<{ children: JSX.Element }> = props => (
+const OptionsButtonList: Component<{ children: JSX.Element }> = (props) => (
   <ul
     class="
       m-0 list-inside list-disc flex flex-col gap-0.75
@@ -19,9 +19,9 @@ const OptionsButtonList: Component<{ children: JSX.Element }> = props => (
   >
     {props.children}
   </ul>
-)
+);
 
-const OptionsButton: Component<{ children: JSX.Element }> = props => (
+const OptionsButton: Component<{ children: JSX.Element }> = (props) => (
   <button
     class="
       w-fit cursor-pointer bg-transparent
@@ -31,21 +31,25 @@ const OptionsButton: Component<{ children: JSX.Element }> = props => (
   >
     {props.children}
   </button>
-)
+);
 
-const OptionsSection: Component<{ title: string; children: JSX.Element }> = props => {
+const OptionsSection: Component<{ title: string; children: JSX.Element }> = (
+  props,
+) => {
   return (
     <div class="flex flex-1 justify-start sm:justify-center">
       <div class="flex flex-col gap-2">
-        <span class="font-medium italic text-neutral-600 dark:text-neutral-400">{props.title}</span>
+        <span class="font-medium italic text-neutral-600 dark:text-neutral-400">
+          {props.title}
+        </span>
         {props.children}
       </div>
     </div>
-  )
-}
+  );
+};
 
 export const Options: Component = () => {
-  const [hostLayout, setHostLayout] = createSignal<string[]>(['english-us'])
+  const [hostLayout, setHostLayout] = createSignal<string[]>(["english-us"]);
 
   return (
     <div class="mt-6 flex flex-col gap-6 sm:flex-row">
@@ -54,7 +58,7 @@ export const Options: Component = () => {
           class="relative w-40 min-w-40 max-w-40"
           collection={hostLayoutCollection}
           value={hostLayout()}
-          onValueChange={details => setHostLayout(details.value)}
+          onValueChange={(details) => setHostLayout(details.value)}
         >
           <Select.Control>
             <Select.Trigger
@@ -87,7 +91,7 @@ export const Options: Component = () => {
               "
             >
               <For each={hostLayoutCollection.items}>
-                {item => (
+                {(item) => (
                   <Select.Item
                     class="
                       m-1 flex items-center justify-between gap-4 rounded-lg p-2
@@ -134,7 +138,7 @@ export const Options: Component = () => {
         </OptionsButtonList>
       </OptionsSection>
     </div>
-  )
-}
+  );
+};
 
-export default Options
+export default Options;

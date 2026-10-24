@@ -1,19 +1,19 @@
-import { Tooltip } from '@ark-ui/solid'
-import type { KeyActionRender } from '../../keyAction'
-import type { Component, JSX } from 'solid-js'
-import StyledTooltipContent from '../StyledTooltipContent'
+import { Tooltip } from "@ark-ui/solid";
+import type { KeyActionRender } from "../../keyAction";
+import type { Component, JSX } from "solid-js";
+import StyledTooltipContent from "../StyledTooltipContent";
 
 export type KeyButtonProps = {
-  keyAction: KeyActionRender
-  onClick?: JSX.EventHandler<HTMLButtonElement, MouseEvent>
-}
+  keyAction: KeyActionRender;
+  onClick?: JSX.EventHandler<HTMLButtonElement, MouseEvent>;
+};
 
-export const KeyButton: Component<KeyButtonProps> = props => {
-  const selectedLayer = 0
-  const layerCount = 2
+export const KeyButton: Component<KeyButtonProps> = (props) => {
+  const selectedLayer = 0;
+  const layerCount = 2;
 
   return (
-    <Tooltip.Root positioning={{ placement: 'bottom', flip: false }}>
+    <Tooltip.Root positioning={{ placement: "bottom", flip: false }}>
       <Tooltip.Trigger
         class="absolute flex items-center justify-center
           w-[64px] h-[60px] rounded-lg
@@ -31,10 +31,12 @@ export const KeyButton: Component<KeyButtonProps> = props => {
         {props.keyAction.render(selectedLayer, layerCount)}
       </Tooltip.Trigger>
       <Tooltip.Positioner>
-        <StyledTooltipContent>{props.keyAction.renderTooltip()}</StyledTooltipContent>
+        <StyledTooltipContent>
+          {props.keyAction.renderTooltip()}
+        </StyledTooltipContent>
       </Tooltip.Positioner>
     </Tooltip.Root>
-  )
-}
+  );
+};
 
-export default KeyButton
+export default KeyButton;

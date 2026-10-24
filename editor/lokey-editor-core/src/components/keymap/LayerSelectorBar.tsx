@@ -1,43 +1,45 @@
-import { Tooltip } from '@ark-ui/solid'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-solid'
-import { For } from 'solid-js'
-import type { Component, JSX } from 'solid-js'
-import LayerSelectorButton from './LayerSelectorButton'
-import StyledTooltipContent from '../StyledTooltipContent'
+import { Tooltip } from "@ark-ui/solid";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-solid";
+import { For } from "solid-js";
+import type { Component, JSX } from "solid-js";
+import LayerSelectorButton from "./LayerSelectorButton";
+import StyledTooltipContent from "../StyledTooltipContent";
 
 export type LayerSelectorBarProps = {
   /** Number of layers displayed by the selector. */
-  layerCount: number
+  layerCount: number;
 
   /** Index of the currently selected layer. */
-  selected?: number
+  selected?: number;
 
   /** Called with the selected layer index when moving it to the left. */
-  onMoveLeft?: (index: number) => void
+  onMoveLeft?: (index: number) => void;
 
   /** Called with the selected layer index when moving it to the right. */
-  onMoveRight?: (index: number) => void
+  onMoveRight?: (index: number) => void;
 
   /** Called when a new layer should be created. */
-  onCreate?: () => void
+  onCreate?: () => void;
 
   /** Called when a layer is selected. */
-  onSelect?: (index: number) => void
+  onSelect?: (index: number) => void;
 
   /** Called when a layer is removed. */
-  onRemove?: (index: number) => void
-}
+  onRemove?: (index: number) => void;
+};
 
 type LayerSelectorActionButtonProps = {
-  label: string
-  tooltip: string
-  icon: JSX.Element
-  disabled?: boolean
-  onClick?: JSX.EventHandler<HTMLButtonElement, MouseEvent>
-}
+  label: string;
+  tooltip: string;
+  icon: JSX.Element;
+  disabled?: boolean;
+  onClick?: JSX.EventHandler<HTMLButtonElement, MouseEvent>;
+};
 
-const LayerSelectorActionButton: Component<LayerSelectorActionButtonProps> = props => (
-  <Tooltip.Root positioning={{ placement: 'bottom' }}>
+const LayerSelectorActionButton: Component<LayerSelectorActionButtonProps> = (
+  props,
+) => (
+  <Tooltip.Root positioning={{ placement: "bottom" }}>
     <Tooltip.Trigger
       class="
         inline-flex flex-none size-8 items-center justify-center rounded-full border-0 p-0
@@ -61,11 +63,12 @@ const LayerSelectorActionButton: Component<LayerSelectorActionButtonProps> = pro
       <StyledTooltipContent>{props.tooltip}</StyledTooltipContent>
     </Tooltip.Positioner>
   </Tooltip.Root>
-)
+);
 
-export const LayerSelectorBar: Component<LayerSelectorBarProps> = props => {
-  const layers = () => Array.from({ length: props.layerCount }, (_, index) => index)
-  const hasSelectedLayer = () => props.selected !== undefined
+export const LayerSelectorBar: Component<LayerSelectorBarProps> = (props) => {
+  const layers = () =>
+    Array.from({ length: props.layerCount }, (_, index) => index);
+  const hasSelectedLayer = () => props.selected !== undefined;
 
   return (
     <div class="flex w-full min-w-0 items-center gap-1.5 overflow-x-scroll px-3 py-2">
@@ -75,7 +78,7 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = props => {
         icon={<ChevronLeft size={18} strokeWidth={2} />}
         disabled={!hasSelectedLayer()}
         onClick={() => {
-          if (props.selected !== undefined) props.onMoveLeft?.(props.selected)
+          if (props.selected !== undefined) props.onMoveLeft?.(props.selected);
         }}
       />
 
@@ -85,7 +88,7 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = props => {
         icon={<ChevronRight size={18} strokeWidth={2} />}
         disabled={!hasSelectedLayer()}
         onClick={() => {
-          if (props.selected !== undefined) props.onMoveRight?.(props.selected)
+          if (props.selected !== undefined) props.onMoveRight?.(props.selected);
         }}
       />
 
@@ -101,7 +104,7 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = props => {
         aria-label="Layers"
       >
         <For each={layers()}>
-          {index => (
+          {(index) => (
             <LayerSelectorButton
               layerIndex={index}
               selected={props.selected}
@@ -119,7 +122,7 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = props => {
         />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LayerSelectorBar
+export default LayerSelectorBar;

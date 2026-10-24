@@ -7,7 +7,7 @@
   width: 100%;
 }
 
-.root > [data-scope='tabs'][data-part='list'] {
+.root > [data-scope="tabs"][data-part="list"] {
   display: flex;
   justify-content: center;
   gap: 0.25rem;
@@ -16,7 +16,7 @@
   @apply dark:border-neutral-800;
 }
 
-.root > [data-scope='tabs'][data-part='list'] [data-part='trigger'] {
+.root > [data-scope="tabs"][data-part="list"] [data-part="trigger"] {
   background: none;
   border: none;
   font-size: inherit;
@@ -27,22 +27,26 @@
   @apply dark:text-neutral-400;
 }
 
-.root > [data-scope='tabs'][data-part='list'] [data-part='trigger']:not([data-selected]):hover {
+.root
+  > [data-scope="tabs"][data-part="list"]
+  [data-part="trigger"]:not([data-selected]):hover {
   @apply text-neutral-700;
   @apply dark:text-neutral-300;
 }
 
-.root > [data-scope='tabs'][data-part='list'] [data-part='trigger'][data-selected] {
+.root
+  > [data-scope="tabs"][data-part="list"]
+  [data-part="trigger"][data-selected] {
   @apply text-accent;
   box-shadow: inset 0 -2px 0 0 var(--color-accent);
 }
 
-.root > [data-scope='tabs'][data-part='content'] {
+.root > [data-scope="tabs"][data-part="content"] {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.root > [data-scope='tabs'][data-part='content'][data-state='closed'] {
+.root > [data-scope="tabs"][data-part="content"][data-state="closed"] {
   display: none;
 }

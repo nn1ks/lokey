@@ -1,15 +1,15 @@
-import { Lightbulb } from 'lucide-solid'
-import { createSignal } from 'solid-js'
-import type { Component } from 'solid-js'
-import PageHeading from '../PageHeading'
-import ToggleRow from './ToggleRow'
-import PoweredByLokey from '../PoweredByLokey'
+import { Lightbulb } from "lucide-solid";
+import { createSignal } from "solid-js";
+import type { Component } from "solid-js";
+import PageHeading from "../PageHeading";
+import ToggleRow from "./ToggleRow";
+import PoweredByLokey from "../PoweredByLokey";
 
 export const LedArrayPage: Component = () => {
-  const [boot, setBoot] = createSignal(false)
-  const [bluetoothProfile, setBluetoothProfile] = createSignal(false)
-  const [bluetoothPairing, setBluetoothPairing] = createSignal(false)
-  const [layer, setLayer] = createSignal(false)
+  const [boot, setBoot] = createSignal(false);
+  const [bluetoothProfile, setBluetoothProfile] = createSignal(false);
+  const [bluetoothPairing, setBluetoothPairing] = createSignal(false);
+  const [layer, setLayer] = createSignal(false);
 
   return (
     <main class="w-full max-w-200 px-(--page-padding-x) mb-8">
@@ -56,7 +56,7 @@ export const LedArrayPage: Component = () => {
       </div>
       <PoweredByLokey />
     </main>
-  )
-}
+  );
+};
 
-export default LedArrayPage
+export default LedArrayPage;

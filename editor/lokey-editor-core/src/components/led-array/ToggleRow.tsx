@@ -1,18 +1,18 @@
-import { Switch } from '@ark-ui/solid'
-import type { Component } from 'solid-js'
+import { Switch } from "@ark-ui/solid";
+import type { Component } from "solid-js";
 
 export type ToggleRowProps = {
-  label: string
-  description: string
-  enabled: boolean
-  onCheckedChange?: (checked: boolean) => void
-}
+  label: string;
+  description: string;
+  enabled: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+};
 
-export const ToggleRow: Component<ToggleRowProps> = props => {
+export const ToggleRow: Component<ToggleRowProps> = (props) => {
   return (
     <Switch.Root
       checked={props.enabled}
-      onCheckedChange={details => props.onCheckedChange?.(details.checked)}
+      onCheckedChange={(details) => props.onCheckedChange?.(details.checked)}
       class="
         flex items-center justify-between gap-3 py-3 px-4 cursor-pointer select-none
         bg-neutral-150 dark:bg-neutral-900
@@ -43,7 +43,7 @@ export const ToggleRow: Component<ToggleRowProps> = props => {
       </Switch.Control>
       <Switch.HiddenInput />
     </Switch.Root>
-  )
-}
+  );
+};
 
-export default ToggleRow
+export default ToggleRow;

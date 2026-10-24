@@ -1,4 +1,4 @@
-.indeterminate_range[data-state='indeterminate'] {
+.indeterminate_range[data-state="indeterminate"] {
   animation: indeterminate 1s ease-in-out infinite;
 }
 

@@ -1,15 +1,15 @@
-import { Show } from 'solid-js'
-import type { Component, JSX } from 'solid-js'
+import { Show } from "solid-js";
+import type { Component, JSX } from "solid-js";
 
-import { useConnection } from '../contexts'
-import Button from './Button'
+import { useConnection } from "../contexts";
+import Button from "./Button";
 
 type HeaderProps = {
-  title: JSX.Element
-}
+  title: JSX.Element;
+};
 
-export const Header: Component<HeaderProps> = props => {
-  const { connection, disconnect } = useConnection()
+export const Header: Component<HeaderProps> = (props) => {
+  const { connection, disconnect } = useConnection();
 
   return (
     <>
@@ -24,24 +24,26 @@ export const Header: Component<HeaderProps> = props => {
       >
         <div class="flex items-center gap-2">{props.title}</div>
 
-        <Show when={connection().status === 'connected' ? connection() : undefined}>
-          {connected => {
+        <Show
+          when={connection().status === "connected" ? connection() : undefined}
+        >
+          {(connected) => {
             const isDemo = () => {
-              const state = connected()
-              return state.status === 'connected' && state.isDemo
-            }
+              const state = connected();
+              return state.status === "connected" && state.isDemo;
+            };
 
             return (
               <Button onClick={() => void disconnect()}>
-                {isDemo() ? 'Leave Demo' : 'Disconnect'}
+                {isDemo() ? "Leave Demo" : "Disconnect"}
               </Button>
-            )
+            );
           }}
         </Show>
       </header>
       <div class="h-(--header-height)"></div>
     </>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;

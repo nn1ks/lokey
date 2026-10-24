@@ -1,7 +1,7 @@
-import { CircleAlert } from 'lucide-solid'
-import type { ParentComponent } from 'solid-js'
+import { CircleAlert } from "lucide-solid";
+import type { ParentComponent } from "solid-js";
 
-export const ErrorMessage: ParentComponent = props => {
+export const ErrorMessage: ParentComponent = (props) => {
   return (
     <div
       class="flex w-full items-center gap-3 p-0 text-red-700 dark:text-red-400 font-medium"
@@ -12,7 +12,7 @@ export const ErrorMessage: ParentComponent = props => {
       </div>
       <span>{props.children}</span>
     </div>
-  )
-}
+  );
+};
 
-export default ErrorMessage
+export default ErrorMessage;

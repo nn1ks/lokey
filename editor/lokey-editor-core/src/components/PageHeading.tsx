@@ -1,13 +1,13 @@
-import type { Component, JSX } from 'solid-js'
+import type { Component, JSX } from "solid-js";
 
 export type PageHeadingProps = {
-  icon: JSX.Element
-  title: JSX.Element
-  description: JSX.Element
-  actions: JSX.Element
-}
+  icon: JSX.Element;
+  title: JSX.Element;
+  description: JSX.Element;
+  actions: JSX.Element;
+};
 
-export const PageHeading: Component<PageHeadingProps> = props => {
+export const PageHeading: Component<PageHeadingProps> = (props) => {
   return (
     <div class="box-border flex w-full items-center gap-3 py-4">
       <div
@@ -23,11 +23,15 @@ export const PageHeading: Component<PageHeadingProps> = props => {
         <h1 class="m-0 text-lg leading-6 font-medium text-neutral-800 dark:text-neutral-200">
           {props.title}
         </h1>
-        <div class="text-md leading-5 text-neutral-500">{props.description}</div>
+        <div class="text-md leading-5 text-neutral-500">
+          {props.description}
+        </div>
       </div>
-      <div class="ml-auto flex flex-none items-center gap-2">{props.actions}</div>
+      <div class="ml-auto flex flex-none items-center gap-2">
+        {props.actions}
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default PageHeading
+export default PageHeading;

@@ -1,25 +1,27 @@
-import { Tooltip } from '@ark-ui/solid'
-import { X } from 'lucide-solid'
-import type { Component } from 'solid-js'
-import StyledTooltipContent from '../StyledTooltipContent'
+import { Tooltip } from "@ark-ui/solid";
+import { X } from "lucide-solid";
+import type { Component } from "solid-js";
+import StyledTooltipContent from "../StyledTooltipContent";
 
 export type LayerSelectorButtonProps = {
   /** Index of the layer represented by this component. */
-  layerIndex: number
+  layerIndex: number;
 
   /** Index of the currently selected layer. */
-  selected?: number
+  selected?: number;
 
   /** Called with the layer index when its label is clicked. */
-  onSelect?: (index: number) => void
+  onSelect?: (index: number) => void;
 
   /** Called with the layer index when its remove button is clicked. */
-  onRemove?: (index: number) => void
-}
+  onRemove?: (index: number) => void;
+};
 
-export const LayerSelectorButton: Component<LayerSelectorButtonProps> = props => {
-  const label = () => `Layer ${props.layerIndex + 1}`
-  const isSelected = () => props.selected === props.layerIndex
+export const LayerSelectorButton: Component<LayerSelectorButtonProps> = (
+  props,
+) => {
+  const label = () => `Layer ${props.layerIndex + 1}`;
+  const isSelected = () => props.selected === props.layerIndex;
 
   return (
     <div
@@ -50,7 +52,7 @@ export const LayerSelectorButton: Component<LayerSelectorButtonProps> = props =>
         {label()}
       </button>
       {isSelected() && (
-        <Tooltip.Root positioning={{ placement: 'bottom' }}>
+        <Tooltip.Root positioning={{ placement: "bottom" }}>
           <Tooltip.Trigger
             class="
               mr-[0.2rem] inline-flex items-center justify-center rounded-full
@@ -65,9 +67,9 @@ export const LayerSelectorButton: Component<LayerSelectorButtonProps> = props =>
             "
             type="button"
             aria-label={`Remove ${label()}`}
-            onClick={event => {
-              event.stopPropagation()
-              props.onRemove?.(props.layerIndex)
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onRemove?.(props.layerIndex);
             }}
           >
             <X size={14} strokeWidth={2} />
@@ -78,7 +80,7 @@ export const LayerSelectorButton: Component<LayerSelectorButtonProps> = props =>
         </Tooltip.Root>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default LayerSelectorButton
+export default LayerSelectorButton;
