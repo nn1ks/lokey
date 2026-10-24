@@ -11,8 +11,8 @@ description = "USB transport support for the lokey framework (macro crate)"
 proc-macro = true
 
 [dependencies]
-darling = "0.23.0"
+darling = "0.24.1"
 proc-macro-error = "1.0.4"
 proc-macro2 = "1.0.69"
 quote = "1.0.33"
-syn = { version = "2.0.38", features = ["full"] }
+syn = { version = "3.0.9", features = ["full"] }
