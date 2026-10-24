@@ -799,10 +799,7 @@ mod tests {
     fn bond_info_serialization1() {
         let bond_info = BondInformation::new(
             Identity {
-                addr: trouble_host::Address::new(
-                    AddressKind::PUBLIC,
-                    BdAddr::new([1, 2, 3, 4, 5, 6]),
-                ),
+                addr: trouble_host::Address::new(AddrKind::PUBLIC, BdAddr::new([1, 2, 3, 4, 5, 6])),
                 irk: Some(IdentityResolvingKey::from_le_bytes([7; 16]).unwrap()),
             },
             LongTermKey::from_le_bytes([8; 16]),
@@ -812,7 +809,7 @@ mod tests {
         let stored = StoredBondInformation(bond_info.clone());
         let bytes = storage::Entry::to_bytes(&stored);
         let deserialized = <StoredBondInformation as storage::Entry>::from_bytes(&bytes).unwrap();
-        assert_eq!(stored.0.identity.bd_addr, deserialized.0.identity.bd_addr);
+        assert_eq!(stored.0.identity.addr, deserialized.0.identity.addr);
         assert_eq!(stored.0.identity.irk, deserialized.0.identity.irk);
         assert_eq!(stored.0.ltk, deserialized.0.ltk);
         assert_eq!(stored.0.security_level, deserialized.0.security_level);
@@ -824,7 +821,7 @@ mod tests {
         let bond_info = BondInformation::new(
             Identity {
                 addr: trouble_host::Address::new(
-                    AddressKind::RANDOM,
+                    AddrKind::RANDOM,
                     BdAddr::new([21, 22, 23, 24, 25, 26]),
                 ),
                 irk: None,
@@ -836,7 +833,7 @@ mod tests {
         let stored = StoredBondInformation(bond_info.clone());
         let bytes = storage::Entry::to_bytes(&stored);
         let deserialized = <StoredBondInformation as storage::Entry>::from_bytes(&bytes).unwrap();
-        assert_eq!(stored.0.identity.bd_addr, deserialized.0.identity.bd_addr);
+        assert_eq!(stored.0.identity.addr, deserialized.0.identity.addr);
         assert_eq!(stored.0.identity.irk, deserialized.0.identity.irk);
         assert_eq!(stored.0.ltk, deserialized.0.ltk);
         assert_eq!(stored.0.security_level, deserialized.0.security_level);
