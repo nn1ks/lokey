@@ -2,6 +2,8 @@
 import { render } from "solid-js/web";
 import "solid-devtools";
 
+import "lokey-editor-core/styles.css";
+
 import App from "./App";
 
 const root = document.getElementById("root");
