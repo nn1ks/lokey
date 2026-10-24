@@ -9,8 +9,13 @@ categories = ["embedded", "no-std"]
 keywords = ["firmware"]
 
 [features]
+## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
 defmt = ["dep:defmt", "embassy-sync?/defmt", "embassy-usb?/defmt", "lokey?/defmt", "lokey-usb?/defmt"]
+
+## Enables the lokey component [`OdynCore`].
 component = ["dep:lokey"]
+
+## Enables support for using [`Message`] in USB transports.
 usb = ["dep:embassy-sync", "dep:embassy-usb", "dep:lokey", "dep:lokey-usb"]
 
 max-payload-size-64 = []
@@ -21,6 +26,7 @@ max-payload-size-256 = []
 arrayvec = { version = "0.7.8", default-features = false }
 capnp = { version = "0.27.2", default-features = false, features = ["unaligned"] }
 defmt = { version = "1.0.1", optional = true }
+document-features = "0.2.11"
 embassy-sync = { version = "0.8.0", default-features = false, optional = true }
 embassy-usb = { version = "0.6.0", default-features = false, optional = true }
 lokey = { path = "../lokey", optional = true }
