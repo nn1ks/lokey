@@ -28,3 +28,6 @@ lokey-usb = { path = "../lokey-usb", optional = true }
 
 [build-dependencies]
 capnpc = "0.27.0"
+
+[package.metadata.docs.rs]
+features = ["defmt", "component", "usb"]
