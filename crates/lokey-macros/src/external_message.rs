@@ -2,8 +2,8 @@ use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
+use syn::DeriveInput;
 use syn::spanned::Spanned;
-use syn::{DeriveInput, parse_macro_input};
 
 #[derive(FromDeriveInput)]
 #[darling(attributes(external_message))]
@@ -12,12 +12,9 @@ struct ExternalMessageArgs {
     crate_: Option<syn::Path>,
 }
 
-pub fn external_message_derive(item: TokenStream) -> TokenStream {
-    let input: DeriveInput = parse_macro_input!(item);
-    let args = match ExternalMessageArgs::from_derive_input(&input) {
-        Ok(args) => args,
-        Err(e) => return e.write_errors().into(),
-    };
+pub fn external_message_derive(item: TokenStream) -> syn::Result<TokenStream2> {
+    let input: DeriveInput = syn::parse(item)?;
+    let args = ExternalMessageArgs::from_derive_input(&input)?;
 
     let crate_path: TokenStream2 = args
         .crate_
@@ -29,12 +26,12 @@ pub fn external_message_derive(item: TokenStream) -> TokenStream {
         syn::Data::Enum(data_enum) => {
             external_message_derive_enum(input.ident, data_enum, crate_path)
         }
-        syn::Data::Struct(_) => external_message_derive_struct(input.ident, crate_path),
-        syn::Data::Union(_) => external_message_derive_struct(input.ident, crate_path),
+        syn::Data::Struct(_) => Ok(external_message_derive_struct(input.ident, crate_path)),
+        syn::Data::Union(_) => Ok(external_message_derive_struct(input.ident, crate_path)),
     }
 }
 
-fn external_message_derive_struct(ident: syn::Ident, crate_path: TokenStream2) -> TokenStream {
+fn external_message_derive_struct(ident: syn::Ident, crate_path: TokenStream2) -> TokenStream2 {
     quote! {
         impl #crate_path::external::Message for #ident {
             fn has_inner_message<M: #crate_path::external::Message>() -> bool {
@@ -53,14 +50,13 @@ fn external_message_derive_struct(ident: syn::Ident, crate_path: TokenStream2) -
             }
         }
     }
-    .into()
 }
 
 fn external_message_derive_enum(
     ident: syn::Ident,
     data_enum: syn::DataEnum,
     crate_path: TokenStream2,
-) -> TokenStream {
+) -> syn::Result<TokenStream2> {
     let variant_names = data_enum
         .variants
         .iter()
@@ -91,15 +87,11 @@ fn external_message_derive_enum(
                 "Message derive macro can not be used on unit enum variants",
             )),
         })
-        .collect::<Result<Vec<_>, _>>();
-    let variant_fields = match variant_fields {
-        Ok(v) => v,
-        Err(e) => return e.into_compile_error().into(),
-    };
+        .collect::<Result<Vec<_>, _>>()?;
 
     let variant_types = variant_fields.iter().map(|f| &f.ty).collect::<Vec<_>>();
 
-    quote! {
+    Ok(quote! {
         impl #crate_path::external::Message for #ident {
             fn has_inner_message<M: #crate_path::external::Message>() -> bool {
                 false
@@ -161,6 +153,5 @@ fn external_message_derive_enum(
                 #ident::#variant_names(value)
             }
         })*
-    }
-    .into()
+    })
 }

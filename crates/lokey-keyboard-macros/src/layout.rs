@@ -1,23 +1,24 @@
 use proc_macro::TokenStream;
-use proc_macro_error::abort;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::{ToTokens, quote};
+use syn::Ident;
+use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Ident, parse_macro_input};
 
 fn layer_actions(
     arrays: Punctuated<syn::ExprArray, syn::token::Comma>,
-) -> Vec<Vec<proc_macro2::TokenStream>> {
+) -> syn::Result<Vec<Vec<proc_macro2::TokenStream>>> {
     let num_keys = match arrays.first() {
         Some(v) => v.elems.len(),
         None => 0,
     };
     for array in &arrays {
         if array.elems.len() != num_keys {
-            abort!(
+            return Err(syn::Error::new(
                 array.span(),
-                "All layers must have an equal amount of actions"
-            );
+                "All layers must have an equal amount of actions",
+            ));
         }
     }
     let mut layer_actions: Vec<Vec<proc_macro2::TokenStream>> = vec![vec![]; num_keys];
@@ -38,14 +39,12 @@ fn layer_actions(
             layer_actions[key_index].push(expr);
         }
     }
-    layer_actions
+    Ok(layer_actions)
 }
 
-pub fn layout(item: TokenStream) -> TokenStream {
-    let arrays = parse_macro_input!(
-        item with Punctuated::<syn::ExprArray, syn::token::Comma>::parse_terminated
-    );
-    let layer_actions = layer_actions(arrays);
+pub fn layout(item: TokenStream) -> syn::Result<TokenStream2> {
+    let arrays = Punctuated::<syn::ExprArray, syn::token::Comma>::parse_terminated.parse(item)?;
+    let layer_actions = layer_actions(arrays)?;
 
     let combined_actions = layer_actions
         .into_iter()
@@ -127,10 +126,9 @@ pub fn layout(item: TokenStream) -> TokenStream {
         }
     };
 
-    quote! {{
+    Ok(quote! {{
         #struct_definition
         #struct_impl
         ::lokey_keyboard::Layout::new(__LayoutActionContainer(#(#combined_actions,)*))
-    }}
-    .into()
+    }})
 }

@@ -1,10 +1,10 @@
 use darling::FromField;
 use darling::util::Flag;
 use proc_macro::TokenStream;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
+use syn::DeriveInput;
 use syn::spanned::Spanned;
-use syn::{DeriveInput, parse_macro_input};
 
 #[derive(Debug, FromField)]
 #[darling(attributes(state))]
@@ -12,25 +12,21 @@ struct FieldAttrs {
     query: Flag,
 }
 
-pub fn state_derive(item: TokenStream) -> TokenStream {
-    let DeriveInput { ident, data, .. } = parse_macro_input!(item);
+pub fn state_derive(item: TokenStream) -> syn::Result<TokenStream2> {
+    let DeriveInput { ident, data, .. } = syn::parse(item)?;
     let data_struct = match data {
         syn::Data::Struct(v) => v,
         syn::Data::Enum(_) => {
-            return syn::Error::new(
+            return Err(syn::Error::new(
                 Span::call_site(),
                 "State derive macro can not be used on enums",
-            )
-            .into_compile_error()
-            .into();
+            ));
         }
         syn::Data::Union(_) => {
-            return syn::Error::new(
+            return Err(syn::Error::new(
                 Span::call_site(),
                 "State derive macro can not be used on unions",
-            )
-            .into_compile_error()
-            .into();
+            ));
         }
     };
 
@@ -48,9 +44,7 @@ pub fn state_derive(item: TokenStream) -> TokenStream {
             .collect(),
         syn::Fields::Unit => Vec::new(),
     };
-    if let Err(e) = errors.finish() {
-        return e.write_errors().into();
-    }
+    errors.finish()?;
 
     let field_types: Vec<_> = match &data_struct.fields {
         syn::Fields::Named(v) => v.named.iter().map(|v| &v.ty).collect(),
@@ -108,7 +102,7 @@ pub fn state_derive(item: TokenStream) -> TokenStream {
         })
         .collect::<proc_macro2::TokenStream>();
 
-    quote! {
+    Ok(quote! {
         #(
             impl ::lokey::state::State<#field_types> for #ident {
                 fn get(&self) -> &#field_types {
@@ -147,6 +141,5 @@ pub fn state_derive(item: TokenStream) -> TokenStream {
                 ::core::option::Option::None
             }
         }
-    }
-    .into()
+    })
 }

@@ -1,30 +1,26 @@
 use proc_macro::TokenStream;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
+use syn::DeriveInput;
 use syn::spanned::Spanned;
-use syn::{DeriveInput, parse_macro_input};
 
-pub fn tx_message_derive(item: TokenStream) -> TokenStream {
+pub fn tx_message_derive(item: TokenStream) -> syn::Result<TokenStream2> {
     let DeriveInput {
         vis, ident, data, ..
-    } = parse_macro_input!(item);
+    } = syn::parse(item)?;
     let data_enum = match data {
         syn::Data::Enum(v) => v,
         syn::Data::Struct(_) => {
-            return syn::Error::new(
+            return Err(syn::Error::new(
                 Span::call_site(),
                 "Message derive macro can not be used on structs",
-            )
-            .into_compile_error()
-            .into();
+            ));
         }
         syn::Data::Union(_) => {
-            return syn::Error::new(
+            return Err(syn::Error::new(
                 Span::call_site(),
                 "Message derive macro can not be used on unions",
-            )
-            .into_compile_error()
-            .into();
+            ));
         }
     };
 
@@ -58,11 +54,7 @@ pub fn tx_message_derive(item: TokenStream) -> TokenStream {
                 "TxMessage derive macro can not be used on unit enum variants",
             )),
         })
-        .collect::<Result<Vec<_>, _>>();
-    let variant_fields = match variant_fields {
-        Ok(v) => v,
-        Err(e) => return e.into_compile_error().into(),
-    };
+        .collect::<Result<Vec<_>, _>>()?;
 
     let variant_types = variant_fields.iter().map(|f| &f.ty).collect::<Vec<_>>();
 
@@ -78,7 +70,7 @@ pub fn tx_message_derive(item: TokenStream) -> TokenStream {
         Span::call_site(),
     );
 
-    quote! {
+    Ok(quote! {
         impl ::lokey_usb::external::TxMessage for #ident {
             type MessageService<'d, D: ::lokey_usb::embassy_usb::driver::Driver<'d> + 'd> = #message_service_ident<'d, D>;
         }
@@ -141,6 +133,5 @@ pub fn tx_message_derive(item: TokenStream) -> TokenStream {
                 }
             }
         }
-    }
-    .into()
+    })
 }

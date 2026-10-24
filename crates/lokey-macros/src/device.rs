@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use darling::ast::NestedMeta;
 use proc_macro::TokenStream;
-use proc_macro_error::abort;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::{ToTokens, quote};
 use syn::spanned::Spanned;
 
@@ -15,52 +15,77 @@ struct DeviceArgs {
     message_override: Option<syn::Expr>,
 }
 
-pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr_args = NestedMeta::parse_meta_list(attr.into()).unwrap_or_else(|e| abort!("{}", e));
-    let args = DeviceArgs::from_list(&attr_args).unwrap_or_else(|e| abort!("{}", e));
+const INVALID_DEVICE_TYPE_ERROR: &str = "Parameter must be of type `Context`";
+const INVALID_ARGUMENT_TYPE_ERROR: &str = "Unexpected generic argument, expected type argument";
 
-    let function: syn::ItemFn = syn::parse(item).unwrap_or_else(|e| abort!("{}", e.to_string()));
+fn parse_context_generic_arguments(
+    v: &syn::AngleBracketedGenericArguments,
+) -> syn::Result<(syn::TypePath, syn::TypePath, syn::TypePath)> {
+    if v.args.len() != 3 {
+        return Err(syn::Error::new(v.args.span(), "Expected 3 type arguments"));
+    }
+    let mut iter = v.args.iter();
+    let a = match iter.next().unwrap() {
+        syn::GenericArgument::Type(syn::Type::Path(path)) => path.clone(),
+        _ => {
+            return Err(syn::Error::new(v.span(), INVALID_ARGUMENT_TYPE_ERROR));
+        }
+    };
+    let b = match iter.next().unwrap() {
+        syn::GenericArgument::Type(syn::Type::Path(path)) => path.clone(),
+        _ => {
+            return Err(syn::Error::new(v.span(), INVALID_ARGUMENT_TYPE_ERROR));
+        }
+    };
+    let c = match iter.next().unwrap() {
+        syn::GenericArgument::Type(syn::Type::Path(path)) => path.clone(),
+        _ => {
+            return Err(syn::Error::new(v.span(), INVALID_ARGUMENT_TYPE_ERROR));
+        }
+    };
+    Ok((a, b, c))
+}
+
+pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2> {
+    let attr_args = NestedMeta::parse_meta_list(attr.into())?;
+    let args = DeviceArgs::from_list(&attr_args)?;
+
+    let function: syn::ItemFn = syn::parse(item)?;
     let function_ident = &function.sig.ident;
 
     let context_param = if function.sig.inputs.len() == 2 {
         &function.sig.inputs[0]
     } else {
-        abort!(function.sig.inputs.span(), "Expected 2 parameters");
+        return Err(syn::Error::new(
+            function.sig.inputs.span(),
+            "Expected 2 parameters",
+        ));
     };
-
-    let invalid_device_type_error = "Parameter must be of type `Context`";
-    let invalid_argument_type_error = "Unexpected generic argument, expected type argument";
 
     let (device_type_path, transports_type_path, state_type_path) = match &context_param {
         syn::FnArg::Typed(pattern) => match &*pattern.ty {
             syn::Type::Path(v) => {
                 let last_segment = &v.path.segments.last().unwrap();
                 match &last_segment.arguments {
-                    syn::PathArguments::AngleBracketed(v) => {
-                        if v.args.len() != 3 {
-                            abort!(v.args.span(), "Expected 3 type arguments");
-                        }
-                        let mut iter = v.args.iter();
-                        let a = match iter.next().unwrap() {
-                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_argument_type_error),
-                        };
-                        let b = match iter.next().unwrap() {
-                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_argument_type_error),
-                        };
-                        let c = match iter.next().unwrap() {
-                            syn::GenericArgument::Type(syn::Type::Path(path)) => path,
-                            _ => abort!(v.span(), invalid_argument_type_error),
-                        };
-                        (a, b, c)
+                    syn::PathArguments::AngleBracketed(v) => parse_context_generic_arguments(v)?,
+                    _ => {
+                        return Err(syn::Error::new(v.span(), INVALID_ARGUMENT_TYPE_ERROR));
                     }
-                    _ => abort!(v.span(), invalid_argument_type_error),
                 }
             }
-            _ => abort!(pattern.ty.span(), invalid_device_type_error),
+            _ => {
+                return Err(syn::Error::new(
+                    pattern.ty.span(),
+                    INVALID_DEVICE_TYPE_ERROR,
+                ));
+            }
         },
-        syn::FnArg::Receiver(_) => abort!(context_param.span(), invalid_device_type_error),
+        syn::FnArg::Receiver(_) => {
+            return Err(syn::Error::new(
+                context_param.span(),
+                INVALID_DEVICE_TYPE_ERROR,
+            ));
+        }
     };
 
     let address = match args.address {
@@ -95,7 +120,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
-    quote! {
+    Ok(quote! {
         #[::embassy_executor::main]
         async fn main(spawner: ::embassy_executor::Spawner) {
             fn __modify_mcu_config(
@@ -245,6 +270,5 @@ pub fn device(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             #function_ident(context, spawner).await
         }
-    }
-    .into()
+    })
 }
