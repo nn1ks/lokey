@@ -16,7 +16,9 @@
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "types": [],
-    "baseUrl": "."
+    // tsup 8 always sets `baseUrl` for its DTS build, which TypeScript 6 reports as deprecated
+    // (TS5101). Remove this once tsup stops injecting it.
+    "ignoreDeprecations": "6.0"
   },
   "exclude": ["node_modules", "dist", "./dev"]
 }

@@ -33,7 +33,7 @@
     "capnp-es": "^0.0.16"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "typedoc": "^0.28.0"
+    "typedoc": "^0.28.0",
+    "typescript": "^6.0.3"
   }
 }

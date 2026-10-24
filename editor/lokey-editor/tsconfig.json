@@ -11,7 +11,6 @@
     "isolatedModules": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "noEmit": true,
 
     // Type Checking & Safety
