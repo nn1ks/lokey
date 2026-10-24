@@ -73,6 +73,26 @@ impl Message {
     }
 }
 
+#[cfg(any(feature = "component", feature = "usb"))]
+impl lokey::external::Message for Message {
+    fn has_inner_message<M: lokey::external::Message>() -> bool {
+        false
+    }
+
+    fn inner_message<M: lokey::external::Message>(&self) -> Option<&M> {
+        None
+    }
+
+    fn try_from_inner_message(
+        _: &dyn core::any::Any,
+    ) -> Result<Self, lokey::external::MismatchedMessageType>
+    where
+        Self: Sized,
+    {
+        Err(lokey::external::MismatchedMessageType)
+    }
+}
+
 struct ArrayVecWriter<const N: usize>(ArrayVec<u8, N>);
 
 impl<const N: usize> capnp::io::Write for ArrayVecWriter<N> {

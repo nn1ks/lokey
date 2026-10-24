@@ -1,25 +1,7 @@
 use crate::{MAX_PAYLOAD_SIZE, Message, decode, encode, protocol};
-use core::any::Any;
-use lokey::external::{MismatchedMessageType, TryReceiverError, UnsupportedMessageType};
+use lokey::external::{TryReceiverError, UnsupportedMessageType};
 use lokey::util::{error, info};
 use lokey::{AnyState, Component, Context, Device, Transports};
-
-impl lokey::external::Message for Message {
-    fn has_inner_message<M: lokey::external::Message>() -> bool {
-        false
-    }
-
-    fn inner_message<M: lokey::external::Message>(&self) -> Option<&M> {
-        None
-    }
-
-    fn try_from_inner_message(_: &dyn Any) -> Result<Self, MismatchedMessageType>
-    where
-        Self: Sized,
-    {
-        Err(MismatchedMessageType)
-    }
-}
 
 pub struct OdynCore {
     pub device_id: u32,
