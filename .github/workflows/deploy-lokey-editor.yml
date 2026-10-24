@@ -34,6 +34,8 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: editor/pnpm-lock.yaml
+      - name: Install Cap'n Proto
+        run: sudo apt-get update && sudo apt-get install -y capnproto
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build
