@@ -23,8 +23,6 @@ defmt = [
     "lokey-keyboard/defmt",
     "lokey-layer/defmt",
     "lokey-led-array/defmt",
-    "lokey-midi/defmt",
-    "lokey-mouse/defmt",
     "lokey-nrf/defmt",
     "lokey-usb/defmt",
     "lokey-usb-ble/defmt",
