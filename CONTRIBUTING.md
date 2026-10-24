@@ -107,8 +107,7 @@ cargo clippy -p lokey-rp --features "defmt usb rp2040" --target thumbv6m-none-ea
 The unit tests and doc tests can be run with the following commands:
 
 ```sh
-cargo test --workspace --exclude lokey --exclude lokey-nrf --exclude lokey-rp --all-features
-cargo test -p lokey
+cargo test --workspace --exclude lokey-nrf --exclude lokey-rp --all-features
 cargo test -p lokey-nrf --features "defmt usb ble nrf52840" --target thumbv7em-none-eabihf
 cargo test -p lokey-rp --features "defmt usb rp2040" --target thumbv6m-none-eabi
 ```
