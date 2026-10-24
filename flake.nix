@@ -47,6 +47,7 @@
 
           # Docs website
           nodejs
+          pnpm
           package-version-server
 
           # Nix
