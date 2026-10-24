@@ -122,7 +122,7 @@ The Lokey Editor web app is built with [SolidJS](https://www.solidjs.com/) and [
 To run a development server, use the following commands:
 
 ```sh
-cd editor/lokey-editor
+cd editor
 npm install
 npm run dev
 ```
