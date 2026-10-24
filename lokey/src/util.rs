@@ -1,13 +1,16 @@
 //! Utility macros and functions.
 
+#[macro_export]
+#[doc(hidden)]
+#[collapse_debuginfo(yes)]
 macro_rules! __declare_const_for_feature_group {
-    // Entry: optional attributes + list of (feature, value) tuples
-    ($(#[$attr:meta])* $name:ident, [ $( ( $feat:expr, $val:expr ) ),+ $(,)? ]) => {
+    // Entry with an explicit default value.
+    ($(#[$attr:meta])* $name:ident, default = $default:expr, [ $( ( $feat:expr, $val:expr ) ),+ $(,)? ]) => {
         // Default when none of the features are enabled
         #[cfg(not(any( $( feature = $feat ),* )))]
         #[cfg_attr(docsrs, doc(auto_cfg = false))]
         $(#[$attr])*
-        pub const $name: usize = 0;
+        pub const $name: usize = $default;
 
         // Emit per-feature consts, each excluding all remaining features to avoid duplicate defs.
         $crate::util::declare_const_for_feature_group!(
@@ -15,6 +18,16 @@ macro_rules! __declare_const_for_feature_group {
             [$(#[$attr])*]
             $name,
             $( ( $feat, $val ) ),+
+        );
+    };
+
+    // Entry without a default value: use zero when no feature is enabled.
+    ($(#[$attr:meta])* $name:ident, [ $( ( $feat:expr, $val:expr ) ),+ $(,)? ]) => {
+        $crate::util::declare_const_for_feature_group!(
+            $(#[$attr])*
+            $name,
+            default = 0,
+            [ $( ( $feat, $val ) ),+ ]
         );
     };
 
@@ -125,9 +138,7 @@ macro_rules! __debug {
 }
 
 #[doc(inline)]
-pub(crate) use __declare_const_for_feature_group as declare_const_for_feature_group;
-#[doc(inline)]
 pub use {
-    __debug as debug, __error as error, __info as info, __panic as panic, __unwrap as unwrap,
-    __warn as warn,
+    __debug as debug, __declare_const_for_feature_group as declare_const_for_feature_group,
+    __error as error, __info as info, __panic as panic, __unwrap as unwrap, __warn as warn,
 };
