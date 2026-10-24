@@ -159,7 +159,12 @@ where
     where
         M: Message,
     {
-        if !Transport::RxMessage::has_inner_message::<M>() {
+        let is_inner_message;
+        if TypeId::of::<M>() == TypeId::of::<Transport::RxMessage>() {
+            is_inner_message = false;
+        } else if Transport::RxMessage::has_inner_message::<M>() {
+            is_inner_message = true;
+        } else {
             return Err(TryReceiverError::UnsupportedMessageType(
                 UnsupportedMessageType,
             ));
@@ -170,6 +175,7 @@ where
             .map_err(|_| MaximumReceiversReached)?;
         Ok(TryReceiver {
             subscriber,
+            is_inner_message,
             phantom: PhantomData,
         })
     }
@@ -199,7 +205,12 @@ where
     where
         M: Message,
     {
-        if !Transport::TxMessage::has_inner_message::<M>() {
+        let is_inner_message;
+        if TypeId::of::<M>() == TypeId::of::<Transport::TxMessage>() {
+            is_inner_message = false;
+        } else if Transport::TxMessage::has_inner_message::<M>() {
+            is_inner_message = true;
+        } else {
             return Err(TryObserverError::UnsupportedMessageType(
                 UnsupportedMessageType,
             ));
@@ -210,6 +221,7 @@ where
             .map_err(|_| MaximumObserversReached)?;
         Ok(TryObserver {
             subscriber,
+            is_inner_message,
             phantom: PhantomData,
         })
     }
@@ -291,6 +303,7 @@ where
     RxMessage: external::Message,
 {
     subscriber: Subscriber<'a, CriticalSectionRawMutex, RxMessage, 1, RECEIVER_SLOTS, 1>,
+    is_inner_message: bool,
     phantom: PhantomData<Message>,
 }
 
@@ -306,8 +319,14 @@ where
                 WaitResult::Lagged(_) => continue,
                 WaitResult::Message(v) => v,
             };
-            if let Some(inner_message) = message.inner_message::<Message>() {
-                return inner_message.clone();
+            if self.is_inner_message {
+                if let Some(inner_message) = message.inner_message::<Message>() {
+                    return inner_message.clone();
+                }
+            } else {
+                if let Some(v) = (&message as &dyn Any).downcast_ref::<Message>() {
+                    return v.clone();
+                }
             }
         }
     }
@@ -349,6 +368,7 @@ where
     TxMessage: external::Message,
 {
     subscriber: Subscriber<'a, CriticalSectionRawMutex, TxMessage, 1, OBSERVER_SLOTS, 1>,
+    is_inner_message: bool,
     phantom: PhantomData<Message>,
 }
 
@@ -364,8 +384,14 @@ where
                 WaitResult::Lagged(_) => continue,
                 WaitResult::Message(v) => v,
             };
-            if let Some(inner_message) = message.inner_message::<Message>() {
-                return inner_message.clone();
+            if self.is_inner_message {
+                if let Some(inner_message) = message.inner_message::<Message>() {
+                    return inner_message.clone();
+                }
+            } else {
+                if let Some(v) = (&message as &dyn Any).downcast_ref::<Message>() {
+                    return v.clone();
+                }
             }
         }
     }
