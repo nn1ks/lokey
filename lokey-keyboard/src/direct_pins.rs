@@ -7,7 +7,9 @@ use lokey::util::error;
 /// Configuration for the [`DirectPins`] scanner.
 #[derive(Clone, Default)]
 pub struct DirectPinsConfig {
+    /// The debounce strategy to use when a key is pressed.
     pub debounce_key_press: Debounce,
+    /// The debounce strategy to use when a key is released.
     pub debounce_key_release: Debounce,
 }
 

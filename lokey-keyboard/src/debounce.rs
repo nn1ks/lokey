@@ -26,6 +26,19 @@ impl Default for Debounce {
 }
 
 impl Debounce {
+    /// Waits for the switch to become active (i.e., pressed), applying the configured debounce
+    /// strategy.
+    ///
+    /// - [`Debounce::Defer`]: Waits until the pin has been continuously active for the specified
+    ///   duration, re-waiting if the pin becomes inactive before the timer expires.
+    /// - [`Debounce::Eager`]: Returns immediately when the pin first becomes active, and returns
+    ///   the debounce duration so the caller can ignore further changes for that length of time.
+    /// - [`Debounce::None`]: Returns immediately when the pin becomes active with zero backoff.
+    ///
+    /// # Returns
+    ///
+    /// On success, returns a [`Duration`] indicating how long the caller should wait before
+    /// sampling the pin again. A zero duration means the caller may sample immediately.
     pub async fn wait_for_active<T: WaitableInputSwitch>(
         &self,
         pin: &mut T,
@@ -54,6 +67,19 @@ impl Debounce {
         }
     }
 
+    /// Waits for the switch to become inactive (i.e., released), applying the configured debounce
+    /// strategy.
+    ///
+    /// - [`Debounce::Defer`]: Waits until the pin has been continuously inactive for the specified
+    ///   duration, re-waiting if the pin becomes active before the timer expires.
+    /// - [`Debounce::Eager`]: Returns immediately when the pin first becomes inactive, and returns
+    ///   the debounce duration so the caller can ignore further changes for that length of time.
+    /// - [`Debounce::None`]: Returns immediately when the pin becomes inactive with zero backoff.
+    ///
+    /// # Returns
+    ///
+    /// On success, returns a [`Duration`] indicating how long the caller should wait before
+    /// sampling the pin again. A zero duration means the caller may sample immediately.
     pub async fn wait_for_inactive<T: WaitableInputSwitch>(
         &self,
         pin: &mut T,
@@ -82,6 +108,19 @@ impl Debounce {
         }
     }
 
+    /// Waits for the switch to change state (active → inactive or inactive → active), applying the
+    /// configured debounce strategy.
+    ///
+    /// - [`Debounce::Defer`]: Waits until the pin has been continuously in the new state for the
+    ///   specified duration, re-waiting if the pin toggles back before the timer expires.
+    /// - [`Debounce::Eager`]: Returns immediately when the pin first changes, and returns the
+    ///   debounce duration so the caller can ignore further changes for that length of time.
+    /// - [`Debounce::None`]: Returns immediately when the pin changes with zero backoff.
+    ///
+    /// # Returns
+    ///
+    /// On success, returns a [`Duration`] indicating how long the caller should wait before
+    /// sampling the pin again. A zero duration means the caller may sample immediately.
     pub async fn wait_for_change<T: WaitableInputSwitch>(
         &self,
         pin: &mut T,
