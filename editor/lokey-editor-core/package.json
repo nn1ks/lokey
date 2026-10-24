@@ -24,36 +24,75 @@
   "browser": {},
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "development": {
+        "import": {
+          "types": "./dist/index/index.d.ts",
+          "default": "./dist/index/dev.js"
+        }
+      },
+      "import": {
+        "types": "./dist/index/index.d.ts",
+        "default": "./dist/index/index.js"
+      }
     },
     "./components": {
-      "types": "./src/components/index.ts",
-      "import": "./src/components/index.ts"
+      "import": {
+        "types": "./dist/components/index.d.ts",
+        "default": "./dist/components/index.js"
+      }
     },
     "./components/keymap": {
-      "types": "./src/components/keymap/index.ts",
-      "import": "./src/components/keymap/index.ts"
+      "import": {
+        "types": "./dist/components/keymap/index.d.ts",
+        "default": "./dist/components/keymap/index.js"
+      }
     },
     "./components/led-array": {
-      "types": "./src/components/led-array/index.ts",
-      "import": "./src/components/led-array/index.ts"
+      "import": {
+        "types": "./dist/components/led-array/index.d.ts",
+        "default": "./dist/components/led-array/index.js"
+      }
     },
     "./components/start": {
-      "types": "./src/components/start/index.ts",
-      "import": "./src/components/start/index.ts"
+      "import": {
+        "types": "./dist/components/start/index.d.ts",
+        "default": "./dist/components/start/index.js"
+      }
     },
     "./contexts": {
-      "types": "./src/contexts/index.ts",
-      "import": "./src/contexts/index.ts"
+      "import": {
+        "types": "./dist/contexts/index.d.ts",
+        "default": "./dist/contexts/index.js"
+      }
     },
     "./protocol": {
-      "types": "./src/protocol/index.ts",
-      "import": "./src/protocol/index.ts"
+      "import": {
+        "types": "./dist/protocol/index.d.ts",
+        "default": "./dist/protocol/index.js"
+      }
     }
   },
   "typesVersions": {
-    "*": {}
+    "*": {
+      "components": [
+        "./dist/components/index.d.ts"
+      ],
+      "components/keymap": [
+        "./dist/components/keymap/index.d.ts"
+      ],
+      "components/led-array": [
+        "./dist/components/led-array/index.d.ts"
+      ],
+      "components/start": [
+        "./dist/components/start/index.d.ts"
+      ],
+      "contexts": [
+        "./dist/contexts/index.d.ts"
+      ],
+      "protocol": [
+        "./dist/protocol/index.d.ts"
+      ]
+    }
   },
   "scripts": {
     "dev": "vite serve dev",
@@ -85,6 +124,7 @@
     "jsdom": "^24.0.0",
     "prettier": "3.0.0",
     "solid-js": "^1.8.17",
+    "tailwindcss": "^4.3.3",
     "tsup": "^8.0.2",
     "tsup-preset-solid": "^2.2.0",
     "typescript": "^5.4.5",
