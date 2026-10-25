@@ -159,16 +159,15 @@ where
     where
         M: Message,
     {
-        let is_inner_message;
-        if TypeId::of::<M>() == TypeId::of::<Transport::RxMessage>() {
-            is_inner_message = false;
+        let is_inner_message = if TypeId::of::<M>() == TypeId::of::<Transport::RxMessage>() {
+            false
         } else if Transport::RxMessage::has_inner_message::<M>() {
-            is_inner_message = true;
+            true
         } else {
             return Err(TryReceiverError::UnsupportedMessageType(
                 UnsupportedMessageType,
             ));
-        }
+        };
         let subscriber = self
             .rx_channel
             .subscriber()
@@ -205,16 +204,15 @@ where
     where
         M: Message,
     {
-        let is_inner_message;
-        if TypeId::of::<M>() == TypeId::of::<Transport::TxMessage>() {
-            is_inner_message = false;
+        let is_inner_message = if TypeId::of::<M>() == TypeId::of::<Transport::TxMessage>() {
+            false
         } else if Transport::TxMessage::has_inner_message::<M>() {
-            is_inner_message = true;
+            true
         } else {
             return Err(TryObserverError::UnsupportedMessageType(
                 UnsupportedMessageType,
             ));
-        }
+        };
         let subscriber = self
             .tx_channel
             .subscriber()
