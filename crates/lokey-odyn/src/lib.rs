@@ -4,7 +4,7 @@
 //!
 
 #![no_std]
-#![feature(doc_cfg)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "component")]
 mod component;
