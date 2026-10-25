@@ -29,9 +29,9 @@ jobs:
         with:
           package_json_file: editor/package.json
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: latest
           cache: pnpm
           cache-dependency-path: editor/pnpm-lock.yaml
       - name: Install Cap'n Proto
