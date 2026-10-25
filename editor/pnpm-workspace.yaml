@@ -6,6 +6,7 @@ packages:
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
+  workerd: true
 
 # Solid breaks when two copies of `solid-js` are loaded (reactivity is tracked per-instance),
 # so make sure pnpm always resolves a single copy for the whole workspace.
