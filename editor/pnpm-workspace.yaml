@@ -3,12 +3,16 @@ packages:
   - lokey-editor-core
   - lokey-editor-odyn
 
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+
 # Solid breaks when two copies of `solid-js` are loaded (reactivity is tracked per-instance),
 # so make sure pnpm always resolves a single copy for the whole workspace.
 # See https://pnpm.io/settings#dedupepeerdependents
-dedupe-peer-dependents: true
+dedupePeerDependents: true
 
 # `lokey-editor-core` and `lokey-editor-odyn` are consumed through their `src` entry points, but
 # tooling that reads `dist` still needs to see them hoisted next to the app.
-public-hoist-pattern:
+publicHoistPattern:
   - "*solid-js*"
