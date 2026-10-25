@@ -123,11 +123,11 @@ To run a development server, use the following commands:
 
 ```sh
 cd editor
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
-Use `npm run build` for a production build.
+Use `pnpm run build` for a production build.
 
 ## Documentation website
 
