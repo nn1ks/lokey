@@ -1,5 +1,3 @@
-cargo-features = ["per-package-target"]
-
 [package]
 name = "lokey-rp"
 version = "0.0.0"
@@ -12,8 +10,6 @@ readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
 rust-version = "1.96"
-
-default-target = "thumbv6m-none-eabi"
 
 [features]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
