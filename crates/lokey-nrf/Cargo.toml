@@ -38,6 +38,7 @@ usb = [
 ble = [
   "dep:embassy-sync",
   "dep:lokey-ble",
+  "dep:nrf-sdc",
   "dep:trouble-host",
 ]
 
@@ -46,7 +47,6 @@ ble = [
 ## Enables support for the nRF52840 microcontroller.
 nrf52840 = [
   "dep:nrf-mpsl",
-  "dep:nrf-sdc",
   "embassy-nrf/nrf52840",
   "nrf-mpsl?/nrf52840",
   "nrf-sdc?/nrf52840",
