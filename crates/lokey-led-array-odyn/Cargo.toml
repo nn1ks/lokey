@@ -7,6 +7,7 @@ repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+rust-version = "1.96"
 
 [dependencies]
 capnp = { version = "0.27.2", default-features = false, features = ["unaligned"] }

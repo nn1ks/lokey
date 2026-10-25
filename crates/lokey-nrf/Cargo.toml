@@ -11,6 +11,7 @@ description = "nRF microcontroller support for the lokey framework"
 readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+rust-version = "1.96"
 
 default-target = "thumbv7em-none-eabihf"
 

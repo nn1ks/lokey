@@ -9,6 +9,7 @@ description = "BLE (Bluetooth Low Energy) transport support for the lokey framew
 readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+rust-version = "1.96"
 
 [features]
 default = ["macros"]

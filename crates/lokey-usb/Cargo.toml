@@ -9,6 +9,7 @@ description = "USB transport support for the lokey framework"
 readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+rust-version = "1.96"
 
 [features]
 default = ["macros"]

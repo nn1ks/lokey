@@ -6,6 +6,7 @@ authors = ["Niklas Sauter <niklas@n1ks.net>"]
 repository = "https://github.com/nn1ks/lokey"
 license = "Apache-2.0 OR MIT"
 description = "BLE transport support for the lokey framework (macro crate)"
+rust-version = "1.96"
 
 [lib]
 proc-macro = true

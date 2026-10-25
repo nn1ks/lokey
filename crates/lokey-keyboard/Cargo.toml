@@ -9,6 +9,7 @@ description = "Keyboard component for the lokey framework"
 readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["keyboard", "firmware"]
+rust-version = "1.96"
 
 [features]
 default = ["macros"]

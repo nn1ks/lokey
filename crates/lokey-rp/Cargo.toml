@@ -11,6 +11,7 @@ description = "Raspberry Pi RP2040 and RP235x microcontroller support for the lo
 readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+rust-version = "1.96"
 
 default-target = "thumbv6m-none-eabi"
 

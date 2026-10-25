@@ -9,6 +9,7 @@ description = "Combined USB and BLE transport support for the lokey framework"
 readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+rust-version = "1.96"
 
 [features]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).

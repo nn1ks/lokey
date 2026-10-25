@@ -9,6 +9,7 @@ description = "LED array component for the lokey framework"
 readme = "../../README.md"
 categories = ["embedded", "no-std"]
 keywords = ["firmware"]
+rust-version = "1.96"
 
 [features]
 ## Enables logging via [defmt](https://docs.rs/defmt/latest/defmt).
