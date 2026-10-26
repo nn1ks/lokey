@@ -181,6 +181,8 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
                 )
             };
 
+            let _ = ::lokey::storage::mount_or_format(storage).await;
+
             // Create channels
             let internal_channel = {
                 static CHANNEL: ::lokey::static_cell::StaticCell<
@@ -232,14 +234,6 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
                 internal_channel,
                 state,
             };
-
-            #[::embassy_executor::task]
-            async fn __mount_storage(
-                storage: &'static <<#device_type_path as ::lokey::Device>::StorageDriver as ::lokey::storage::StorageDriver>::Storage
-            ) {
-                let _ = ::lokey::storage::mount_or_format(storage).await;
-            }
-            spawner.spawn(__mount_storage(storage).unwrap());
 
             #[::embassy_executor::task]
             async fn __run_mcu(mcu: &'static <#device_type_path as ::lokey::Device>::Mcu, context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>) {
