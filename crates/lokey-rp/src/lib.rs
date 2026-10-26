@@ -8,25 +8,12 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-use core::ops::Range;
 use embassy_rp::clocks::RoscRng;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
 use embassy_rp::{bind_interrupts, flash};
 use lokey::storage::flash::MultiwriteNorFlash;
-use lokey::storage::{DefaultStorage, StorageDriver};
-use lokey::{Address, AnyState, Context, Device, Mcu, Transports};
-
-pub struct StorageConfig {
-    pub flash_page_range: Range<usize>,
-}
-
-impl Default for StorageConfig {
-    fn default() -> Self {
-        Self {
-            flash_page_range: 0..0x100,
-        }
-    }
-}
+use lokey::storage::{DefaultStorage, DefaultStorageConfig};
+use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
 
 bind_interrupts!(struct Irqs {
     DMA_IRQ_0 => embassy_rp::dma::InterruptHandler<DMA_CH0>;
@@ -40,11 +27,6 @@ pub struct Rp {}
 impl Mcu for Rp {
     type Config = embassy_rp::config::Config;
 
-    async fn create(config: Self::Config, _address: Address) -> Self {
-        embassy_rp::init(config);
-        Self {}
-    }
-
     async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
     where
         D: Device<Mcu = Self>,
@@ -56,18 +38,27 @@ impl Mcu for Rp {
 
 type Flash = flash::Flash<'static, FLASH, flash::Async, 0x200000>;
 
-pub struct DefaultStorageDriver;
-
-impl StorageDriver for DefaultStorageDriver {
+impl McuCreator<DefaultStorageConfig> for Rp {
     type Storage = DefaultStorage<MultiwriteNorFlash<Flash>>;
-    type Mcu = Rp;
-    type Config = StorageConfig;
 
-    fn create_storage(_: &'static Self::Mcu, config: Self::Config) -> Self::Storage {
-        let flash = Flash::new(unsafe { FLASH::steal() }, unsafe { DMA_CH0::steal() }, Irqs);
-        let flash = MultiwriteNorFlash::new(flash, config.flash_page_range);
-        let random_seed = RoscRng.next_u32();
-        DefaultStorage::new(flash, random_seed)
+    async fn create(
+        mcu_config: Self::Config,
+        _: Address,
+        storage_config: DefaultStorageConfig,
+    ) -> (Self, Self::Storage)
+    where
+        Self: Sized,
+    {
+        let p = embassy_rp::init(mcu_config);
+
+        let storage = {
+            let flash = Flash::new(p.FLASH, p.DMA_CH0, Irqs);
+            let flash = MultiwriteNorFlash::new(flash, storage_config.flash_page_range);
+            let random_seed = RoscRng.next_u32();
+            DefaultStorage::new(flash, random_seed)
+        };
+
+        (Self {}, storage)
     }
 }
 

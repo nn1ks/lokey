@@ -1,24 +1,9 @@
 use crate::storage::flash::EmptyFlash;
-use crate::storage::{
-    Entry, ReadTransaction, Storage, StorageDriver, ValueDeserializeError, WriteTransaction,
-};
-use core::marker::PhantomData;
+use crate::storage::{Entry, ReadTransaction, Storage, ValueDeserializeError, WriteTransaction};
 use ekv::flash::Flash;
 
-/// A storage driver to crate an [`EmptyStorage`] instance.
-pub struct EmptyStorageDriver<M> {
-    phantom: PhantomData<M>,
-}
-
-impl<Mcu: 'static> StorageDriver for EmptyStorageDriver<Mcu> {
-    type Storage = EmptyStorage;
-    type Mcu = Mcu;
-    type Config = ();
-
-    fn create_storage(_: &'static Self::Mcu, _: Self::Config) -> Self::Storage {
-        EmptyStorage
-    }
-}
+/// Configuration for [`EmptyStorage`].
+pub struct EmptyStorageConfig;
 
 /// A storage implementation that does not actually store anything.
 ///

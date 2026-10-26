@@ -4,9 +4,19 @@ use crate::storage::{
     entry_tag,
 };
 use core::marker::PhantomData;
+use core::ops::Range;
 use ekv::Database;
 use ekv::flash::Flash;
 use generic_array::GenericArray;
+
+/// Configuration for [`DefaultStorage`].
+pub struct DefaultStorageConfig {
+    /// The flash pages reserved for the storage database, as a half-open page index range.
+    ///
+    /// The range is expressed in pages, and must not overlap pages used by other data such as the
+    /// bootloader or application code. All pages in this range are owned by the database.
+    pub flash_page_range: Range<usize>,
+}
 
 /// The default storage.
 pub struct DefaultStorage<F>

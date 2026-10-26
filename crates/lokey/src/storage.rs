@@ -4,7 +4,6 @@
 //! memory.
 //!
 //! Main building blocks:
-//! - [`StorageDriver`]: Creates a concrete storage backend from MCU-specific resources.
 //! - [`Storage`]: Async API to read, write, and delete typed entries.
 //! - [`Entry`]: Defines how a type is tagged and serialized for storage.
 //!
@@ -19,13 +18,14 @@ pub mod flash;
 mod test;
 
 use crate::util::{error, info, warn};
-use core::any::Any;
 use core::marker::PhantomData;
-pub use default::{DefaultReadTransaction, DefaultStorage, DefaultWriteTransaction};
+pub use default::{
+    DefaultReadTransaction, DefaultStorage, DefaultStorageConfig, DefaultWriteTransaction,
+};
 #[cfg(feature = "defmt")]
 use defmt::Debug2Format;
 use ekv::flash::Flash;
-pub use empty::{EmptyReadTransaction, EmptyStorage, EmptyStorageDriver, EmptyWriteTransaction};
+pub use empty::{EmptyReadTransaction, EmptyStorage, EmptyStorageConfig, EmptyWriteTransaction};
 use generic_array::{ArrayLength, GenericArray};
 
 /// Error returned by [`ReadTransaction::read`].
@@ -54,21 +54,6 @@ pub enum DeserializeError<E> {
     KeyTooSmall,
     /// Another error occurred.
     Other(E),
-}
-
-/// Trait to create and configure a storage instance for a specific MCU.
-pub trait StorageDriver: Any {
-    /// The type of the storage created by this driver.
-    type Storage: Storage;
-
-    /// The type of the MCU that this storage driver is designed for.
-    type Mcu;
-
-    /// The configuration type for this storage driver.
-    type Config: Default;
-
-    /// Creates a storage instance for the specified MCU and configuration.
-    fn create_storage(mcu: &'static Self::Mcu, config: Self::Config) -> Self::Storage;
 }
 
 /// Trait for persistent storage of typed entries.

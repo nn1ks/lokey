@@ -89,7 +89,6 @@ pub mod state;
 pub mod storage;
 pub mod util;
 
-use crate::storage::StorageDriver;
 use core::any::Any;
 use core::future::Future;
 /// Derives state trait implementations for a type.
@@ -163,7 +162,7 @@ pub use lokey_macros::State;
 /// - **`storage_config`**
 ///
 ///   Modifies the storage configuration. Must be set to a function or closure that receives
-///   `&mut <D::StorageDriver as storage::StorageDriver>::Config`.
+///   `&mut D::StorageConfig`.
 ///
 /// - **`internal_transport_config`**
 ///
@@ -188,8 +187,9 @@ pub use lokey_macros::State;
 /// #
 /// # impl lokey::Device for MyDevice {
 /// #     type Mcu = lokey::DummyMcu;
-/// #     type StorageDriver = lokey::storage::EmptyStorageDriver<Self::Mcu>;
+/// #     type StorageConfig = lokey::storage::EmptyStorageConfig;
 /// #     const DEFAULT_ADDRESS: lokey::Address = lokey::Address([0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
+/// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
 /// # }
 /// #
 /// # struct MyTransports;
@@ -224,8 +224,9 @@ pub use lokey_macros::State;
 /// #
 /// # impl lokey::Device for MyDevice {
 /// #     type Mcu = lokey::DummyMcu;
-/// #     type StorageDriver = lokey::storage::EmptyStorageDriver<Self::Mcu>;
+/// #     type StorageConfig = lokey::storage::EmptyStorageConfig;
 /// #     const DEFAULT_ADDRESS: lokey::Address = lokey::Address([0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
+/// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
 /// # }
 /// #
 /// # struct MyTransports;
@@ -283,7 +284,7 @@ pub use lokey_macros::State;
 pub use lokey_macros::device;
 #[doc(hidden)]
 pub use mcu::DummyMcu; // This is only used for doc tests
-pub use mcu::Mcu;
+pub use mcu::{Mcu, McuCreator};
 use postcard::experimental::max_size::MaxSize;
 use seq_macro::seq;
 use serde::{Deserialize, Serialize};
@@ -315,7 +316,7 @@ where
     /// Reference to the initialized MCU instance.
     pub mcu: &'static D::Mcu,
     /// Reference to the storage.
-    pub storage: &'static <D::StorageDriver as StorageDriver>::Storage,
+    pub storage: &'static <D::Mcu as McuCreator<D::StorageConfig>>::Storage,
     /// Channel used to send and receive internal messages.
     pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
     /// Channel used to send and receive external messages.
@@ -424,14 +425,14 @@ pub struct Address(pub [u8; 6]);
 ///
 /// A `Device` ties together:
 /// - The MCU backend via [`Device::Mcu`].
-/// - The persistent storage backend via [`Device::StorageDriver`].
+/// - The persistent storage config.
 /// - A default device address via [`Device::DEFAULT_ADDRESS`].
 pub trait Device: Sized {
     /// MCU used by this device.
-    type Mcu: mcu::Mcu;
+    type Mcu: mcu::Mcu + mcu::McuCreator<Self::StorageConfig>;
 
-    /// Storage backend used by this device.
-    type StorageDriver: storage::StorageDriver<Mcu = Self::Mcu>;
+    /// Storage configuration used by this device.
+    type StorageConfig: 'static;
 
     /// Default address used by the device.
     const DEFAULT_ADDRESS: Address;
@@ -444,11 +445,7 @@ pub trait Device: Sized {
     }
 
     /// Returns the storage configuration used during device initialization.
-    ///
-    /// The default implementation returns [`Default::default`].
-    fn storage_config() -> <Self::StorageDriver as storage::StorageDriver>::Config {
-        Default::default()
-    }
+    fn storage_config() -> Self::StorageConfig;
 }
 
 /// Defines the transport backends used by a device.

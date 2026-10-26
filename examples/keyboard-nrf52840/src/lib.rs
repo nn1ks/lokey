@@ -10,6 +10,7 @@ use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use lokey::external::NoMessage;
+use lokey::storage::DefaultStorageConfig;
 use lokey::{
     Address, AnyState, ComponentSupport, Context, Device, State, Transports, external, internal,
 };
@@ -94,9 +95,15 @@ pub struct KeyboardLeft;
 
 impl Device for KeyboardLeft {
     type Mcu = Nrf;
-    type StorageDriver = lokey_nrf::DefaultStorageDriver;
+    type StorageConfig = DefaultStorageConfig;
 
-    const DEFAULT_ADDRESS: Address = Address([0x8b, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
+    const DEFAULT_ADDRESS: Address = Address([0xcb, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
+
+    fn storage_config() -> Self::StorageConfig {
+        DefaultStorageConfig {
+            flash_page_range: 0x60..0x70,
+        }
+    }
 }
 
 impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardLeft {
@@ -238,9 +245,15 @@ pub struct KeyboardRight;
 
 impl Device for KeyboardRight {
     type Mcu = Nrf;
-    type StorageDriver = lokey_nrf::DefaultStorageDriver;
+    type StorageConfig = DefaultStorageConfig;
 
-    const DEFAULT_ADDRESS: Address = Address([0x1f, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
+    const DEFAULT_ADDRESS: Address = Address([0xdf, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
+
+    fn storage_config() -> Self::StorageConfig {
+        DefaultStorageConfig {
+            flash_page_range: 0x60..0x70,
+        }
+    }
 }
 
 impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardRight {

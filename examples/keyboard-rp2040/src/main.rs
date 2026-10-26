@@ -8,6 +8,7 @@ use embassy_rp::gpio::{AnyPin, Input, Level, Output, Pull};
 use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::external::{self, NoMessage};
+use lokey::storage::DefaultStorageConfig;
 use lokey::{Address, AnyState, ComponentSupport, Context, Device, State, Transports, internal};
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
@@ -50,9 +51,15 @@ struct KeyboardLeft;
 
 impl Device for KeyboardLeft {
     type Mcu = Rp;
-    type StorageDriver = lokey_rp::DefaultStorageDriver;
+    type StorageConfig = DefaultStorageConfig;
 
     const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
+
+    fn storage_config() -> Self::StorageConfig {
+        DefaultStorageConfig {
+            flash_page_range: 0x0..0x10,
+        }
+    }
 }
 
 impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardLeft {

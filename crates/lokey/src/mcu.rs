@@ -1,5 +1,29 @@
-use crate::{Address, AnyState, Context, Device, Transports};
+use crate::{Address, AnyState, Context, Device, Transports, storage};
 use core::any::Any;
+
+/// Creates an MCU together with its storage backend.
+///
+/// A single MCU can implement this trait multiple times, once per storage configuration, which
+/// allows the same hardware to be used with different storage backends. The [`Device`]
+/// implementation selects one of them via [`Device::StorageConfig`].
+///
+/// This trait is called by the [`device`](crate::device) macro. The created MCU and storage
+/// instance are provided via the [`Context`].
+pub trait McuCreator<StorageConfig>: Mcu {
+    /// The storage backend created alongside this MCU.
+    type Storage: storage::Storage;
+
+    /// Initializes the MCU and creates its storage backend.
+    ///
+    /// This function must be called only once per concrete MCU type.
+    fn create(
+        mcu_config: Self::Config,
+        address: Address,
+        storage_config: StorageConfig,
+    ) -> impl Future<Output = (Self, Self::Storage)>
+    where
+        Self: Sized;
+}
 
 /// Microcontroller abstraction.
 ///
@@ -7,13 +31,6 @@ use core::any::Any;
 pub trait Mcu: Any {
     /// The configuration for this MCU.
     type Config: Default;
-
-    /// Creates and initializes the MCU instance.
-    ///
-    /// This function must be called only once per concrete MCU type.
-    fn create(config: Self::Config, address: Address) -> impl Future<Output = Self>
-    where
-        Self: Sized;
 
     /// Runs MCU-specific tasks.
     ///
@@ -34,15 +51,12 @@ pub use dummy::DummyMcu;
 #[allow(missing_docs)]
 mod dummy {
     use super::*;
+    use crate::storage::{EmptyStorage, EmptyStorageConfig};
 
     pub struct DummyMcu;
 
     impl Mcu for DummyMcu {
         type Config = ();
-
-        async fn create(_config: Self::Config, _address: Address) -> Self {
-            Self
-        }
 
         async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
         where
@@ -50,6 +64,17 @@ mod dummy {
             T: Transports<Self>,
             S: AnyState,
         {
+        }
+    }
+
+    impl McuCreator<EmptyStorageConfig> for DummyMcu {
+        type Storage = EmptyStorage;
+
+        async fn create(_: Self::Config, _: Address, _: EmptyStorageConfig) -> (Self, Self::Storage)
+        where
+            Self: Sized,
+        {
+            (Self, EmptyStorage)
         }
     }
 }
