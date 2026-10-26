@@ -1,3 +1,4 @@
+mod bond_information;
 mod message_service;
 mod transport;
 
@@ -5,7 +6,7 @@ use embassy_time::Duration;
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::NoMessage;
 use lokey::util::error;
-use lokey::{Address, external, internal};
+use lokey::{external, internal};
 #[cfg(feature = "macros")]
 pub use lokey_ble_macros::TxMessage;
 pub use message_service::{InitMessageService, RxMessageService, TxMessageService};
@@ -24,6 +25,7 @@ pub struct TransportConfig {
     pub appearance: &'static BluetoothUuid16,
     pub min_connection_interval: Option<Duration>,
     pub max_connection_interval: Option<Duration>,
+    pub supervision_timeout: Option<Duration>,
 }
 
 impl Default for TransportConfig {
@@ -40,6 +42,7 @@ impl Default for TransportConfig {
             appearance: &appearance::UNKNOWN,
             min_connection_interval: None,
             max_connection_interval: None,
+            supervision_timeout: None,
         }
     }
 }
@@ -93,15 +96,15 @@ impl internal::Message for Message {
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Event {
-    StartedAdvertising { scannable: bool },
-    StoppedAdvertising { scannable: bool },
-    Connected { device_address: Address },
-    Disconnected { device_address: Address },
+    StartedAdvertising { discoverable: bool },
+    StoppedAdvertising { discoverable: bool },
+    Connected,
+    Disconnected,
     SwitchedProfile { profile_index: u8, changed: bool },
 }
 
 impl internal::Message for Event {
-    type Size = typenum::U7;
+    type Size = typenum::U3;
 
     const TAG: [u8; 4] = [0xc6, 0x7a, 0xbd, 0xb0];
 
@@ -109,22 +112,22 @@ impl internal::Message for Event {
     where
         Self: Sized,
     {
-        match bytes.into_array::<7>() {
-            [0, 0, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising { scannable: false }),
-            [0, 1, 0, 0, 0, 0, 0] => Some(Self::StartedAdvertising { scannable: true }),
-            [1, 0, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising { scannable: false }),
-            [1, 1, 0, 0, 0, 0, 0] => Some(Self::StoppedAdvertising { scannable: true }),
-            [2, address_bytes @ ..] => Some(Self::Connected {
-                device_address: Address(address_bytes),
+        match bytes.into_array::<3>() {
+            [0, 0, 0] => Some(Self::StartedAdvertising {
+                discoverable: false,
             }),
-            [3, address_bytes @ ..] => Some(Self::Disconnected {
-                device_address: Address(address_bytes),
+            [0, 1, 0] => Some(Self::StartedAdvertising { discoverable: true }),
+            [1, 0, 0] => Some(Self::StoppedAdvertising {
+                discoverable: false,
             }),
-            [4, profile_index, 0, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
+            [1, 1, 0] => Some(Self::StoppedAdvertising { discoverable: true }),
+            [2, 0, 0] => Some(Self::Connected),
+            [3, 0, 0] => Some(Self::Disconnected),
+            [4, profile_index, 0] => Some(Self::SwitchedProfile {
                 profile_index,
                 changed: false,
             }),
-            [4, profile_index, 1, 0, 0, 0, 0] => Some(Self::SwitchedProfile {
+            [4, profile_index, 1] => Some(Self::SwitchedProfile {
                 profile_index,
                 changed: true,
             }),
@@ -136,24 +139,15 @@ impl internal::Message for Event {
     }
 
     fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
-        fn build_with_address(tag_byte: u8, address: &Address) -> [u8; 7] {
-            let mut bytes = [0; 7];
-            bytes[0] = tag_byte;
-            for (i, byte) in address.0.into_iter().enumerate() {
-                bytes[i + 1] = byte;
-            }
-            bytes
-        }
-
         match self {
-            Self::StartedAdvertising { scannable } => [0, *scannable as u8, 0, 0, 0, 0, 0],
-            Self::StoppedAdvertising { scannable } => [1, *scannable as u8, 0, 0, 0, 0, 0],
-            Self::Connected { device_address } => build_with_address(2, device_address),
-            Self::Disconnected { device_address } => build_with_address(3, device_address),
+            Self::StartedAdvertising { discoverable } => [0, *discoverable as u8, 0],
+            Self::StoppedAdvertising { discoverable } => [1, *discoverable as u8, 0],
+            Self::Connected => [2, 0, 0],
+            Self::Disconnected => [3, 0, 0],
             Self::SwitchedProfile {
                 profile_index,
                 changed,
-            } => [4, *profile_index, *changed as u8, 0, 0, 0, 0],
+            } => [4, *profile_index, *changed as u8],
         }
         .into()
     }

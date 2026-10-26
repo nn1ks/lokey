@@ -483,7 +483,7 @@ mod ble {
             loop {
                 let message = receiver.next().await;
                 match message {
-                    external::Event::StartedAdvertising { scannable: true } => {
+                    external::Event::StartedAdvertising { discoverable: true } => {
                         let action_id = ActionId::new(context.address);
                         let action = Action::SlideForwards {
                             duration_ms: 800,
@@ -505,7 +505,7 @@ mod ble {
                         }
                         current_action_id = Some(action_id);
                     }
-                    external::Event::StoppedAdvertising { scannable: true } => {
+                    external::Event::StoppedAdvertising { discoverable: true } => {
                         if let Some(action_id) = current_action_id.take() {
                             let new_action_id = ActionId::new(context.address);
                             let action = Action::Stop { action_id };

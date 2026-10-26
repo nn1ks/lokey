@@ -91,7 +91,7 @@ impl Mcu for Nrf {
             source: nrf_mpsl::raw::MPSL_CLOCK_LF_SRC_RC as u8,
             rc_ctiv: nrf_mpsl::raw::MPSL_RECOMMENDED_RC_CTIV as u8,
             rc_temp_ctiv: nrf_mpsl::raw::MPSL_RECOMMENDED_RC_TEMP_CTIV as u8,
-            accuracy_ppm: nrf_mpsl::raw::MPSL_DEFAULT_CLOCK_ACCURACY_PPM as u16,
+            accuracy_ppm: nrf_mpsl::raw::MPSL_WORST_CLOCK_ACCURACY_PPM as u16,
             skip_wait_lfclk_started: nrf_mpsl::raw::MPSL_DEFAULT_SKIP_WAIT_LFCLK_STARTED != 0,
         };
         static SESSION_MEM: StaticCell<SessionMem<1>> = StaticCell::new();
@@ -227,6 +227,7 @@ mod ble {
             .support_scan()
             .support_central()
             .support_peripheral()
+            .support_le_privacy()
             .central_count(1)?
             .peripheral_count(1)?
             .buffer_cfg(72, 72, 3, 3)?

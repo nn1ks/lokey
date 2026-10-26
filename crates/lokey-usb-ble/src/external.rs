@@ -224,6 +224,7 @@ pub struct TransportConfig {
     pub appearance: &'static BluetoothUuid16,
     pub ble_min_connection_interval: Option<Duration>,
     pub ble_max_connection_interval: Option<Duration>,
+    pub ble_supervision_timeout: Option<Duration>,
     pub deactivate_unused_transport: bool,
 }
 
@@ -243,6 +244,7 @@ impl Default for TransportConfig {
             appearance: &appearance::UNKNOWN,
             ble_min_connection_interval: None,
             ble_max_connection_interval: None,
+            ble_supervision_timeout: None,
             deactivate_unused_transport: true,
         }
     }
@@ -273,6 +275,7 @@ impl TransportConfig {
             appearance: self.appearance,
             min_connection_interval: self.ble_min_connection_interval,
             max_connection_interval: self.ble_max_connection_interval,
+            supervision_timeout: self.ble_supervision_timeout,
         }
     }
 }
