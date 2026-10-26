@@ -12,7 +12,7 @@ use embassy_rp::clocks::RoscRng;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
 use embassy_rp::{bind_interrupts, flash};
 use lokey::storage::flash::MultiwriteNorFlash;
-use lokey::storage::{DefaultStorage, DefaultStorageConfig};
+use lokey::storage::{self, DefaultStorage, DefaultStorageConfig};
 use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
 
 bind_interrupts!(struct Irqs {
@@ -57,6 +57,7 @@ impl McuCreator<DefaultStorageConfig> for Rp {
             let random_seed = RoscRng.next_u32();
             DefaultStorage::new(flash, random_seed)
         };
+        let _ = storage::mount_or_format(&storage).await;
 
         (Self {}, storage)
     }
