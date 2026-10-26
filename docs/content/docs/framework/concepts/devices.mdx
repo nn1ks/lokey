@@ -11,7 +11,7 @@ At the type level, a device is defined by implementing the [`Device`](https://do
 A device type defines the hardware-specific foundation used by the rest of the framework:
 
 - **Microcontroller:** The microcontroller type and its configuration.
-- **Storage:** The storage type used for persistent storage, along with its configuration.
+- **Storage:** The storage configuration used for persistent storage. The storage type itself is determined by the MCU's [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) implementation for that configuration.
 - **Default address:** A unique, stable per-device address.
 
 <Callout title="INFO" type="info">
@@ -29,7 +29,7 @@ pub struct MyDevice;
 
 impl Device for MyDevice {
     type Mcu = Nrf;
-    type StorageDriver: lokey_nrf::DefaultStorageDriver;
+    type StorageConfig = lokey::storage::DefaultStorageConfig;
 
     const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
 
@@ -38,9 +38,10 @@ impl Device for MyDevice {
         Default::default()
     }
 
-    // Optional
-    fn storage_config() -> lokey_nrf::StorageConfig {
-        Default::default()
+    fn storage_config() -> Self::StorageConfig {
+        DefaultStorageConfig {
+            flash_page_range: 0x60..0x70,
+        }
     }
 }
 ```

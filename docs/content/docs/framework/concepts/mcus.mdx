@@ -4,15 +4,20 @@ title: MCUs
 
 An **MCU** in Lokey represents the microcontroller your firmware runs on.
 
-At the type level, an MCU is defined by implementing the [`Mcu`](https://docs.rs/lokey/latest/lokey/trait.Mcu.html) trait.
+At the type level, an MCU is defined by implementing the [`Mcu`](https://docs.rs/lokey/latest/lokey/trait.Mcu.html) trait, plus the [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) trait which initializes the MCU together with its storage backend.
 
 ## Responsibilities
 
 An MCU type defines the setup of a microcontroller:
 
 - **Configuration type:** The MCU-specific config type.
-- **Initialization:** How to create and initialize the MCU.
+- **Initialization:** How to create and initialize the MCU and its storage backend.
 - **Background tasks:** Optional MCU-level background work, typically running for the device lifetime.
+
+These are split across two traits:
+
+- [`Mcu`](https://docs.rs/lokey/latest/lokey/trait.Mcu.html) holds the configuration type and the background tasks.
+- [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) holds the initialization logic and the storage type.
 
 ## MCU selection
 
@@ -28,17 +33,13 @@ impl Device for MyDevice {
 ## Example
 
 ```rust
-use lokey::{Address, AnyState, Context, Device, Mcu, Transports};
+use lokey::storage::{EmptyStorage, EmptyStorageConfig};
+use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
 
 pub struct MyMcu;
 
 impl Mcu for MyMcu {
 	type Config = (); // Define the MCU-specific configuration type
-
-	async fn create(config: Self::Config, address: Address) -> Self {
-		// Perform MCU initialization here
-		Self
-	}
 
 	async fn run<D, T, S>(&'static self, context: Context<D, T, S>)
 	where
@@ -47,6 +48,24 @@ impl Mcu for MyMcu {
 		S: AnyState,
 	{
 		// Run MCU background tasks here (if needed)
+	}
+}
+
+impl McuCreator<EmptyStorageConfig> for MyMcu {
+	type Storage = EmptyStorage;
+
+	async fn create(
+		mcu_config: Self::Config,
+		address: Address,
+		storage_config: EmptyStorageConfig,
+	) -> (Self, Self::Storage) {
+		// Perform MCU initialization
+		let mcu = Self;
+
+		// Create storage
+		let storage = EmptyStorage;
+
+		(mcu, storage)
 	}
 }
 ```

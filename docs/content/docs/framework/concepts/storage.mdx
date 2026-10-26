@@ -4,18 +4,11 @@ title: Storage
 
 Persistent storage in Lokey is handled by the [`Storage`](https://docs.rs/lokey/latest/lokey/storage/trait.Storage.html) trait, which provides an async API for storing, fetching, and removing typed entries in non-volatile memory (typically flash). A storage can handle typed entries that implement the [`Entry`](https://docs.rs/lokey/latest/lokey/storage/trait.Entry.html) trait.
 
-The concrete storage backend is determined by the device's associated [`StorageDriver`](https://docs.rs/lokey/latest/lokey/storage/trait.StorageDriver.html). 
+The concrete storage backend is created by the MCU, via the [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) trait. See the [MCUs](./mcus.md) page for details.
 
 See the [`storage`](https://docs.rs/lokey/latest/lokey/storage/) module for the complete API reference.
 
 ## Responsibilities
-
-A `StorageDriver` type defines how to create a `Storage` instance for an MCU:
-
-- **Storage type**: The concrete `Storage` type created by the driver.
-- **MCU type**: The MCU type the driver targets.
-- **Configuration type**: The storage driver-specific configuration type.
-- **Initialization:** How to create and initialize the storage for a given MCU and configuration.
 
 A `Storage` type defines the following functionality:
 
@@ -31,13 +24,20 @@ An `Entry` type defines how a typed value is stored in storage:
 
 ## Storage selection
 
-The concrete storage backend used by your firmware is chosen by the device type. In the [`Device`](https://docs.rs/lokey/latest/lokey/trait.Device.html) implementation, the `type StorageDriver = ...` associated type binds that device to a specific storage driver implementation.
+In the [`Device`](https://docs.rs/lokey/latest/lokey/trait.Device.html) implementation, `type StorageConfig = ...` selects which storage configuration to use, and `fn storage_config()` returns the configuration value. The device's MCU must implement [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) for that configuration type.
 
 ```rust
-pub struct MyDevice;
+use lokey::storage::DefaultStorageConfig;
 
 impl Device for MyDevice {
-	type StorageDriver = lokey_nrf::DefaultStorageDriver;
+	type Mcu = Nrf;
+	type StorageConfig = DefaultStorageConfig;
+
+	fn storage_config() -> Self::StorageConfig {
+		DefaultStorageConfig {
+			flash_page_range: 0x60..0x70,
+		}
+	}
 	// ...
 }
 ```
@@ -97,10 +97,10 @@ impl Entry for MyEntry {
 
 The following storage implementations are provided:
 
-- [`lokey::storage::DefaultStorage`](https://docs.rs/lokey/latest/lokey/storage/struct.DefaultStorage.html) – A flash-backed map storage implementation
-- [`lokey::storage::EmptyStorage`](https://docs.rs/lokey/latest/lokey/storage/struct.EmptyStorage.html) – A no-op storage useful for devices that do not require persistent storage
+- [`lokey::storage::DefaultStorage`](https://docs.rs/lokey/latest/lokey/storage/struct.DefaultStorage.html) – A flash-backed map storage implementation, configured with [`DefaultStorageConfig`](https://docs.rs/lokey/latest/lokey/storage/struct.DefaultStorageConfig.html)
+- [`lokey::storage::EmptyStorage`](https://docs.rs/lokey/latest/lokey/storage/struct.EmptyStorage.html) – A no-op storage useful for devices that do not require persistent storage, configured with [`EmptyStorageConfig`](https://docs.rs/lokey/latest/lokey/storage/struct.EmptyStorageConfig.html)
 
-Crates that provide MCU support (for example `lokey-nrf` and `lokey-rp`) typically expose a `DefaultStorageDriver` that creates a `DefaultStorage` configured for the chip's flash layout.
+Crates that provide MCU support (for example `lokey-nrf` and `lokey-rp`) implement `McuCreator` for these configurations, so you can select them directly via `type StorageConfig` in your device.
 
 ## Entry tags
 
