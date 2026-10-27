@@ -698,6 +698,26 @@ where
         match connection.next().await {
             GattConnectionEvent::Disconnected { reason } => {
                 info!("BLE disconnected (reason: {})", reason);
+                if reason.to_result() == Err(bt_hci::param::Error::AUTHENTICATION_FAILURE) {
+                    // The stored bond no longer matches the peer; drop it so the next
+                    // connection performs a fresh pairing instead of failing forever.
+                    warn!("Clearing stale bond for profile {}", profile_index);
+                    let mut write_transaction = runner.storage.write_transaction().await;
+                    if let Err(e) = write_transaction
+                        .delete::<StoredBondInformation>(profile_index)
+                        .await
+                    {
+                        #[cfg(feature = "defmt")]
+                        let e = defmt::Debug2Format(&e);
+                        error!("Failed to delete bond info from storage: {}", e);
+                    }
+                    if let Err(e) = write_transaction.commit().await {
+                        #[cfg(feature = "defmt")]
+                        let e = defmt::Debug2Format(&e);
+                        error!("Failed to commit to storage: {}", e);
+                    }
+                    runner.profile_bond_infos.lock().await[profile_index as usize] = None;
+                }
                 return ConnectionStatusResult::Disconnected;
             }
             GattConnectionEvent::PairingComplete {
