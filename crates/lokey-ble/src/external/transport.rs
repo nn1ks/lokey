@@ -509,7 +509,7 @@ where
         Storage: storage::Storage,
     {
         let ble_stack = self.mcu.ble_stack();
-        let ble_host_peripheral = self.mcu.ble_host_peripheral();
+        let mut ble_host_peripheral = ble_stack.peripheral();
 
         let adv_params = AdvertisementParameters::default();
         let adv_data_discoverable = self.build_adv_data(true);
@@ -564,7 +564,7 @@ where
                 .await;
 
             let advertiser = match select(
-                ble_host_peripheral.lock().await.advertise(&adv_params, adv),
+                ble_host_peripheral.advertise(&adv_params, adv),
                 runner.cancel_advertisement.wait(),
             )
             .await

@@ -143,7 +143,7 @@ impl<Mcu: BleStack + 'static> internal::Transport for Transport<Mcu> {
 
 async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &'static [Address]) {
     let ble_stack = mcu.ble_stack();
-    let ble_host_central = mcu.ble_host_central();
+    let mut ble_host_central = ble_stack.central();
     let ble_host_runner = mcu.ble_host_runner();
 
     let filter_accept_list = peripheral_addresses
@@ -174,7 +174,7 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
     let connect = async {
         loop {
             debug!("Looking for BLE connection to peripheral");
-            let connection = match ble_host_central.lock().await.connect(&config).await {
+            let connection = match ble_host_central.connect(&config).await {
                 Ok(v) => v,
                 Err(e) => {
                     #[cfg(feature = "defmt")]
@@ -320,7 +320,8 @@ async fn central<M: BleStack + 'static>(mcu: &'static M, peripheral_addresses: &
 }
 
 async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Address) {
-    let ble_host_peripheral = mcu.ble_host_peripheral();
+    let ble_stack = mcu.ble_stack();
+    let mut ble_host_peripheral = ble_stack.peripheral();
     let ble_host_runner = mcu.ble_host_runner();
 
     let adv_params = AdvertisementParameters::default();
@@ -344,12 +345,7 @@ async fn peripheral<M: BleStack + 'static>(mcu: &'static M, central_address: Add
     let connect = async {
         loop {
             info!("Starting BLE advertisement");
-            let advertiser = match ble_host_peripheral
-                .lock()
-                .await
-                .advertise(&adv_params, adv)
-                .await
-            {
+            let advertiser = match ble_host_peripheral.advertise(&adv_params, adv).await {
                 Ok(v) => v,
                 Err(e) => {
                     #[cfg(feature = "defmt")]

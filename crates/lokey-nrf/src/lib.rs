@@ -27,7 +27,7 @@ use {
     embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
     embassy_sync::mutex::Mutex,
     nrf_sdc::SoftdeviceController,
-    trouble_host::prelude::{Central, DefaultPacketPool, Peripheral, Runner},
+    trouble_host::prelude::{DefaultPacketPool, Runner},
     trouble_host::{HostResources, Stack},
 };
 
@@ -44,16 +44,6 @@ bind_interrupts!(struct Irqs {
 pub struct Nrf {
     #[cfg(feature = "ble")]
     ble_stack: &'static Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
-    #[cfg(feature = "ble")]
-    ble_host_central: Mutex<
-        CriticalSectionRawMutex,
-        Central<'static, SoftdeviceController<'static>, DefaultPacketPool>,
-    >,
-    #[cfg(feature = "ble")]
-    ble_host_peripheral: Mutex<
-        CriticalSectionRawMutex,
-        Peripheral<'static, SoftdeviceController<'static>, DefaultPacketPool>,
-    >,
     #[cfg(feature = "ble")]
     ble_host_runner: Mutex<
         CriticalSectionRawMutex,
@@ -152,19 +142,11 @@ where
     };
 
     #[cfg(feature = "ble")]
-    let (ble_host_central, ble_host_peripheral, ble_host_runner) = (
-        Mutex::new(ble_stack.central()),
-        Mutex::new(ble_stack.peripheral()),
-        Mutex::new(ble_stack.runner()),
-    );
+    let ble_host_runner = Mutex::new(ble_stack.runner());
 
     let mcu = Nrf {
         #[cfg(feature = "ble")]
         ble_stack,
-        #[cfg(feature = "ble")]
-        ble_host_central,
-        #[cfg(feature = "ble")]
-        ble_host_peripheral,
         #[cfg(feature = "ble")]
         ble_host_runner,
     };
@@ -247,7 +229,7 @@ mod ble {
     use nrf_mpsl::MultiprotocolServiceLayer;
     use nrf_sdc::SoftdeviceController;
     use rand_chacha::rand_core::{SeedableRng, TryRng};
-    use trouble_host::prelude::{AddrKind, BdAddr, Central, DefaultPacketPool, Peripheral, Runner};
+    use trouble_host::prelude::{AddrKind, BdAddr, DefaultPacketPool, Runner};
     use trouble_host::{IdentityResolvingKey, Stack};
 
     pub fn build_sdc<'d, const N: usize>(
@@ -319,20 +301,6 @@ mod ble {
 
         fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {
             self.ble_stack
-        }
-
-        fn ble_host_central(
-            &self,
-        ) -> &Mutex<CriticalSectionRawMutex, Central<'static, Self::Controller, DefaultPacketPool>>
-        {
-            &self.ble_host_central
-        }
-
-        fn ble_host_peripheral(
-            &self,
-        ) -> &Mutex<CriticalSectionRawMutex, Peripheral<'static, Self::Controller, DefaultPacketPool>>
-        {
-            &self.ble_host_peripheral
         }
 
         fn ble_host_runner(
