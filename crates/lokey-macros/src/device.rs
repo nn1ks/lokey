@@ -169,7 +169,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             let (mcu, storage) = {
                 static MCU: ::lokey::static_cell::StaticCell<<#device_type_path as ::lokey::Device>::Mcu> = ::lokey::static_cell::StaticCell::new();
                 static STORAGE: ::lokey::static_cell::StaticCell<<<#device_type_path as ::lokey::Device>::Mcu as ::lokey::McuCreator<<#device_type_path as ::lokey::Device>::StorageConfig>>::Storage> = ::lokey::static_cell::StaticCell::new();
-                let (mcu, storage) = <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::McuCreator<<#device_type_path as ::lokey::Device>::StorageConfig>>::create(mcu_config, address, storage_config).await;
+                let (mcu, storage) = <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::McuCreator<<#device_type_path as ::lokey::Device>::StorageConfig>>::create(spawner, mcu_config, address, storage_config).await;
                 (MCU.init(mcu), STORAGE.init(storage))
             };
 
