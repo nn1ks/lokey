@@ -82,9 +82,6 @@ where
     ) -> S,
     S: storage::Storage,
 {
-    #[cfg(not(feature = "ble"))]
-    let _ = address;
-
     config.gpiote_interrupt_priority = Priority::P2;
     config.time_interrupt_priority = Priority::P2;
     let p = embassy_nrf::init(config);
