@@ -311,7 +311,7 @@ mod ble {
         type Size = typenum::U6;
         type TagParam = ();
 
-        const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x00, 0x00, 0x00, 0x03];
+        const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x00, 0x00, 0x00, 0x02];
 
         fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
         where
