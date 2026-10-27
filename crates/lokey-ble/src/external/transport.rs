@@ -764,27 +764,19 @@ where
                 debug!("Received PassKeyInput event");
             }
             GattConnectionEvent::Gatt { event } => {
-                debug!("Received GATT event");
-                let result = if connection
-                    .raw()
-                    .security_level()
-                    .map(|v| v.encrypted())
-                    .unwrap_or(false)
-                {
-                    if let GattEvent::Write(write_event) = &event
-                        && let Some(message) = runner
-                            .rx_message_service
-                            .receive(write_event, connection)
-                            .await
+                debug!("Received GATT event: {}", event);
+                if let GattEvent::Write(write_event) = &event {
+                    let connection = runner.connection.read().await;
+                    let connection = connection.as_ref().unwrap();
+                    if let Some(message) = runner
+                        .rx_message_service
+                        .receive(write_event, connection)
+                        .await
                     {
                         self.rx_channel.send(message).await;
                     }
-                    event.accept()
-                } else {
-                    warn!("Rejecting event because connection is not encrypted");
-                    event.reject(AttErrorCode::INSUFFICIENT_ENCRYPTION)
-                };
-                match result {
+                }
+                match event.accept() {
                     Ok(reply) => reply.send().await,
                     Err(error) => error!("Failed to handle event: {}", error),
                 }
