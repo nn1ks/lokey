@@ -679,13 +679,16 @@ where
     where
         Storage: storage::Storage,
     {
-        let connection = runner.connection.read().await;
-        let connection = connection.as_ref().unwrap();
-        if !connection.raw().is_connected() {
-            debug!("BLE is not connected");
-            return ConnectionStatusResult::Disconnected;
-        }
-        match connection.next().await {
+        let event = {
+            let connection = runner.connection.read().await;
+            let connection = connection.as_ref().unwrap();
+            if !connection.raw().is_connected() {
+                debug!("BLE is not connected");
+                return ConnectionStatusResult::Disconnected;
+            }
+            connection.next().await
+        };
+        match event {
             GattConnectionEvent::Disconnected { reason } => {
                 info!("BLE disconnected (reason: {})", reason);
                 if reason.to_result() == Err(bt_hci::param::Error::AUTHENTICATION_FAILURE) {
