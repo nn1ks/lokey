@@ -3,6 +3,7 @@ use crate::BleStack;
 use crate::external::bond_information::StoredBondInformation;
 use crate::external::{InitMessageService, RxMessageService, TxMessageService, bond_information};
 use arrayvec::ArrayVec;
+use bt_hci::uuid::appearance;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
@@ -446,12 +447,13 @@ where
     fn build_adv_data(&self, discoverable: bool) -> ArrayVec<u8, 31> {
         let mut adv_data = [0; 31];
 
+        let appearance_bytes = self.appearance.to_be_bytes();
         let adv_service_uuids_16_tx = TxMessage::service_uuids_16();
         let adv_service_uuids_128_tx = TxMessage::service_uuids_128();
         let adv_service_uuids_16_rx = RxMessage::service_uuids_16();
         let adv_service_uuids_128_rx = RxMessage::service_uuids_128();
 
-        let mut ad_structure_vec = ArrayVec::<AdStructure, 6>::new();
+        let mut ad_structure_vec = ArrayVec::<AdStructure, 7>::new();
         let mut flags = BR_EDR_NOT_SUPPORTED;
         if discoverable {
             flags |= LE_GENERAL_DISCOVERABLE;
@@ -460,6 +462,12 @@ where
             AdStructure::Flags(flags),
             AdStructure::CompleteLocalName(self.name.as_bytes()),
         ]);
+        if self.appearance != &appearance::UNKNOWN {
+            ad_structure_vec.push(AdStructure::Unknown {
+                ty: 0x19, // Appearance
+                data: &appearance_bytes,
+            });
+        }
         if !adv_service_uuids_16_tx.is_empty() {
             ad_structure_vec.push(AdStructure::IncompleteServiceUuids16(
                 &adv_service_uuids_16_tx,
