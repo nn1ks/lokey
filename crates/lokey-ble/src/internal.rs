@@ -76,9 +76,18 @@ mod peripheral {
 
     #[gatt_service(uuid = SERVICE_UUID)]
     pub struct Service {
-        #[characteristic(uuid = MESSAGE_TO_CENTRAL_CHARACTERISTIC_UUID, read, notify)]
+        #[characteristic(
+            uuid = MESSAGE_TO_CENTRAL_CHARACTERISTIC_UUID,
+            read,
+            notify,
+            permissions(encrypted)
+        )]
         pub message_to_central: Message,
-        #[characteristic(uuid = MESSAGE_TO_PERIPHERAL_CHARACTERISTIC_UUID, write_without_response)]
+        #[characteristic(
+            uuid = MESSAGE_TO_PERIPHERAL_CHARACTERISTIC_UUID,
+            write_without_response,
+            permissions(encrypted)
+        )]
         pub message_to_peripheral: Message,
     }
 

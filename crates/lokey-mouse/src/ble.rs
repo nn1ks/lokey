@@ -30,16 +30,27 @@ impl TxMessage for MouseReport {
 
 #[gatt_service(uuid = service::HUMAN_INTERFACE_DEVICE)]
 struct HidService {
-    #[characteristic(uuid = "2a4a", read, value = [0x01, 0x01, 0x00, 0x03])]
+    #[characteristic(uuid = "2a4a", read, value = [0x01, 0x01, 0x00, 0x03], permissions(encrypted))]
     pub hid_info: [u8; 4],
-    #[characteristic(uuid = "2a4b", read, value = HidMouseReport::desc().try_into().unwrap())]
+    #[characteristic(
+        uuid = "2a4b",
+        read,
+        value = HidMouseReport::desc().try_into().unwrap(),
+        permissions(encrypted)
+    )]
     pub report_map: [u8; 60], // 60 is the length of the slice returned by HidMouseReport::desc()
-    #[characteristic(uuid = "2a4c", write_without_response)]
+    #[characteristic(uuid = "2a4c", write_without_response, permissions(encrypted))]
     pub hid_control_point: u8,
-    #[characteristic(uuid = "2a4e", read, write_without_response, value = 1)]
+    #[characteristic(
+        uuid = "2a4e",
+        read,
+        write_without_response,
+        value = 1,
+        permissions(encrypted)
+    )]
     pub protocol_mode: u8,
     #[descriptor(uuid = "2908", read, value = [0u8, 1u8])]
-    #[characteristic(uuid = "2a4d", read, notify)]
+    #[characteristic(uuid = "2a4d", read, notify, permissions(encrypted))]
     pub input_mouse: [u8; INPUT_MOUSE_SIZE],
 }
 

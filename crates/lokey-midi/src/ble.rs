@@ -44,7 +44,8 @@ struct MidiService {
         uuid = "7772E5DB-3868-4112-A1A9-F2669D106BF3",
         read,
         notify,
-        write_without_response
+        write_without_response,
+        permissions(encrypted)
     )]
     pub midi_io: [u8; MAX_BLE_MIDI_PACKET_SIZE],
 }
