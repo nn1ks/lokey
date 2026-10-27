@@ -266,7 +266,10 @@ mod ble {
         S: storage::Storage,
     {
         let read_transaction = storage.read_transaction().await;
-        match read_transaction.read::<StoredIrk>(()).await {
+        match read_transaction
+            .read::<StoredIdentityResolvingKey>(())
+            .await
+        {
             Ok(v) => return v.0,
             Err(e) => {
                 #[cfg(feature = "defmt")]
@@ -288,7 +291,10 @@ mod ble {
             IdentityResolvingKey::from_le_bytes(buf).expect("non-zero IRK")
         };
         let mut write_transaction = storage.write_transaction().await;
-        if let Err(e) = write_transaction.write((), &StoredIrk(irk)).await {
+        if let Err(e) = write_transaction
+            .write((), &StoredIdentityResolvingKey(irk))
+            .await
+        {
             #[cfg(feature = "defmt")]
             let e = defmt::Debug2Format(&e);
             error!("Failed to write IRK to storage: {}", e);
@@ -311,9 +317,9 @@ mod ble {
         }
     }
 
-    pub struct StoredIrk(pub IdentityResolvingKey);
+    pub struct StoredIdentityResolvingKey(pub IdentityResolvingKey);
 
-    impl Entry for StoredIrk {
+    impl Entry for StoredIdentityResolvingKey {
         type Size = typenum::U16;
         type TagParam = ();
 
@@ -323,7 +329,8 @@ mod ble {
         where
             Self: Sized,
         {
-            IdentityResolvingKey::from_le_bytes(bytes.into_array::<16>()).map(StoredIrk)
+            IdentityResolvingKey::from_le_bytes(bytes.into_array::<16>())
+                .map(StoredIdentityResolvingKey)
         }
 
         fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
