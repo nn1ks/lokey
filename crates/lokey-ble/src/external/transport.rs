@@ -18,7 +18,6 @@ use lokey::storage::WriteTransaction;
 use lokey::util::{debug, error, info, unwrap, warn};
 use lokey::{Address, external, internal, storage};
 use portable_atomic::{AtomicBool, AtomicU8};
-use trouble_host::att::AttErrorCode;
 use trouble_host::gap::{GapConfig, PeripheralConfig};
 use trouble_host::gatt::{GattConnection, GattConnectionEvent, GattEvent};
 use trouble_host::prelude::{
