@@ -26,8 +26,9 @@ use static_cell::StaticCell;
 use {
     embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
     embassy_sync::mutex::Mutex,
+    lokey::util::info,
     nrf_sdc::SoftdeviceController,
-    trouble_host::prelude::{DefaultPacketPool, Runner},
+    trouble_host::prelude::{AddrKind, DefaultPacketPool, Runner},
     trouble_host::{HostResources, Stack},
 };
 
@@ -71,7 +72,7 @@ async fn run_mpsl(mpsl: &'static MultiprotocolServiceLayer<'static>) -> ! {
 async fn create_mcu_and_storage<F, S>(
     spawner: Spawner,
     mut config: embassy_nrf::config::Config,
-    address: Address,
+    _: Address,
     create_storage: F,
 ) -> (Nrf, S)
 where
@@ -117,6 +118,12 @@ where
     let ble_stack = {
         let irk = ble::get_or_create_irk(&storage, rng).await;
 
+        let identity_address = trouble_host::Address {
+            kind: AddrKind::RANDOM,
+            addr: ble::get_or_create_identity_address(&storage, rng).await,
+        };
+        info!("Using identity address {}", identity_address);
+
         let sdc_p = nrf_sdc::Peripherals::new(
             p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
             p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
@@ -131,7 +138,7 @@ where
         let resources = RESOURCES.init(HostResources::new());
 
         let ble_stack = trouble_host::new(sdc, resources)
-            .set_random_address(ble::device_address_to_ble_address(&address))
+            .set_random_address(identity_address)
             .enable_privacy(irk)
             .build();
 
@@ -222,14 +229,14 @@ mod ble {
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
     use embassy_sync::mutex::Mutex;
     use generic_array::GenericArray;
+    use lokey::storage;
     use lokey::storage::{BASE_TAG_SIZE, Entry, ReadTransaction, WriteTransaction};
     use lokey::util::{error, info};
-    use lokey::{Address, storage};
     use lokey_ble::BleStack;
     use nrf_mpsl::MultiprotocolServiceLayer;
     use nrf_sdc::SoftdeviceController;
     use rand_chacha::rand_core::{SeedableRng, TryRng};
-    use trouble_host::prelude::{AddrKind, BdAddr, DefaultPacketPool, Runner};
+    use trouble_host::prelude::{BdAddr, DefaultPacketPool, Runner};
     use trouble_host::{IdentityResolvingKey, Stack};
 
     pub fn build_sdc<'d, const N: usize>(
@@ -249,13 +256,6 @@ mod ble {
             .peripheral_count(1)?
             .buffer_cfg(72, 72, 3, 3)?
             .build(p, rng, mpsl, mem)
-    }
-
-    pub fn device_address_to_ble_address(address: &Address) -> trouble_host::Address {
-        trouble_host::Address {
-            kind: AddrKind::RANDOM,
-            addr: BdAddr::new(address.0),
-        }
     }
 
     pub async fn get_or_create_irk<S>(
@@ -302,6 +302,40 @@ mod ble {
         irk
     }
 
+    pub async fn get_or_create_identity_address<S>(
+        storage: &S,
+        rng: &mut Rng<'static, Async>,
+    ) -> BdAddr
+    where
+        S: storage::Storage,
+    {
+        let read_transaction = storage.read_transaction().await;
+        match read_transaction.read::<StoredIdentityAddress>(()).await {
+            Ok(v) => return v.0,
+            Err(e) => {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to read identity address from storage: {}", e);
+            }
+        }
+        drop(read_transaction);
+        info!("Generating new identity address...");
+        let mut address_bytes = [0u8; 6];
+        rng.blocking_fill_bytes(&mut address_bytes);
+        address_bytes[5] |= 0b1100_0000;
+        let address = BdAddr::new(address_bytes);
+        let mut write_transaction = storage.write_transaction().await;
+        if let Err(e) = write_transaction
+            .write((), &StoredIdentityAddress(address))
+            .await
+        {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to write identity address to storage: {}", e);
+        }
+        address
+    }
+
     impl BleStack for Nrf {
         type Controller = SoftdeviceController<'static>;
 
@@ -335,6 +369,30 @@ mod ble {
 
         fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
             self.0.to_le_bytes().into()
+        }
+    }
+
+    pub struct StoredIdentityAddress(pub BdAddr);
+
+    impl Entry for StoredIdentityAddress {
+        type Size = typenum::U6;
+        type TagParam = ();
+
+        const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x00, 0x00, 0x00, 0x03];
+
+        fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
+        where
+            Self: Sized,
+        {
+            if bytes[5] & 0b1100_0000 != 0b1100_0000 {
+                return None;
+            }
+            let address = BdAddr::new(bytes.into_array::<6>());
+            Some(StoredIdentityAddress(address))
+        }
+
+        fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
+            self.0.into_inner().into()
         }
     }
 }
