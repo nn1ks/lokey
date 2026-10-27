@@ -72,6 +72,7 @@ defmt = { version = "1.2.0", optional = true }
 derive_more = { version = "2.0.1", default-features = false, features = ["display", "error", "from"] }
 document-features = "0.2.11"
 ekv = { version = "1.0.0", features = ["crc"] }
+embassy-executor = "0.10.0"
 embassy-futures = "0.1.1"
 embassy-sync = "0.8.0"
 embassy-sync-0-6 = { package = "embassy-sync", version = "0.6.2" } # Required for ekv

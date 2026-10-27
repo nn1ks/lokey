@@ -8,6 +8,7 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+use embassy_executor::Spawner;
 use embassy_nrf::bind_interrupts;
 use embassy_nrf::interrupt::Priority;
 use embassy_nrf::mode::Async;
@@ -41,7 +42,6 @@ bind_interrupts!(struct Irqs {
 });
 
 pub struct Nrf {
-    mpsl: &'static MultiprotocolServiceLayer<'static>,
     #[cfg(feature = "ble")]
     ble_stack: &'static Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
     #[cfg(feature = "ble")]
@@ -70,11 +70,16 @@ impl Mcu for Nrf {
         T: Transports<Self>,
         S: AnyState,
     {
-        self.mpsl.run().await
     }
 }
 
+#[embassy_executor::task]
+async fn run_mpsl(mpsl: &'static MultiprotocolServiceLayer<'static>) -> ! {
+    mpsl.run().await
+}
+
 async fn create_mcu_and_storage<F, S>(
+    spawner: Spawner,
     mut config: embassy_nrf::config::Config,
     address: Address,
     create_storage: F,
@@ -111,8 +116,10 @@ where
         SESSION_MEM.init(SessionMem::new())
     )));
 
+    spawner.spawn(run_mpsl(mpsl).unwrap());
+
     static RNG_CELL: StaticCell<Rng<'static, Async>> = StaticCell::new();
-    let rng = RNG_CELL.init(Rng::new(unsafe { RNG::steal() }, Irqs));
+    let rng = RNG_CELL.init(Rng::new(p.RNG, Irqs));
 
     let storage = create_storage(mpsl, rng).await;
 
@@ -149,7 +156,6 @@ where
     );
 
     let mcu = Nrf {
-        mpsl,
         #[cfg(feature = "ble")]
         ble_stack,
         #[cfg(feature = "ble")]
@@ -167,11 +173,12 @@ impl McuCreator<DefaultStorageConfig> for Nrf {
     type Storage = DefaultStorage<MultiwriteNorFlash<Flash<'static>>>;
 
     async fn create(
+        spawner: Spawner,
         mcu_config: Self::Config,
         address: Address,
         storage_config: DefaultStorageConfig,
     ) -> (Self, Self::Storage) {
-        create_mcu_and_storage(mcu_config, address, async |mpsl, rng| {
+        create_mcu_and_storage(spawner, mcu_config, address, async |mpsl, rng| {
             let random_seed = rng.blocking_next_u32();
             let nvmc = unsafe { embassy_nrf::peripherals::NVMC::steal() };
             let flash = Flash::take(mpsl, nvmc);
@@ -183,15 +190,20 @@ impl McuCreator<DefaultStorageConfig> for Nrf {
         .await
     }
 }
+
 impl McuCreator<EmptyStorageConfig> for Nrf {
     type Storage = EmptyStorage;
 
     async fn create(
+        spawner: Spawner,
         mcu_config: Self::Config,
         address: Address,
         _: EmptyStorageConfig,
     ) -> (Self, Self::Storage) {
-        create_mcu_and_storage(mcu_config, address, async |_mpsl, _rng| EmptyStorage).await
+        create_mcu_and_storage(spawner, mcu_config, address, async |_mpsl, _rng| {
+            EmptyStorage
+        })
+        .await
     }
 }
 

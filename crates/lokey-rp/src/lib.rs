@@ -8,11 +8,14 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+use embassy_executor::Spawner;
 use embassy_rp::clocks::RoscRng;
 use embassy_rp::peripherals::{DMA_CH0, FLASH};
 use embassy_rp::{bind_interrupts, flash};
 use lokey::storage::flash::MultiwriteNorFlash;
-use lokey::storage::{self, DefaultStorage, DefaultStorageConfig};
+use lokey::storage::{
+    self, DefaultStorage, DefaultStorageConfig, EmptyStorage, EmptyStorageConfig,
+};
 use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
 
 bind_interrupts!(struct Irqs {
@@ -42,13 +45,11 @@ impl McuCreator<DefaultStorageConfig> for Rp {
     type Storage = DefaultStorage<MultiwriteNorFlash<Flash>>;
 
     async fn create(
+        _: Spawner,
         mcu_config: Self::Config,
         _: Address,
         storage_config: DefaultStorageConfig,
-    ) -> (Self, Self::Storage)
-    where
-        Self: Sized,
-    {
+    ) -> (Self, Self::Storage) {
         let p = embassy_rp::init(mcu_config);
 
         let storage = {
@@ -60,6 +61,21 @@ impl McuCreator<DefaultStorageConfig> for Rp {
         let _ = storage::mount_or_format(&storage).await;
 
         (Self {}, storage)
+    }
+}
+
+impl McuCreator<EmptyStorageConfig> for Rp {
+    type Storage = EmptyStorage;
+
+    async fn create(
+        _: Spawner,
+        mcu_config: Self::Config,
+        _: Address,
+        _: EmptyStorageConfig,
+    ) -> (Self, Self::Storage) {
+        embassy_rp::init(mcu_config);
+
+        (Self {}, EmptyStorage)
     }
 }
 

@@ -17,6 +17,7 @@ pub trait McuCreator<StorageConfig>: Mcu {
     ///
     /// This function must be called only once per concrete MCU type.
     fn create(
+        spawner: Spawner,
         mcu_config: Self::Config,
         address: Address,
         storage_config: StorageConfig,
@@ -47,6 +48,7 @@ pub trait Mcu: Any {
 }
 
 pub use dummy::DummyMcu;
+use embassy_executor::Spawner;
 
 #[allow(missing_docs)]
 mod dummy {
@@ -70,7 +72,12 @@ mod dummy {
     impl McuCreator<EmptyStorageConfig> for DummyMcu {
         type Storage = EmptyStorage;
 
-        async fn create(_: Self::Config, _: Address, _: EmptyStorageConfig) -> (Self, Self::Storage)
+        async fn create(
+            _: Spawner,
+            _: Self::Config,
+            _: Address,
+            _: EmptyStorageConfig,
+        ) -> (Self, Self::Storage)
         where
             Self: Sized,
         {
