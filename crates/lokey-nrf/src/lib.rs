@@ -125,6 +125,8 @@ where
 
     #[cfg(feature = "ble")]
     let ble_stack = {
+        let irk = ble::get_or_create_irk(&storage, rng).await;
+
         let sdc_p = nrf_sdc::Peripherals::new(
             p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
             p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
@@ -140,6 +142,7 @@ where
 
         let ble_stack = trouble_host::new(sdc, resources)
             .set_random_address(ble::device_address_to_ble_address(&address))
+            .enable_privacy(irk)
             .build();
 
         static BLE_STACK: StaticCell<
@@ -236,12 +239,16 @@ mod ble {
     use embassy_nrf::rng::Rng;
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
     use embassy_sync::mutex::Mutex;
-    use lokey::Address;
+    use generic_array::GenericArray;
+    use lokey::storage::{BASE_TAG_SIZE, Entry, ReadTransaction, WriteTransaction};
+    use lokey::util::{error, info};
+    use lokey::{Address, storage};
     use lokey_ble::BleStack;
     use nrf_mpsl::MultiprotocolServiceLayer;
     use nrf_sdc::SoftdeviceController;
-    use trouble_host::Stack;
+    use rand_chacha::rand_core::{SeedableRng, TryRng};
     use trouble_host::prelude::{AddrKind, BdAddr, Central, DefaultPacketPool, Peripheral, Runner};
+    use trouble_host::{IdentityResolvingKey, Stack};
 
     pub fn build_sdc<'d, const N: usize>(
         p: nrf_sdc::Peripherals<'d>,
@@ -267,6 +274,44 @@ mod ble {
             kind: AddrKind::RANDOM,
             addr: BdAddr::new(address.0),
         }
+    }
+
+    pub async fn get_or_create_irk<S>(
+        storage: &S,
+        rng: &mut Rng<'static, Async>,
+    ) -> IdentityResolvingKey
+    where
+        S: storage::Storage,
+    {
+        let read_transaction = storage.read_transaction().await;
+        match read_transaction.read::<StoredIrk>(()).await {
+            Ok(v) => return v.0,
+            Err(e) => {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to read IRK from storage: {}", e);
+            }
+        }
+        drop(read_transaction);
+        info!("Generating new IRK...");
+        let mut csprng = {
+            let mut seed = [0u8; 32];
+            rng.blocking_fill_bytes(&mut seed);
+            rand_chacha::ChaCha12Rng::from_seed(seed)
+        };
+        let irk = {
+            let mut buf = [0u8; 16];
+            let Ok(()) = csprng.try_fill_bytes(&mut buf);
+            buf[0] |= 1; // IRK must be non-zero
+            IdentityResolvingKey::from_le_bytes(buf).expect("non-zero IRK")
+        };
+        let mut write_transaction = storage.write_transaction().await;
+        if let Err(e) = write_transaction.write((), &StoredIrk(irk)).await {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to write IRK to storage: {}", e);
+        }
+        irk
     }
 
     impl BleStack for Nrf {
@@ -295,6 +340,26 @@ mod ble {
         ) -> &Mutex<CriticalSectionRawMutex, Runner<'static, Self::Controller, DefaultPacketPool>>
         {
             &self.ble_host_runner
+        }
+    }
+
+    pub struct StoredIrk(pub IdentityResolvingKey);
+
+    impl Entry for StoredIrk {
+        type Size = typenum::U16;
+        type TagParam = ();
+
+        const BASE_TAG: [u8; BASE_TAG_SIZE] = [0x00, 0x00, 0x00, 0x02];
+
+        fn from_bytes(bytes: &GenericArray<u8, Self::Size>) -> Option<Self>
+        where
+            Self: Sized,
+        {
+            IdentityResolvingKey::from_le_bytes(bytes.into_array::<16>()).map(StoredIrk)
+        }
+
+        fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
+            self.0.to_le_bytes().into()
         }
     }
 }
