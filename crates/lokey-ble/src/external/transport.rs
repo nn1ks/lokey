@@ -171,8 +171,10 @@ struct Runner<'server, Storage: 'static, TxMessageService, RxMessageService, con
     num_profiles: NonZeroU8,
 }
 
-impl<'server, Storage: 'static, TxMessageService, RxMessageService, const CONN_MAX: usize>
+impl<'server, Storage, TxMessageService, RxMessageService, const CONN_MAX: usize>
     Runner<'server, Storage, TxMessageService, RxMessageService, CONN_MAX>
+where
+    Storage: storage::Storage,
 {
     fn new(
         storage: &'static Storage,
@@ -199,6 +201,47 @@ impl<'server, Storage: 'static, TxMessageService, RxMessageService, const CONN_M
             active_profile_index: AtomicU8::new(0),
             profile_bond_infos: Mutex::new(profile_bond_infos),
             num_profiles,
+        }
+    }
+
+    async fn remove_bond(&self, profile_index: u8) {
+        debug!("Removing bond info for profile {}", profile_index);
+        {
+            let mut write_transaction = self.storage.write_transaction().await;
+            if let Err(e) = write_transaction
+                .delete::<StoredBondInformation>(profile_index)
+                .await
+            {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to remove bond info: {}", e);
+            }
+            if let Err(e) = write_transaction.commit().await {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to commit to database: {}", e);
+            }
+        }
+        self.profile_bond_infos.lock().await[profile_index as usize] = None;
+    }
+
+    async fn remove_all_bonds(&self) {
+        debug!("Removing all bond infos");
+        {
+            let mut write_transaction = self.storage.write_transaction().await;
+            for i in 0..self.num_profiles.get() {
+                if let Err(e) = write_transaction.delete::<StoredBondInformation>(i).await {
+                    #[cfg(feature = "defmt")]
+                    let e = defmt::Debug2Format(&e);
+                    error!("Failed to remove bond info: {}", e);
+                }
+                self.profile_bond_infos.lock().await[i as usize] = None;
+            }
+            if let Err(e) = write_transaction.commit().await {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to commit to database: {}", e);
+            }
         }
     }
 }
@@ -372,24 +415,7 @@ where
                             profile_index, runner.num_profiles
                         );
                     } else {
-                        debug!("Removing bond info for profile {}", profile_index);
-                        {
-                            let mut write_transaction = runner.storage.write_transaction().await;
-                            if let Err(e) = write_transaction
-                                .delete::<StoredBondInformation>(profile_index)
-                                .await
-                            {
-                                #[cfg(feature = "defmt")]
-                                let e = defmt::Debug2Format(&e);
-                                error!("Failed to remove bond info: {}", e);
-                            }
-                            if let Err(e) = write_transaction.commit().await {
-                                #[cfg(feature = "defmt")]
-                                let e = defmt::Debug2Format(&e);
-                                error!("Failed to commit to database: {}", e);
-                            }
-                        }
-                        runner.profile_bond_infos.lock().await[profile_index as usize] = None;
+                        runner.remove_bond(profile_index).await;
                         if runner.active_profile_index.load(Ordering::SeqCst) == profile_index {
                             if let Some(connection) = &*runner.connection.read().await {
                                 connection.raw().disconnect();
@@ -399,50 +425,15 @@ where
                     }
                 }
                 Message::ClearActive => {
-                    debug!("Removing bond info for active profile");
                     let profile_index = runner.active_profile_index.load(Ordering::SeqCst);
-                    {
-                        let mut write_transaction = runner.storage.write_transaction().await;
-                        if let Err(e) = write_transaction
-                            .delete::<StoredBondInformation>(profile_index)
-                            .await
-                        {
-                            #[cfg(feature = "defmt")]
-                            let e = defmt::Debug2Format(&e);
-                            error!("Failed to remove bond info: {}", e);
-                        }
-                        if let Err(e) = write_transaction.commit().await {
-                            #[cfg(feature = "defmt")]
-                            let e = defmt::Debug2Format(&e);
-                            error!("Failed to commit to database: {}", e);
-                        }
-                    }
-                    runner.profile_bond_infos.lock().await[profile_index as usize] = None;
+                    runner.remove_bond(profile_index).await;
                     if let Some(connection) = &*runner.connection.read().await {
                         connection.raw().disconnect();
                     }
                     runner.cancel_advertisement.signal(());
                 }
                 Message::ClearAll => {
-                    debug!("Removing all bond infos");
-                    {
-                        let mut write_transaction = runner.storage.write_transaction().await;
-                        for i in 0..runner.num_profiles.get() {
-                            if let Err(e) =
-                                write_transaction.delete::<StoredBondInformation>(i).await
-                            {
-                                #[cfg(feature = "defmt")]
-                                let e = defmt::Debug2Format(&e);
-                                error!("Failed to remove bond info: {}", e);
-                            }
-                            runner.profile_bond_infos.lock().await[i as usize] = None;
-                        }
-                        if let Err(e) = write_transaction.commit().await {
-                            #[cfg(feature = "defmt")]
-                            let e = defmt::Debug2Format(&e);
-                            error!("Failed to commit to database: {}", e);
-                        }
-                    }
+                    runner.remove_all_bonds().await;
                     if let Some(connection) = &*runner.connection.read().await {
                         connection.raw().disconnect();
                     }
@@ -821,6 +812,7 @@ where
             }
             GattConnectionEvent::BondLost => {
                 debug!("Received BondLost event");
+                runner.remove_bond(profile_index).await;
             }
             GattConnectionEvent::Encrypted { bond, .. } => {
                 debug!("Received Encrypted event");
