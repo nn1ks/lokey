@@ -3,7 +3,6 @@ use crate::BleStack;
 use crate::external::bond_information::StoredBondInformation;
 use crate::external::{InitMessageService, RxMessageService, TxMessageService, bond_information};
 use arrayvec::ArrayVec;
-use bt_hci::param::AddrKind;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join5;
@@ -32,7 +31,7 @@ use trouble_host::{BleHostError, BondInformation};
 pub(crate) const MAX_NUM_BOND_INFOS: usize = 10;
 
 // TODO: use TxMessage::ATTRIBUTE_COUNT
-const ATT_MAX: usize = 50;
+const ATT_MAX: usize = 128;
 
 static ACTIVE_SIGNAL: Signal<CriticalSectionRawMutex, bool> = Signal::new();
 static IS_ACTIVE: AtomicBool = AtomicBool::new(true);
