@@ -296,6 +296,11 @@ mod ble {
             let e = defmt::Debug2Format(&e);
             error!("Failed to write IRK to storage: {}", e);
         }
+        if let Err(e) = write_transaction.commit().await {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to commit to storage: {}", e);
+        }
         irk
     }
 
@@ -329,6 +334,11 @@ mod ble {
             #[cfg(feature = "defmt")]
             let e = defmt::Debug2Format(&e);
             error!("Failed to write identity address to storage: {}", e);
+        }
+        if let Err(e) = write_transaction.commit().await {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to commit to storage: {}", e);
         }
         address
     }
