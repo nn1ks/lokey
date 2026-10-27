@@ -41,7 +41,6 @@ ble = [
   "dep:generic-array",
   "dep:lokey-ble",
   "dep:nrf-sdc",
-  "dep:rand_chacha",
   "dep:trouble-host",
 ]
 
@@ -55,7 +54,6 @@ nrf52840 = [
   "nrf-sdc?/nrf52840",
 ]
 embassy-sync = ["dep:embassy-sync"]
-rand_chacha = ["dep:rand_chacha"]
 generic-array = ["dep:generic-array"]
 
 [dependencies]
@@ -72,7 +70,6 @@ lokey-ble = { path = "../lokey-ble", optional = true }
 lokey-usb = { path = "../lokey-usb", optional = true }
 nrf-mpsl = { version = "0.4.0", features = ["critical-section-impl"], optional = true }
 nrf-sdc = { version = "0.4.0", features = ["central", "peripheral"], optional = true }
-rand_chacha = { version = "0.10.0", optional = true, default-features = false }
 static_cell = "2.1.0"
 trouble-host = { version = "0.8.0", features = ["security"], optional = true }
 typenum = "1.19.0"
