@@ -116,7 +116,7 @@ where
         let irk = ble::get_or_create_irk(&storage, rng).await;
 
         let identity_address = trouble_host::Address {
-            kind: AddrKind::RESOLVABLE_PRIVATE_OR_RANDOM,
+            kind: AddrKind::RANDOM,
             addr: ble::get_or_create_identity_address(&storage, rng).await,
         };
         info!("Using identity address {}", identity_address);
@@ -324,7 +324,7 @@ mod ble {
         info!("Generating new identity address...");
         let mut address_bytes = [0u8; 6];
         rng.blocking_fill_bytes(&mut address_bytes);
-        address_bytes[5] = (address_bytes[5] & 0b0011_1111) | 0b0100_0000;
+        address_bytes[5] = (address_bytes[5] & 0b0011_1111) | 0b1100_0000;
         let address = BdAddr::new(address_bytes);
         let mut write_transaction = storage.write_transaction().await;
         if let Err(e) = write_transaction
