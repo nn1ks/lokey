@@ -742,22 +742,6 @@ where
                     return ConnectionStatusResult::Disconnected;
                 }
 
-                let is_identity_addr = {
-                    // An identity address must be public or static-random (top 2 bits 0b11).
-                    // An RPA (0b01) or NRPA (0b00) cannot serve as an identity address.
-                    let addr_msb = bond.identity.addr.addr.into_inner()[5];
-                    bond.identity.addr.kind == AddrKind::PUBLIC
-                        || (addr_msb & 0b1100_0000) == 0b1100_0000
-                };
-                if bond.identity.irk.is_none() || !is_identity_addr {
-                    warn!(
-                        "Rejecting unusable bond: irk={} identity={} (not a resolvable identity address)",
-                        bond.identity.irk.is_some(),
-                        bond.identity.addr,
-                    );
-                    return ConnectionStatusResult::Disconnected;
-                }
-
                 debug!("Writing bond info to flash");
                 {
                     let mut write_transaction = runner.storage.write_transaction().await;
