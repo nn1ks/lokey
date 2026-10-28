@@ -633,7 +633,7 @@ where
                     continue;
                 }
             };
-            if let Err(e) = new_connection.raw().set_bondable(true) {
+            if let Err(e) = new_connection.raw().set_bondable(discoverable) {
                 error!("Failed to set connection as bondable: {}", e);
             }
             if let Err(e) = new_connection.raw().request_security() {
