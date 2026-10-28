@@ -25,7 +25,7 @@ use trouble_host::prelude::{
     BR_EDR_NOT_SUPPORTED, BluetoothUuid16, DefaultPacketPool, LE_GENERAL_DISCOVERABLE,
     RequestedConnParams,
 };
-use trouble_host::{BleHostError, BondInformation};
+use trouble_host::{BleHostError, BondInformation, Stack};
 
 // TODO: Don't hardcode maximum number of bond infos
 pub(crate) const MAX_NUM_BOND_INFOS: usize = 10;
@@ -647,7 +647,7 @@ where
             #[allow(clippy::while_let_loop)]
             loop {
                 match self
-                    .handle_next_connection_event(runner, profile_index)
+                    .handle_next_connection_event(runner, profile_index, ble_stack)
                     .await
                 {
                     ConnectionStatusResult::Connected => {}
@@ -669,6 +669,7 @@ where
             CONN_MAX,
         >,
         profile_index: u8,
+        ble_stack: &Stack<'static, Mcu::Controller, DefaultPacketPool>,
     ) -> ConnectionStatusResult
     where
         Storage: storage::Storage,
@@ -783,6 +784,9 @@ where
             }
             GattConnectionEvent::RequestConnectionParams(v) => {
                 debug!("Received RequestConnectionParams event: {:?}", v);
+                if let Err(e) = v.accept(None, ble_stack).await {
+                    error!("Failed to accept connection params request: {}", e);
+                }
             }
             GattConnectionEvent::DataLengthUpdated { .. } => {
                 debug!("Received DataLengthUpdated event");
