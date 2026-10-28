@@ -22,15 +22,6 @@ use lokey::util::unwrap;
 use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
-#[cfg(feature = "ble")]
-use {
-    embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
-    embassy_sync::mutex::Mutex,
-    lokey::util::info,
-    nrf_sdc::SoftdeviceController,
-    trouble_host::prelude::{AddrKind, DefaultPacketPool, Runner},
-    trouble_host::{HostResources, Stack},
-};
 
 bind_interrupts!(struct Irqs {
     RNG => embassy_nrf::rng::InterruptHandler<RNG>;
@@ -44,12 +35,7 @@ bind_interrupts!(struct Irqs {
 
 pub struct Nrf {
     #[cfg(feature = "ble")]
-    ble_stack: &'static Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
-    #[cfg(feature = "ble")]
-    ble_host_runner: Mutex<
-        CriticalSectionRawMutex,
-        Runner<'static, SoftdeviceController<'static>, DefaultPacketPool>,
-    >,
+    ble_stack: &'static ble::Stack,
 }
 
 impl Mcu for Nrf {
@@ -113,43 +99,16 @@ where
 
     #[cfg(feature = "ble")]
     let ble_stack = {
-        let identity_address = trouble_host::Address {
-            kind: AddrKind::RANDOM,
-            addr: ble::get_or_create_identity_address(&storage, rng).await,
-        };
-        info!("Using identity address {}", identity_address);
-
         let sdc_p = nrf_sdc::Peripherals::new(
             p.PPI_CH17, p.PPI_CH18, p.PPI_CH20, p.PPI_CH21, p.PPI_CH22, p.PPI_CH23, p.PPI_CH24,
             p.PPI_CH25, p.PPI_CH26, p.PPI_CH27, p.PPI_CH28, p.PPI_CH29,
         );
-
-        static SDC_MEM: StaticCell<nrf_sdc::Mem<3920>> = StaticCell::new();
-        let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
-        let sdc = unwrap!(ble::build_sdc(sdc_p, rng, mpsl, sdc_mem));
-
-        static RESOURCES: StaticCell<HostResources<DefaultPacketPool, 2, 4, 72>> =
-            StaticCell::new();
-        let resources = RESOURCES.init(HostResources::new());
-
-        let ble_stack = trouble_host::new(sdc, resources)
-            .set_random_address(identity_address)
-            .build();
-
-        static BLE_STACK: StaticCell<
-            Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>,
-        > = StaticCell::new();
-        BLE_STACK.init(ble_stack)
+        ble::build_stack(spawner, mpsl, sdc_p, rng, &storage).await
     };
-
-    #[cfg(feature = "ble")]
-    let ble_host_runner = Mutex::new(ble_stack.runner());
 
     let mcu = Nrf {
         #[cfg(feature = "ble")]
         ble_stack,
-        #[cfg(feature = "ble")]
-        ble_host_runner,
     };
 
     (mcu, storage)
@@ -218,21 +177,61 @@ mod usb {
 #[cfg(feature = "ble")]
 mod ble {
     use super::Nrf;
+    use embassy_executor::Spawner;
     use embassy_nrf::mode::Async;
     use embassy_nrf::rng::Rng;
-    use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-    use embassy_sync::mutex::Mutex;
+    use embassy_time::Timer;
     use generic_array::GenericArray;
     use lokey::storage;
     use lokey::storage::{BASE_TAG_SIZE, Entry, ReadTransaction, WriteTransaction};
-    use lokey::util::{error, info};
-    use lokey_ble::BleStack;
+    use lokey::util::{error, info, unwrap};
+    use lokey_ble::{BleStack, Runner, RunnerEventHandler};
     use nrf_mpsl::MultiprotocolServiceLayer;
     use nrf_sdc::SoftdeviceController;
-    use trouble_host::Stack;
-    use trouble_host::prelude::{BdAddr, DefaultPacketPool, Runner};
+    use static_cell::StaticCell;
+    use trouble_host::HostResources;
+    use trouble_host::prelude::{AddrKind, BdAddr, DefaultPacketPool, EventHandler};
 
-    pub fn build_sdc<'d, const N: usize>(
+    pub type Stack = trouble_host::Stack<'static, SoftdeviceController<'static>, DefaultPacketPool>;
+
+    pub async fn build_stack<S>(
+        spawner: Spawner,
+        mpsl: &'static MultiprotocolServiceLayer<'static>,
+        peripherals: nrf_sdc::Peripherals<'static>,
+        rng: &'static mut Rng<'static, Async>,
+        storage: &S,
+    ) -> &'static Stack
+    where
+        S: storage::Storage,
+    {
+        let identity_address = trouble_host::Address {
+            kind: AddrKind::RANDOM,
+            addr: get_or_create_identity_address(storage, rng).await,
+        };
+        info!("Using identity address {}", identity_address);
+
+        static SDC_MEM: StaticCell<nrf_sdc::Mem<3920>> = StaticCell::new();
+        let sdc_mem = SDC_MEM.init(nrf_sdc::Mem::new());
+        let sdc = unwrap!(build_sdc(peripherals, rng, mpsl, sdc_mem));
+
+        static RESOURCES: StaticCell<HostResources<DefaultPacketPool, 2, 4>> = StaticCell::new();
+        let resources = RESOURCES.init(HostResources::new());
+
+        let ble_stack = trouble_host::new(sdc, resources)
+            .set_random_address(identity_address)
+            .build();
+
+        static BLE_STACK: StaticCell<Stack> = StaticCell::new();
+        let ble_stack = BLE_STACK.init(ble_stack);
+
+        let ble_host_runner = ble_stack.runner();
+        let runner = lokey_ble::Runner::new(ble_host_runner, &EVENT_HANDLER);
+        spawner.spawn(run_ble_stack(runner).unwrap());
+
+        ble_stack
+    }
+
+    fn build_sdc<'d, const N: usize>(
         p: nrf_sdc::Peripherals<'d>,
         rng: &'d mut Rng<Async>,
         mpsl: &'d MultiprotocolServiceLayer,
@@ -250,11 +249,38 @@ mod ble {
             .buffer_cfg(72, 72, 3, 3)?
             .build(p, rng, mpsl, mem)
     }
+    static EVENT_HANDLER: RunnerEventHandler = RunnerEventHandler::new();
 
-    pub async fn get_or_create_identity_address<S>(
-        storage: &S,
-        rng: &mut Rng<'static, Async>,
-    ) -> BdAddr
+    #[embassy_executor::task]
+    async fn run_ble_stack(
+        mut runner: Runner<'static, 'static, SoftdeviceController<'static>, DefaultPacketPool>,
+    ) {
+        loop {
+            if let Err(e) = runner.run().await {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("BLE run error: {}", e);
+                Timer::after_secs(1).await;
+            }
+        }
+    }
+
+    impl BleStack for Nrf {
+        type Controller = SoftdeviceController<'static>;
+
+        fn ble_stack(&self) -> &Stack {
+            self.ble_stack
+        }
+
+        fn register_ble_event_handler<H: EventHandler + Sync>(
+            &self,
+            event_handler: &'static H,
+        ) -> bool {
+            EVENT_HANDLER.register(event_handler)
+        }
+    }
+
+    async fn get_or_create_identity_address<S>(storage: &S, rng: &mut Rng<'static, Async>) -> BdAddr
     where
         S: storage::Storage,
     {
@@ -290,22 +316,7 @@ mod ble {
         address
     }
 
-    impl BleStack for Nrf {
-        type Controller = SoftdeviceController<'static>;
-
-        fn ble_stack(&self) -> &Stack<'static, Self::Controller, DefaultPacketPool> {
-            self.ble_stack
-        }
-
-        fn ble_host_runner(
-            &self,
-        ) -> &Mutex<CriticalSectionRawMutex, Runner<'static, Self::Controller, DefaultPacketPool>>
-        {
-            &self.ble_host_runner
-        }
-    }
-
-    pub struct StoredIdentityAddress(pub BdAddr);
+    struct StoredIdentityAddress(pub BdAddr);
 
     impl Entry for StoredIdentityAddress {
         type Size = typenum::U6;

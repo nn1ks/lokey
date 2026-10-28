@@ -6,7 +6,7 @@ use arrayvec::ArrayVec;
 use bt_hci::uuid::appearance;
 use core::num::NonZeroU8;
 use core::sync::atomic::Ordering;
-use embassy_futures::join::join5;
+use embassy_futures::join::join4;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::channel::Channel;
@@ -120,8 +120,7 @@ where
             num_profiles,
         );
 
-        join5(
-            self.run_ble_host_runner(),
+        join4(
             self.advertise_and_handle_connections(&runner),
             self.handle_incoming_messages(&runner),
             self.handle_internal_messages(&runner),
@@ -279,18 +278,6 @@ where
                 }
                 runner.cancel_activation_wait.signal(());
                 runner.cancel_advertisement.signal(());
-            }
-        }
-    }
-
-    async fn run_ble_host_runner(&self) {
-        let ble_host_runner = self.mcu.ble_host_runner();
-        loop {
-            if let Err(e) = ble_host_runner.lock().await.run().await {
-                #[cfg(feature = "defmt")]
-                let e = defmt::Debug2Format(&e);
-                error!("BLE run error: {}", e);
-                Timer::after_secs(1).await;
             }
         }
     }
