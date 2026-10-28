@@ -101,7 +101,7 @@ impl Device for KeyboardLeft {
 
     fn storage_config() -> Self::StorageConfig {
         DefaultStorageConfig {
-            flash_page_range: 0x60..0x70,
+            flash_page_range: 0xF0..0x100,
         }
     }
 }
@@ -251,7 +251,7 @@ impl Device for KeyboardRight {
 
     fn storage_config() -> Self::StorageConfig {
         DefaultStorageConfig {
-            flash_page_range: 0x60..0x70,
+            flash_page_range: 0xF0..0x100,
         }
     }
 }
