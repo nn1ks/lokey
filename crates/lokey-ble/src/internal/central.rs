@@ -15,7 +15,7 @@ use generic_array::GenericArray;
 use lokey::internal::{self, MAX_MESSAGE_SIZE_WITH_TAG};
 use lokey::storage::{self, Entry, ReadTransaction, WriteTransaction};
 use lokey::util::{debug, error, info};
-use lokey::{AnyState, Context, McuCreator};
+use lokey::{Address, AnyState, Context, McuCreator};
 use portable_atomic::AtomicBool;
 use trouble_host::advertise::AdStructure;
 use trouble_host::connection::{Connection, ConnectionEvent};
@@ -24,13 +24,14 @@ use trouble_host::prelude::{
     Characteristic, ConnectConfig, DefaultPacketPool, EventHandler, ScanConfig,
 };
 use trouble_host::scan::Scanner;
-use trouble_host::{Address, BondInformation};
+use trouble_host::{BondInformation, Stack};
 
 const MAX_SERVICES: usize = 1;
 
 static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
 static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
 static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
+static DISCONNECT_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -46,7 +47,7 @@ impl<Mcu: BleStack + 'static> internal::Transport for CentralTransport<Mcu> {
 
     async fn create<Storage>(
         _: Self::Config,
-        _: lokey::Address,
+        _: Address,
         mcu: &'static Self::Mcu,
         _: &'static Storage,
     ) -> Self
@@ -79,127 +80,51 @@ impl<Mcu: BleStack + 'static> internal::Transport for CentralTransport<Mcu> {
                 error!("Failed to add bond info to BLE stack: {}", e);
             }
 
-            let peer_address = match &bond {
-                Some(bond) => bond.0.identity.addr,
-                None => {
-                    debug!("Starting BLE scan");
-                    let mut scanner = Scanner::new(&mut ble_host_central);
-                    let scan_config = ScanConfig {
-                        filter_accept_list: &[],
-                        interval: Duration::from_secs(3),
-                        ..Default::default()
-                    };
-                    let session = match scanner.scan(&scan_config).await {
-                        Ok(v) => v,
-                        Err(e) => {
-                            error!("Failed to start scanning: {}", e);
-                            Timer::after_secs(5).await;
-                            continue;
-                        }
-                    };
-                    let peer_address = ADV_ADDRESS_SIGNAL.wait().await;
-                    debug!("Found advertised peer: {}", peer_address);
-                    session.stop().await;
-                    ADV_ADDRESS_SIGNAL.reset();
-                    peer_address
-                }
-            };
+            let mut current_connection = None;
 
-            let config = ConnectConfig {
-                scan_config: ScanConfig {
-                    filter_accept_list: &[peer_address],
-                    ..Default::default()
-                },
-                connect_params: Default::default(),
-            };
-
-            debug!("Looking for BLE connection to peripheral");
-            let connection = match ble_host_central.connect(&config).await {
-                Ok(v) => v,
-                Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    let e = defmt::Debug2Format(&e);
-                    error!("Failed to connect: {}", e);
-                    Timer::after_secs(1).await;
-                    continue;
-                }
-            };
-            if let Err(e) = connection.set_bondable(bond.is_none()) {
-                error!("Failed to set bondable: {}", e);
-            }
-            if let Err(e) = connection.request_security() {
-                error!("Failed to request security: {}", e);
-            }
-
-            if bond.is_none() {
-                debug!("Pairing peripheral device");
-                loop {
-                    match connection.next().await {
-                        ConnectionEvent::PairingComplete {
-                            security_level,
-                            bond: received_bond,
-                        } => {
-                            debug!(
-                                "Received PairingComplete event with security level {}",
-                                security_level
-                            );
-                            debug!("Received bond information: {}", received_bond);
-                            if let Some(received_bond) = received_bond {
-                                self.write_bond_to_storage(
-                                    context.storage,
-                                    &PeripheralBond(received_bond),
-                                )
-                                .await;
-                            }
-                            break;
-                        }
-                        ConnectionEvent::PairingFailed(e) => {
-                            error!("Pairing failed: {}", e);
-                            break;
-                        }
-                        ConnectionEvent::Disconnected { reason } => {
-                            error!("BLE disconnected (reason: {})", reason);
-                            break;
-                        }
-                        ConnectionEvent::RequestConnectionParams(params) => {
-                            debug!("Received RequestConnectionParams event: {}", params);
-                            if let Err(e) = params.accept(None, ble_stack).await {
-                                error!("Failed to accept connection params request: {}", e);
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-
-            let client =
-                match GattClient::<_, DefaultPacketPool, MAX_SERVICES>::new(ble_stack, &connection)
-                    .with_timeout(Duration::from_secs(1))
-                    .await
-                {
-                    Ok(Ok(v)) => v,
-                    Ok(Err(e)) => {
-                        #[cfg(feature = "defmt")]
-                        let e = defmt::Debug2Format(&e);
-                        error!("Failed to create GATT client: {}", e);
-                        Timer::after_secs(1).await;
-                        continue;
-                    }
-                    Err(TimeoutError) => {
-                        error!("Reached timeout while creating GATT client");
-                        continue;
-                    }
+            let mut connect = async || {
+                let Some(connection) = self.start_connection(&mut ble_host_central, &bond).await
+                else {
+                    return;
                 };
-            info!("BLE connected to peripheral");
-            IS_CONNECTED.store(true, Ordering::Release);
+                let already_bonded = bond.is_some();
+                self.handle_connection(ble_stack, &connection, context.storage, already_bonded)
+                    .await;
+                current_connection = Some(connection);
+            };
 
-            select3(
-                self.check_connection(&connection),
-                self.client_task(&client),
-                self.handle_messages(&client),
-            )
-            .await;
+            let handle_internal_message = async |mut rx: internal::Receiver<'_, CentralMessage>| {
+                loop {
+                    match rx.next().await {
+                        CentralMessage::RemoveBond(address) => {
+                            if address == context.address {
+                                self.remove_bond(context.storage).await;
+                            } else {
+                                debug!("Ignoring RemoveBond message (address does not match)");
+                            }
+                        }
+                    }
+                }
+            };
 
+            match context.internal_channel.receiver::<CentralMessage>() {
+                Ok(rx) => {
+                    select3(
+                        connect(),
+                        handle_internal_message(rx),
+                        DISCONNECT_SIGNAL.wait(),
+                    )
+                    .await;
+                }
+                Err(e) => {
+                    error!("Failed to create internal channel receiver: {}", e);
+                    select(connect(), DISCONNECT_SIGNAL.wait()).await;
+                }
+            };
+
+            if let Some(connection) = current_connection {
+                connection.disconnect();
+            }
             IS_CONNECTED.store(false, Ordering::Release);
         }
     }
@@ -268,6 +193,174 @@ where
             let e = defmt::Debug2Format(&e);
             error!("Failed to commit to database: {}", e);
         }
+    }
+
+    async fn delete_bond_from_storage<Storage>(&self, storage: &'static Storage)
+    where
+        Storage: storage::Storage,
+    {
+        debug!("Deleting bond information in storage");
+        let mut write_transaction = storage.write_transaction().await;
+        if let Err(e) = write_transaction.delete::<PeripheralBond>(()).await {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to delete bond from database: {}", e);
+        }
+        if let Err(e) = write_transaction.commit().await {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to commit to database: {}", e);
+        }
+    }
+
+    pub async fn remove_bond<Storage>(&self, storage: &'static Storage)
+    where
+        Storage: storage::Storage,
+    {
+        info!("Removing bond info and disconnecting");
+        self.delete_bond_from_storage(storage).await;
+        DISCONNECT_SIGNAL.signal(());
+    }
+
+    async fn start_connection(
+        &self,
+        ble_host_central: &mut trouble_host::central::Central<
+            'static,
+            Mcu::Controller,
+            DefaultPacketPool,
+        >,
+        bond: &Option<PeripheralBond>,
+    ) -> Option<Connection<'_, DefaultPacketPool>> {
+        let peer_address = match &bond {
+            Some(bond) => bond.0.identity.addr,
+            None => {
+                debug!("Starting BLE scan");
+                let mut scanner = Scanner::new(ble_host_central);
+                let scan_config = ScanConfig {
+                    filter_accept_list: &[],
+                    interval: Duration::from_secs(3),
+                    ..Default::default()
+                };
+                let session = match scanner.scan(&scan_config).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("Failed to start scanning: {}", e);
+                        Timer::after_secs(5).await;
+                        return None;
+                    }
+                };
+                let peer_address = ADV_ADDRESS_SIGNAL.wait().await;
+                debug!("Found advertised peer: {}", peer_address);
+                session.stop().await;
+                ADV_ADDRESS_SIGNAL.reset();
+                peer_address
+            }
+        };
+
+        let config = ConnectConfig {
+            scan_config: ScanConfig {
+                filter_accept_list: &[peer_address],
+                ..Default::default()
+            },
+            connect_params: Default::default(),
+        };
+
+        debug!("Looking for BLE connection to peripheral");
+        let connection = match ble_host_central.connect(&config).await {
+            Ok(v) => v,
+            Err(e) => {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to connect: {}", e);
+                Timer::after_secs(1).await;
+                return None;
+            }
+        };
+        if let Err(e) = connection.set_bondable(bond.is_none()) {
+            error!("Failed to set bondable: {}", e);
+        }
+        if let Err(e) = connection.request_security() {
+            error!("Failed to request security: {}", e);
+        }
+
+        Some(connection)
+    }
+
+    async fn handle_connection<Storage>(
+        &self,
+        ble_stack: &Stack<'static, Mcu::Controller, DefaultPacketPool>,
+        connection: &Connection<'_, DefaultPacketPool>,
+        storage: &'static Storage,
+        already_bonded: bool,
+    ) where
+        Storage: storage::Storage,
+    {
+        if !already_bonded {
+            debug!("Pairing peripheral device");
+            loop {
+                match connection.next().await {
+                    ConnectionEvent::PairingComplete {
+                        security_level,
+                        bond: received_bond,
+                    } => {
+                        debug!(
+                            "Received PairingComplete event with security level {}",
+                            security_level
+                        );
+                        debug!("Received bond information: {}", received_bond);
+                        if let Some(received_bond) = received_bond {
+                            self.write_bond_to_storage(storage, &PeripheralBond(received_bond))
+                                .await;
+                        }
+                        break;
+                    }
+                    ConnectionEvent::PairingFailed(e) => {
+                        error!("Pairing failed: {}", e);
+                        break;
+                    }
+                    ConnectionEvent::Disconnected { reason } => {
+                        error!("BLE disconnected (reason: {})", reason);
+                        break;
+                    }
+                    ConnectionEvent::RequestConnectionParams(params) => {
+                        debug!("Received RequestConnectionParams event: {}", params);
+                        if let Err(e) = params.accept(None, ble_stack).await {
+                            error!("Failed to accept connection params request: {}", e);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let client = {
+            match GattClient::<_, DefaultPacketPool, MAX_SERVICES>::new(ble_stack, &connection)
+                .with_timeout(Duration::from_secs(1))
+                .await
+            {
+                Ok(Ok(v)) => v,
+                Ok(Err(e)) => {
+                    #[cfg(feature = "defmt")]
+                    let e = defmt::Debug2Format(&e);
+                    error!("Failed to create GATT client: {}", e);
+                    Timer::after_secs(1).await;
+                    return;
+                }
+                Err(TimeoutError) => {
+                    error!("Reached timeout while creating GATT client");
+                    return;
+                }
+            }
+        };
+        info!("BLE connected to peripheral");
+        IS_CONNECTED.store(true, Ordering::Release);
+
+        select3(
+            self.check_connection(connection),
+            self.client_task(&client),
+            self.handle_messages(&client),
+        )
+        .await;
     }
 
     async fn check_connection(&self, connection: &Connection<'_, DefaultPacketPool>) {
@@ -378,6 +471,41 @@ where
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum CentralMessage {
+    RemoveBond(Address),
+}
+
+impl internal::Message for CentralMessage {
+    type Size = typenum::U5;
+
+    const TAG: [u8; internal::MESSAGE_TAG_SIZE] = [0x00, 0x00, 0x00, 0xF0];
+
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        match bytes.into_array::<5>() {
+            [0, address_bytes @ ..] => {
+                let address = Address(u32::from_be_bytes(address_bytes));
+                Some(Self::RemoveBond(address))
+            }
+            _ => None,
+        }
+    }
+
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
+        match self {
+            Self::RemoveBond(address) => {
+                let mut bytes = [0u8; 5];
+                bytes[1..5].copy_from_slice(&address.0.to_be_bytes());
+                bytes.into()
+            }
+        }
+    }
+}
+
 struct PeripheralBond(BondInformation);
 
 impl Entry for PeripheralBond {
@@ -398,7 +526,7 @@ impl Entry for PeripheralBond {
     }
 }
 
-static ADV_ADDRESS_SIGNAL: Signal<CriticalSectionRawMutex, Address> = Signal::new();
+static ADV_ADDRESS_SIGNAL: Signal<CriticalSectionRawMutex, trouble_host::Address> = Signal::new();
 
 struct AdvEventHandler;
 
@@ -429,7 +557,7 @@ impl EventHandler for AdvEventHandler {
                 || report.event_kind == LeAdvEventKind::AdvDirectInd
             {
                 debug!("Found report with internal service UUID: {}", report);
-                let address = Address {
+                let address = trouble_host::Address {
                     kind: report.addr_kind,
                     addr: report.addr,
                 };

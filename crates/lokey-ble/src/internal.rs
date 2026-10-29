@@ -2,9 +2,9 @@ mod central;
 mod peripheral;
 
 use arrayvec::ArrayVec;
-pub use central::{CentralTransport, CentralTransportConfig};
+pub use central::{CentralMessage, CentralTransport, CentralTransportConfig};
 use lokey::internal::{MAX_MESSAGE_SIZE_WITH_TAG, MESSAGE_TAG_SIZE};
-pub use peripheral::{PeripheralTransport, PeripheralTransportConfig};
+pub use peripheral::{PeripheralMessage, PeripheralTransport, PeripheralTransportConfig};
 use trouble_host::prelude::{AsGatt, FromGatt, Uuid};
 use trouble_host::types::gatt_traits::FromGattError;
 

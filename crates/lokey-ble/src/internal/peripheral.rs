@@ -2,9 +2,10 @@ use crate::BleStack;
 use crate::internal::{Message, SERVICE_UUID128};
 use arrayvec::ArrayVec;
 use core::sync::atomic::Ordering;
-use embassy_futures::select::select;
+use embassy_futures::select::{select, select3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
+use embassy_sync::signal::Signal;
 use embassy_time::Timer;
 use generic_array::GenericArray;
 use lokey::internal::MAX_MESSAGE_SIZE_WITH_TAG;
@@ -12,14 +13,15 @@ use lokey::storage::{self, BASE_TAG_SIZE, Entry, ReadTransaction, WriteTransacti
 use lokey::util::{debug, error, info, unwrap};
 use lokey::{Address, AnyState, Context, McuCreator, internal};
 use portable_atomic::AtomicBool;
-use trouble_host::BondInformation;
 use trouble_host::advertise::{AdStructure, BR_EDR_NOT_SUPPORTED};
-use trouble_host::gatt::{GattConnectionEvent, GattEvent};
-use trouble_host::prelude::{Advertisement, AdvertisementParameters};
+use trouble_host::gatt::{GattConnection, GattConnectionEvent, GattEvent};
+use trouble_host::prelude::{Advertisement, AdvertisementParameters, DefaultPacketPool};
+use trouble_host::{BondInformation, Stack};
 
 static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
 static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
 static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
+static DISCONNECT_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -69,146 +71,59 @@ where
                 error!("Failed to add bond info to BLE stack: {}", e);
             }
 
-            let adv = match &bond {
-                Some(bond) => Advertisement::ConnectableNonscannableDirected {
-                    peer: bond.0.identity.addr,
-                },
-                None => Advertisement::ConnectableScannableUndirected {
-                    adv_data: &adv_data,
-                    scan_data: &[],
-                },
+            let mut current_connection = None;
+
+            let mut connect = async || {
+                let Some(connection) = self
+                    .start_connection(
+                        &mut ble_host_peripheral,
+                        &server,
+                        &bond,
+                        &adv_params,
+                        &adv_data,
+                    )
+                    .await
+                else {
+                    return;
+                };
+                self.handle_connection(&connection, &ble_stack, &server, context.storage, &bond)
+                    .await;
+                current_connection = Some(connection);
             };
 
-            info!("Starting BLE advertisement");
-            let advertiser = match ble_host_peripheral.advertise(&adv_params, adv).await {
-                Ok(v) => v,
+            let handle_internal_message =
+                async |mut rx: lokey::internal::Receiver<'_, PeripheralMessage>| {
+                    loop {
+                        match rx.next().await {
+                            PeripheralMessage::RemoveBond(address) => {
+                                if address == context.address {
+                                    self.remove_bond(context.storage).await;
+                                } else {
+                                    debug!("Ignoring RemoveBond message (address does not match)");
+                                }
+                            }
+                        }
+                    }
+                };
+
+            match context.internal_channel.receiver::<PeripheralMessage>() {
+                Ok(rx) => {
+                    select3(
+                        connect(),
+                        handle_internal_message(rx),
+                        DISCONNECT_SIGNAL.wait(),
+                    )
+                    .await;
+                }
                 Err(e) => {
-                    #[cfg(feature = "defmt")]
-                    let e = defmt::Debug2Format(&e);
-                    error!("Failed to advertise: {}", e);
-                    Timer::after_secs(1).await;
-                    continue;
+                    error!("Failed to create internal channel receiver: {}", e);
+                    select(connect(), DISCONNECT_SIGNAL.wait()).await;
                 }
             };
-            let connection = match advertiser.accept().await {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("Failed to accept connection: {}", e);
-                    Timer::after_secs(1).await;
-                    continue;
-                }
-            };
-            let connection = match connection.with_attribute_server(&server) {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("Failed to add attribute server to connection: {}", e);
-                    Timer::after_secs(1).await;
-                    continue;
-                }
-            };
-            if let Err(e) = connection.raw().set_bondable(bond.is_none()) {
-                error!("Failed to set connection as bondable: {}", e);
+
+            if let Some(connection) = current_connection {
+                connection.raw().disconnect();
             }
-            IS_CONNECTED.store(true, Ordering::Release);
-            info!("BLE connected to central");
-
-            let receive = async {
-                loop {
-                    match connection.next().await {
-                        GattConnectionEvent::PairingComplete {
-                            security_level,
-                            bond: received_bond,
-                        } => {
-                            debug!(
-                                "Received PairingComplete event with security level {}",
-                                security_level
-                            );
-                            debug!("Received bond information: {}", received_bond);
-                            if let Some(received_bond) = received_bond {
-                                if let Some(bond) = &bond
-                                    && !bond.0.identity.match_identity(&received_bond.identity)
-                                {
-                                    error!("Stored bond info does not match identity");
-                                    break;
-                                }
-                                self.write_bond_to_storage(
-                                    context.storage,
-                                    &CentralBond(received_bond),
-                                )
-                                .await;
-                            }
-                        }
-                        GattConnectionEvent::PairingFailed(e) => {
-                            error!("Pairing failed: {}", e);
-                        }
-                        GattConnectionEvent::Disconnected { reason } => {
-                            info!("BLE disconnected (reason: {})", reason);
-                            break;
-                        }
-                        GattConnectionEvent::RequestConnectionParams(params) => {
-                            debug!("Received RequestConnectionParams event: {}", params);
-                            if let Err(e) = params.accept(None, ble_stack).await {
-                                error!("Failed to accept connection params request: {}", e);
-                            }
-                        }
-                        GattConnectionEvent::Gatt { event } => {
-                            debug!("Received GATT event");
-                            match &event {
-                                GattEvent::Read(read_event) => {
-                                    debug!("GATT read event: {}", read_event.handle())
-                                }
-                                GattEvent::Write(write_event) => {
-                                    debug!("GATT write event: {}", write_event.handle());
-                                    if write_event.handle()
-                                        == server.service.message_to_peripheral.handle
-                                    {
-                                        write_event.with_data(|_, data| {
-                                            debug!("Received message from central: {}", data)
-                                        });
-                                        match write_event
-                                            .with_data(|_, data| ArrayVec::try_from(data))
-                                        {
-                                            Ok(array) => {
-                                                RECV_CHANNEL.send(Message(array)).await;
-                                            }
-                                            Err(_) => {
-                                                error!(
-                                                    "Reiceved message exceeds configured max message size"
-                                                )
-                                            }
-                                        };
-                                    }
-                                }
-                                GattEvent::NotAllowed(_) => debug!("GATT not allowed event"),
-                                GattEvent::Other(_) => debug!("GATT other event"),
-                            }
-                            match event.accept() {
-                                Ok(reply) => reply.send().await,
-                                Err(error) => error!("Failed to handle event: {}", error),
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            };
-
-            let send = async {
-                loop {
-                    let message = SEND_CHANNEL.receive().await;
-                    debug!("Sending message to central: {}", message);
-                    if let Err(e) = server
-                        .service
-                        .message_to_central
-                        .notify(&connection, &message, true)
-                        .await
-                    {
-                        error!("Failed to send value: {}", e);
-                    }
-                }
-            };
-
-            select(receive, send).await;
-
             IS_CONNECTED.store(false, Ordering::Release);
         }
     }
@@ -278,6 +193,194 @@ where
             error!("Failed to commit to database: {}", e);
         }
     }
+
+    async fn delete_bond_from_storage<Storage>(&self, storage: &'static Storage)
+    where
+        Storage: storage::Storage,
+    {
+        debug!("Deleting bond information in storage");
+        let mut write_transaction = storage.write_transaction().await;
+        if let Err(e) = write_transaction.delete::<CentralBond>(()).await {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to delete bond from database: {}", e);
+        }
+        if let Err(e) = write_transaction.commit().await {
+            #[cfg(feature = "defmt")]
+            let e = defmt::Debug2Format(&e);
+            error!("Failed to commit to database: {}", e);
+        }
+    }
+
+    pub async fn remove_bond<Storage>(&self, storage: &'static Storage)
+    where
+        Storage: storage::Storage,
+    {
+        info!("Removing bond info and disconnecting");
+        self.delete_bond_from_storage(storage).await;
+        DISCONNECT_SIGNAL.signal(());
+    }
+
+    async fn start_connection<'server>(
+        &self,
+        ble_host_peripheral: &mut trouble_host::peripheral::Peripheral<
+            'static,
+            Mcu::Controller,
+            DefaultPacketPool,
+        >,
+        server: &'server gatt::Server<'static>,
+        bond: &Option<CentralBond>,
+        adv_params: &AdvertisementParameters,
+        adv_data: &ArrayVec<u8, 31>,
+    ) -> Option<GattConnection<'_, 'server, DefaultPacketPool>> {
+        let adv = match &bond {
+            Some(bond) => Advertisement::ConnectableNonscannableDirected {
+                peer: bond.0.identity.addr,
+            },
+            None => Advertisement::ConnectableScannableUndirected {
+                adv_data: adv_data,
+                scan_data: &[],
+            },
+        };
+
+        info!("Starting BLE advertisement");
+        let advertiser = match ble_host_peripheral.advertise(adv_params, adv).await {
+            Ok(v) => v,
+            Err(e) => {
+                #[cfg(feature = "defmt")]
+                let e = defmt::Debug2Format(&e);
+                error!("Failed to advertise: {}", e);
+                Timer::after_secs(1).await;
+                return None;
+            }
+        };
+        let connection = match advertiser.accept().await {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Failed to accept connection: {}", e);
+                Timer::after_secs(1).await;
+                return None;
+            }
+        };
+        let connection = match connection.with_attribute_server(&server) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Failed to add attribute server to connection: {}", e);
+                Timer::after_secs(1).await;
+                return None;
+            }
+        };
+        if let Err(e) = connection.raw().set_bondable(bond.is_none()) {
+            error!("Failed to set connection as bondable: {}", e);
+        }
+        info!("BLE connected to central");
+        IS_CONNECTED.store(true, Ordering::Release);
+        Some(connection)
+    }
+
+    async fn handle_connection<Storage>(
+        &self,
+        connection: &GattConnection<'_, '_, DefaultPacketPool>,
+        ble_stack: &Stack<'static, Mcu::Controller, DefaultPacketPool>,
+        server: &gatt::Server<'static>,
+        storage: &'static Storage,
+        bond: &Option<CentralBond>,
+    ) where
+        Storage: storage::Storage,
+    {
+        let receive = async {
+            loop {
+                match connection.next().await {
+                    GattConnectionEvent::PairingComplete {
+                        security_level,
+                        bond: received_bond,
+                    } => {
+                        debug!(
+                            "Received PairingComplete event with security level {}",
+                            security_level
+                        );
+                        debug!("Received bond information: {}", received_bond);
+                        if let Some(received_bond) = received_bond {
+                            if let Some(bond) = &bond
+                                && !bond.0.identity.match_identity(&received_bond.identity)
+                            {
+                                error!("Stored bond info does not match identity");
+                                break;
+                            }
+                            self.write_bond_to_storage(storage, &CentralBond(received_bond))
+                                .await;
+                        }
+                    }
+                    GattConnectionEvent::PairingFailed(e) => {
+                        error!("Pairing failed: {}", e);
+                    }
+                    GattConnectionEvent::Disconnected { reason } => {
+                        info!("BLE disconnected (reason: {})", reason);
+                        break;
+                    }
+                    GattConnectionEvent::RequestConnectionParams(params) => {
+                        debug!("Received RequestConnectionParams event: {}", params);
+                        if let Err(e) = params.accept(None, ble_stack).await {
+                            error!("Failed to accept connection params request: {}", e);
+                        }
+                    }
+                    GattConnectionEvent::Gatt { event } => {
+                        debug!("Received GATT event");
+                        match &event {
+                            GattEvent::Read(read_event) => {
+                                debug!("GATT read event: {}", read_event.handle())
+                            }
+                            GattEvent::Write(write_event) => {
+                                debug!("GATT write event: {}", write_event.handle());
+                                if write_event.handle()
+                                    == server.service.message_to_peripheral.handle
+                                {
+                                    write_event.with_data(|_, data| {
+                                        debug!("Received message from central: {}", data)
+                                    });
+                                    match write_event.with_data(|_, data| ArrayVec::try_from(data))
+                                    {
+                                        Ok(array) => {
+                                            RECV_CHANNEL.send(Message(array)).await;
+                                        }
+                                        Err(_) => {
+                                            error!(
+                                                "Reiceved message exceeds configured max message size"
+                                            )
+                                        }
+                                    };
+                                }
+                            }
+                            GattEvent::NotAllowed(_) => debug!("GATT not allowed event"),
+                            GattEvent::Other(_) => debug!("GATT other event"),
+                        }
+                        match event.accept() {
+                            Ok(reply) => reply.send().await,
+                            Err(error) => error!("Failed to handle event: {}", error),
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        };
+
+        let send = async {
+            loop {
+                let message = SEND_CHANNEL.receive().await;
+                debug!("Sending message to central: {}", message);
+                if let Err(e) = server
+                    .service
+                    .message_to_central
+                    .notify(&connection, &message, true)
+                    .await
+                {
+                    error!("Failed to send value: {}", e);
+                }
+            }
+        };
+
+        select(receive, send).await;
+    }
 }
 
 mod gatt {
@@ -320,6 +423,41 @@ fn build_adv_data() -> ArrayVec<u8, 31> {
     ];
     let adv_data_len = unwrap!(AdStructure::encode_slice(ad_structure, &mut adv_data));
     ArrayVec::try_from(&adv_data[..adv_data_len]).expect("adv data too large")
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum PeripheralMessage {
+    RemoveBond(Address),
+}
+
+impl internal::Message for PeripheralMessage {
+    type Size = typenum::U5;
+
+    const TAG: [u8; internal::MESSAGE_TAG_SIZE] = [0x00, 0x00, 0x00, 0xF0];
+
+    fn from_bytes(bytes: GenericArray<u8, Self::Size>) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        match bytes.into_array::<5>() {
+            [0, address_bytes @ ..] => {
+                let address = Address(u32::from_be_bytes(address_bytes));
+                Some(Self::RemoveBond(address))
+            }
+            _ => None,
+        }
+    }
+
+    fn to_bytes(&self) -> GenericArray<u8, Self::Size> {
+        match self {
+            Self::RemoveBond(address) => {
+                let mut bytes = [0u8; 5];
+                bytes[1..5].copy_from_slice(&address.0.to_be_bytes());
+                bytes.into()
+            }
+        }
+    }
 }
 
 struct CentralBond(BondInformation);
