@@ -228,29 +228,29 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             };
 
             #[::embassy_executor::task]
-            async fn __run_mcu(mcu: &'static <#device_type_path as ::lokey::Device>::Mcu, context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>) {
-                ::lokey::Mcu::run(mcu, context).await;
+            async fn __run_mcu(
+                context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>
+            ) {
+                ::lokey::Mcu::run(context.mcu, context).await;
             }
-            spawner.spawn(__run_mcu(mcu, context).unwrap());
+            spawner.spawn(__run_mcu(context).unwrap());
 
             #[::embassy_executor::task]
             async fn __run_internal_channel(
-                channel: &'static ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>,
                 context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>,
             ) {
-                channel.run(context).await;
+                context.internal_channel.run(context).await;
             }
-            spawner.spawn(__run_internal_channel(internal_channel, context).unwrap());
+            spawner.spawn(__run_internal_channel(context).unwrap());
 
             #[::embassy_executor::task]
             async fn __run_external_channel(
-                channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>,
                 context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>,
             ) {
                 let message_override = #message_override;
-                channel.run(context, message_override).await;
+                context.external_channel.run(context, message_override).await;
             }
-            spawner.spawn(__run_external_channel(external_channel, context).unwrap());
+            spawner.spawn(__run_external_channel(context).unwrap());
 
             #function
 
