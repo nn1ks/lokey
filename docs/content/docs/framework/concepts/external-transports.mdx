@@ -25,7 +25,9 @@ For devices that do not need to communicate with a host, the [`external::empty::
 ## Example
 
 ```rust
-use crate::{Address, external, internal};
+use lokey::{
+    Address, AnyState, Context, Device, McuCreator, Transports, external, internal, storage,
+};
 
 struct MyTransport<Mcu> {
     // ...
@@ -40,14 +42,16 @@ where
     type TxMessage = MyMessage;
     type RxMessage = MyMessage;
 
-    async fn create<T>(
+    async fn create<Storage, InternalTransport>(
         config: Self::Config,
-        mcu: &'static Self::Mcu,
         address: Address,
-        internal_channel: &'static internal::Channel<T>,
+        mcu: &'static Self::Mcu,
+        storage: &'static Storage,
+        internal_channel: &'static internal::Channel<InternalTransport>,
     ) -> Self
     where
-        T: internal::Transport<Mcu = Self::Mcu>,
+        Storage: storage::Storage,
+        InternalTransport: internal::Transport<Mcu = Self::Mcu>,
     {
         // Initialize the transport...
         Self {
@@ -55,9 +59,12 @@ where
         }
     }
 
-    async fn run<Storage>(&self, storage: &'static Storage)
+    async fn run<Device, Transports, State>(&self, context: Context<Device, Transports, State>)
     where
-        Storage: crate::storage::Storage,
+        Device: lokey::Device<Mcu = Self::Mcu>,
+        Transports: lokey::Transports<Self::Mcu>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>,
     {
         // Run background tasks...
     }
