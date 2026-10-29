@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock';
 import { AnimatedTitle } from './animated-title';
 import styles from './home-page.module.css';
+import { ArrowUpRight } from 'lucide-react';
 
 const features = [
   {
@@ -190,12 +191,13 @@ export default function HomePage() {
           API Documentation
         </Link>
         <a
-          href="https://github.com/nn1ks/lokey"
+          href="https://editor.lokey.rs"
           target="_blank"
           rel="noopener noreferrer"
-          className={`${styles.secondaryButton} rounded-lg border px-5 py-2 font-medium transition-colors`}
+          className={`${styles.secondaryButton} rounded-lg border px-5 py-2 font-medium transition-colors flex items-center gap-1`}
         >
-          Source Code
+          <span>Lokey Editor</span>
+          <ArrowUpRight className="size-5.5" />
         </a>
       </div>
 
