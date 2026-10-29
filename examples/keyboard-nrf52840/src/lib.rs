@@ -17,13 +17,14 @@ use lokey::{
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
-    ActionContainer, DirectPins, DirectPinsConfig, KeyboardReport, Layout, Matrix, MatrixConfig,
-    Scanner,
+    ActionContainer, DirectPins, DirectPinsConfig, KeyboardReport, KeyboardReportState, Layout,
+    Matrix, MatrixConfig, Scanner,
 };
 use lokey_layer::LayerManager;
 use lokey_led_array::nrf52840::Pwm;
 use lokey_led_array::pwm::{Pwm as _, PwmChannel};
 use lokey_led_array::{HookBundle, LedArray};
+use lokey_mouse::MouseReportState;
 use lokey_nrf::Nrf;
 use panic_probe as _;
 
@@ -37,7 +38,8 @@ pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 pub struct DefaultState {
     #[state(query)]
     pub layer_manager: LayerManager<0>,
-    pub keyboard_report: KeyboardReport,
+    pub keyboard_report: KeyboardReportState,
+    pub mouse_report: MouseReportState,
 }
 
 pub struct Central;

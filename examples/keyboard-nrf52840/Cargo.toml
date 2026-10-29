@@ -19,6 +19,7 @@ defmt = [
     "lokey-keyboard/defmt",
     "lokey-layer/defmt",
     "lokey-led-array/defmt",
+    "lokey-mouse/defmt",
     "lokey-nrf/defmt",
     "lokey-usb/defmt",
     "lokey-usb-ble/defmt",
@@ -39,6 +40,7 @@ lokey-blink = { path = "../lokey-blink" }
 lokey-keyboard = { path = "../../crates/lokey-keyboard", features = ["usb", "ble"] }
 lokey-layer = { path = "../../crates/lokey-layer" }
 lokey-led-array = { path = "../../crates/lokey-led-array", features = ["ble", "nrf52840"] }
+lokey-mouse = { path = "../../crates/lokey-mouse", features = ["keyboard-actions", "usb", "ble"] }
 lokey-nrf = { path = "../../crates/lokey-nrf", features = ["nrf52840", "usb", "ble"] }
 lokey-usb = { path = "../../crates/lokey-usb" }
 lokey-usb-ble = { path = "../../crates/lokey-usb-ble" }
