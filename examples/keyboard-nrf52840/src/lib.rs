@@ -9,6 +9,7 @@ use embassy_nrf::peripherals::{
 use embassy_nrf::pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
+use embassy_time::Duration;
 use lokey::external::NoMessage;
 use lokey::storage::DefaultStorageConfig;
 use lokey::{
@@ -27,6 +28,7 @@ use lokey_led_array::{HookBundle, LedArray};
 use lokey_mouse::MouseReportState;
 use lokey_nrf::Nrf;
 use panic_probe as _;
+use trouble_host::prelude::appearance;
 
 pub const KEYBOARD_LEFT_ADDRESS: Address = Address(1);
 pub const KEYBOARD_RIGHT_ADDRESS: Address = Address(2);
@@ -57,7 +59,11 @@ impl Transports<Nrf> for Central {
         // }
         lokey_ble::external::TransportConfig {
             name: "keyboard",
+            appearance: &appearance::human_interface_device::KEYBOARD,
             manufacturer: Some("n1ks"),
+            min_connection_interval: Some(Duration::from_millis(15)),
+            max_connection_interval: Some(Duration::from_millis(30)),
+            supervision_timeout: Some(Duration::from_millis(6)),
             ..Default::default()
         }
         // external::usb_ble::TransportConfig {

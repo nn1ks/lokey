@@ -45,4 +45,5 @@ lokey-nrf = { path = "../../crates/lokey-nrf", features = ["nrf52840", "usb", "b
 lokey-usb = { path = "../../crates/lokey-usb" }
 lokey-usb-ble = { path = "../../crates/lokey-usb-ble" }
 panic-probe = "1.0.0"
+trouble-host = { version = "0.8.0", default-features = false }
 typenum = { version = "1.19.0", features = ["const-generics"] }
