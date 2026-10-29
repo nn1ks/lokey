@@ -1,21 +1,12 @@
 mod central;
 mod peripheral;
 
-use crate::BleStack;
 use arrayvec::ArrayVec;
-use core::sync::atomic::{AtomicBool, Ordering};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
-use lokey::internal::MAX_MESSAGE_SIZE_WITH_TAG;
-use lokey::util::error;
-use lokey::{Address, internal, storage};
+pub use central::{CentralTransport, CentralTransportConfig};
+use lokey::internal::{MAX_MESSAGE_SIZE_WITH_TAG, MESSAGE_TAG_SIZE};
+pub use peripheral::{PeripheralTransport, PeripheralTransportConfig};
 use trouble_host::prelude::{AsGatt, FromGatt, Uuid};
 use trouble_host::types::gatt_traits::FromGattError;
-
-pub enum TransportConfig {
-    Central,
-    Peripheral,
-}
 
 const SERVICE_UUID128: [u8; 16] = [
     0x2e, 0x51, 0x03, 0x5f, 0xd3, 0x9b, 0x41, 0xfe, 0x8b, 0x1b, 0x70, 0xa5, 0x3e, 0x58, 0xa9, 0x85,
@@ -39,8 +30,8 @@ impl defmt::Format for Message {
 }
 
 impl AsGatt for Message {
-    const MIN_SIZE: usize = 0;
-    const MAX_SIZE: usize = 1024;
+    const MIN_SIZE: usize = MESSAGE_TAG_SIZE;
+    const MAX_SIZE: usize = MAX_MESSAGE_SIZE_WITH_TAG;
 
     fn as_gatt(&self) -> &[u8] {
         &self.0
@@ -52,54 +43,5 @@ impl FromGatt for Message {
         ArrayVec::try_from(data)
             .map(Message)
             .map_err(|_| FromGattError::InvalidLength)
-    }
-}
-
-static SEND_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
-static RECV_CHANNEL: Channel<CriticalSectionRawMutex, Message, 1> = Channel::new();
-static IS_CONNECTED: AtomicBool = AtomicBool::new(false);
-
-pub struct Transport<Mcu: 'static> {
-    config: TransportConfig,
-    mcu: &'static Mcu,
-}
-
-impl<Mcu: BleStack + 'static> internal::Transport for Transport<Mcu> {
-    type Config = TransportConfig;
-    type Mcu = Mcu;
-
-    async fn create(config: Self::Config, mcu: &'static Self::Mcu, _: Address) -> Self {
-        Self { config, mcu }
-    }
-
-    async fn run<Storage>(&self, storage: &'static Storage)
-    where
-        Storage: storage::Storage,
-    {
-        match self.config {
-            TransportConfig::Central => central::central(self.mcu, storage).await,
-            TransportConfig::Peripheral => peripheral::peripheral(self.mcu, storage).await,
-        }
-    }
-
-    async fn send(&self, message_bytes: &[u8]) {
-        if IS_CONNECTED.load(Ordering::Acquire) {
-            match ArrayVec::try_from(message_bytes) {
-                Ok(array) => SEND_CHANNEL.send(Message(array)).await,
-                Err(_) => error!("Size of message exceeds configured max message size"),
-            };
-        }
-    }
-
-    async fn receive(&self, buf: &mut [u8]) -> usize {
-        let array = RECV_CHANNEL.receive().await.0;
-        if buf.len() < MAX_MESSAGE_SIZE_WITH_TAG {
-            panic!("Provided buffer is smaller than configured max message size");
-        }
-        let len = array.len();
-        for (i, value) in array.into_iter().enumerate() {
-            buf[i] = value;
-        }
-        len
     }
 }
