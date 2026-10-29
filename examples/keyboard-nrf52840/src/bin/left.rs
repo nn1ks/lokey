@@ -2,8 +2,8 @@
 #![no_std]
 
 use embassy_executor::Spawner;
-use keyboard_nrf52840::{Central, DefaultState, KeyboardLeft, NUM_KEYS};
-use lokey::{Context, Device};
+use keyboard_nrf52840::{Central, DefaultState, KEYBOARD_LEFT_ADDRESS, KeyboardLeft, NUM_KEYS};
+use lokey::Context;
 use lokey_blink::Blink;
 use lokey_keyboard::action::{
     BleClearActive, BleNextProfile, BlePreviousProfile, Layer, NoOp, ToggleExternalTransport,
@@ -16,7 +16,7 @@ fn key_override() -> KeyOverride {
     KeyOverride::new(Key::LShift | Key::A, Key::E)
 }
 
-#[lokey::device(message_override = key_override())]
+#[lokey::device(address = KEYBOARD_LEFT_ADDRESS, message_override = key_override())]
 async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
     let layout = layout!(
         // Layer 0
@@ -25,7 +25,7 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
             BleClearActive,
             BleNextProfile,
             BlePreviousProfile,
-            ToggleExternalTransport(KeyboardLeft::DEFAULT_ADDRESS),
+            ToggleExternalTransport(KEYBOARD_LEFT_ADDRESS),
             Key::A,
             Key::B,
             Key::C,

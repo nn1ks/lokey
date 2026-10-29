@@ -9,7 +9,7 @@ use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::external::{self, NoMessage};
 use lokey::storage::DefaultStorageConfig;
-use lokey::{Address, AnyState, ComponentSupport, Context, Device, State, Transports, internal};
+use lokey::{AnyState, ComponentSupport, Context, Device, State, Transports, internal};
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
@@ -52,8 +52,6 @@ struct KeyboardLeft;
 impl Device for KeyboardLeft {
     type Mcu = Rp;
     type StorageConfig = DefaultStorageConfig;
-
-    const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
 
     fn storage_config() -> Self::StorageConfig {
         DefaultStorageConfig {

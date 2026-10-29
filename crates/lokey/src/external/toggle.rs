@@ -36,7 +36,7 @@ impl Message {
 }
 
 impl internal::Message for Message {
-    type Size = typenum::U7;
+    type Size = typenum::U5;
 
     const TAG: [u8; 4] = [0x16, 0xb3, 0x17, 0x8e];
 
@@ -44,10 +44,16 @@ impl internal::Message for Message {
     where
         Self: Sized,
     {
-        match bytes.into_array::<7>() {
-            [0, address_bytes @ ..] => Some(Self::Activate(Address(address_bytes))),
-            [1, address_bytes @ ..] => Some(Self::Deactivate(Address(address_bytes))),
-            [2, address_bytes @ ..] => Some(Self::Toggle(Address(address_bytes))),
+        match bytes.into_array::<5>() {
+            [0, address_bytes @ ..] => {
+                Some(Self::Activate(Address(u32::from_be_bytes(address_bytes))))
+            }
+            [1, address_bytes @ ..] => {
+                Some(Self::Deactivate(Address(u32::from_be_bytes(address_bytes))))
+            }
+            [2, address_bytes @ ..] => {
+                Some(Self::Toggle(Address(u32::from_be_bytes(address_bytes))))
+            }
             _ => None,
         }
     }
@@ -58,10 +64,10 @@ impl internal::Message for Message {
             Self::Deactivate(address) => (1, address),
             Self::Toggle(address) => (2, address),
         };
-        let mut value = [0; 7];
+        let mut value = [0; 5];
         value[0] = first_byte;
-        for (i, byte) in address.0.iter().enumerate() {
-            value[i + 1] = *byte;
+        for (i, byte) in address.0.to_be_bytes().into_iter().enumerate() {
+            value[i + 1] = byte;
         }
         value.into()
     }

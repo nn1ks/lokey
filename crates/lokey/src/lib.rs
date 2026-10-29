@@ -152,7 +152,7 @@ pub use lokey_macros::State;
 ///
 ///   Sets the device address.
 ///
-///   *If omitted, [`Device::DEFAULT_ADDRESS`] is used.*
+///   *If omitted, `Address(0)` is used.*
 ///
 /// - **`mcu_config`**
 ///
@@ -188,7 +188,6 @@ pub use lokey_macros::State;
 /// # impl lokey::Device for MyDevice {
 /// #     type Mcu = lokey::DummyMcu;
 /// #     type StorageConfig = lokey::storage::EmptyStorageConfig;
-/// #     const DEFAULT_ADDRESS: lokey::Address = lokey::Address([0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
 /// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
 /// # }
 /// #
@@ -225,7 +224,6 @@ pub use lokey_macros::State;
 /// # impl lokey::Device for MyDevice {
 /// #     type Mcu = lokey::DummyMcu;
 /// #     type StorageConfig = lokey::storage::EmptyStorageConfig;
-/// #     const DEFAULT_ADDRESS: lokey::Address = lokey::Address([0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
 /// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
 /// # }
 /// #
@@ -269,7 +267,7 @@ pub use lokey_macros::State;
 /// }
 ///
 /// #[lokey::device(
-///     address = Address([0x57, 0x4d, 0x12, 0x6e, 0xcf, 0x4c]),
+///     address = Address(0x1),
 ///     mcu_config = modify_mcu_config,
 ///     storage_config = |config| { /* ... */ },
 ///     internal_transport_config = |config| { /* ... */ },
@@ -300,6 +298,7 @@ pub use typeid; // Re-exported for use in the `State` derive macro.
 /// A `Context` is passed to components and the device entrypoint and provides access to:
 /// - The device [`Address`].
 /// - The initialized MCU instance.
+/// - The storage instance.
 /// - Internal and external message channels bound to the selected transports.
 /// - The application state.
 ///
@@ -419,23 +418,15 @@ where
 /// A unique, stable per-device address.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, MaxSize)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct Address(pub [u8; 6]);
+pub struct Address(pub u32);
 
 /// Describes a concrete device configuration.
-///
-/// A `Device` ties together:
-/// - The MCU backend via [`Device::Mcu`].
-/// - The persistent storage config.
-/// - A default device address via [`Device::DEFAULT_ADDRESS`].
 pub trait Device: Sized {
     /// MCU used by this device.
     type Mcu: mcu::Mcu + mcu::McuCreator<Self::StorageConfig>;
 
     /// Storage configuration used by this device.
     type StorageConfig: 'static;
-
-    /// Default address used by the device.
-    const DEFAULT_ADDRESS: Address;
 
     /// Returns the MCU configuration used during device initialization.
     ///
@@ -524,6 +515,6 @@ mod test {
 
     #[test]
     fn address_serialized_max_size() {
-        assert_eq!(Address::POSTCARD_MAX_SIZE, 6);
+        assert_eq!(Address::POSTCARD_MAX_SIZE, 5);
     }
 }

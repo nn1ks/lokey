@@ -27,6 +27,9 @@ use lokey_led_array::{HookBundle, LedArray};
 use lokey_nrf::Nrf;
 use panic_probe as _;
 
+pub const KEYBOARD_LEFT_ADDRESS: Address = Address(1);
+pub const KEYBOARD_RIGHT_ADDRESS: Address = Address(2);
+
 pub const NUM_KEYS: usize = 36;
 pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 
@@ -96,8 +99,6 @@ pub struct KeyboardLeft;
 impl Device for KeyboardLeft {
     type Mcu = Nrf;
     type StorageConfig = DefaultStorageConfig;
-
-    const DEFAULT_ADDRESS: Address = Address([0xcb, 0x1d, 0xed, 0xd5, 0x00, 0xc9]);
 
     fn storage_config() -> Self::StorageConfig {
         DefaultStorageConfig {
@@ -246,8 +247,6 @@ pub struct KeyboardRight;
 impl Device for KeyboardRight {
     type Mcu = Nrf;
     type StorageConfig = DefaultStorageConfig;
-
-    const DEFAULT_ADDRESS: Address = Address([0xdf, 0x7a, 0x77, 0x41, 0x8c, 0xfe]);
 
     fn storage_config() -> Self::StorageConfig {
         DefaultStorageConfig {

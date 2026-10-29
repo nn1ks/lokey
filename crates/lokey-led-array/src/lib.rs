@@ -554,8 +554,8 @@ mod tests {
 
     #[test]
     fn serialized_max_size() {
-        assert_eq!(ActionId::POSTCARD_MAX_SIZE, 11);
+        assert_eq!(ActionId::POSTCARD_MAX_SIZE, 10);
         assert_eq!(Action::POSTCARD_MAX_SIZE, 15);
-        assert_eq!(Message::POSTCARD_MAX_SIZE, 33);
+        assert_eq!(Message::POSTCARD_MAX_SIZE, 31);
     }
 }

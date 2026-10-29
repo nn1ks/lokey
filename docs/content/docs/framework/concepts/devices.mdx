@@ -12,10 +12,9 @@ A device type defines the hardware-specific foundation used by the rest of the f
 
 - **Microcontroller:** The microcontroller type and its configuration.
 - **Storage:** The storage configuration used for persistent storage. The storage type itself is determined by the MCU's [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) implementation for that configuration.
-- **Default address:** A unique, stable per-device address.
 
 <Callout title="INFO" type="info">
-  While the device should provide sensible defaults for microcontroller configuration, storage configuration, and address, these values can still be overridden through the [`lokey::device`](https://docs.rs/lokey/latest/lokey/attr.device.html) macro when needed.
+  While the device should provide sensible defaults for microcontroller configuration and storage configuration, these values can still be overridden through the [`lokey::device`](https://docs.rs/lokey/latest/lokey/attr.device.html) macro when needed.
 </Callout>
 
 Additionally, a device type defines which components it supports and provides each component with the required hardware resources through the [`ComponentSupport`](https://docs.rs/lokey/latest/lokey/trait.ComponentSupport.html) trait. For example, when adding support for [`lokey_keyboard::Scanner`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/struct.Scanner.html), the implementation provides the microcontroller pins connected to the keys.
@@ -30,8 +29,6 @@ pub struct MyDevice;
 impl Device for MyDevice {
     type Mcu = Nrf;
     type StorageConfig = lokey::storage::DefaultStorageConfig;
-
-    const DEFAULT_ADDRESS: Address = Address([0x12, 0x45, 0x9e, 0x9f, 0x08, 0xbe]);
 
     // Optional
     fn mcu_config() -> embassy_nrf::config::Config {
@@ -48,4 +45,4 @@ impl Device for MyDevice {
 
 ## Multi-part devices
 
-For multi-part device setups (e.g. split keyboards), each part should be modeled as its own device type with its own address.
+For multi-part device setups (e.g. split keyboards), each part should be modeled as its own device type.

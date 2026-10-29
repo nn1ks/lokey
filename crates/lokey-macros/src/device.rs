@@ -90,7 +90,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
 
     let address = match args.address {
         Some(v) => v.to_token_stream(),
-        None => quote! { <#device_type_path as ::lokey::Device>::DEFAULT_ADDRESS },
+        None => quote! { ::lokey::Address(0) },
     };
 
     let modify_mcu_config = match args.mcu_config {
