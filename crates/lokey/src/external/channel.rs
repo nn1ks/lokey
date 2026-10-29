@@ -5,6 +5,7 @@ use crate::external::{
     UnsupportedMessageType,
 };
 use crate::util::unwrap;
+use crate::{AnyState, Context, McuCreator};
 use core::any::{Any, TypeId};
 use core::marker::PhantomData;
 use embassy_futures::join::{join, join3};
@@ -38,12 +39,15 @@ where
     }
 
     /// Runs the external channel background task, handling incoming and outgoing messages.
-    pub async fn run<Storage, Override>(
+    pub async fn run<Device, Transports, State, Override>(
         &self,
-        storage: &'static Storage,
+        context: Context<Device, Transports, State>,
         mut message_override: Override,
     ) where
-        Storage: crate::storage::Storage,
+        Device: crate::Device<Mcu = Transport::Mcu>,
+        Transports: crate::Transports<Transport::Mcu, ExternalTransport = Transport>,
+        State: AnyState,
+        Transport::Mcu: McuCreator<Device::StorageConfig>,
         Override: external::Override,
         Override::TxMessage: Into<Transport::TxMessage> + TryFromMessage<Transport::TxMessage>,
     {
@@ -87,12 +91,7 @@ where
                 }
             }
         };
-        join3(
-            handle_messages,
-            send_messages,
-            self.transport.run::<Storage>(storage),
-        )
-        .await;
+        join3(handle_messages, send_messages, self.transport.run(context)).await;
     }
 
     /// Converts this channel into a dynamic one.

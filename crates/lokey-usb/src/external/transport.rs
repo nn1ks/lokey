@@ -10,7 +10,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::signal::Signal;
 use lokey::util::{error, info};
-use lokey::{Address, external, internal, storage};
+use lokey::{Address, AnyState, Context, McuCreator, external, internal, storage};
 
 pub struct Transport<Mcu: 'static, TxMessage, RxMessage> {
     tx_channel: Channel<CriticalSectionRawMutex, TxMessage, 1>,
@@ -31,14 +31,16 @@ where
     type TxMessage = TxMessage;
     type RxMessage = RxMessage;
 
-    async fn create<T>(
+    async fn create<Storage, InternalTransport>(
         config: Self::Config,
-        mcu: &'static Self::Mcu,
         _: Address,
-        _: &'static internal::Channel<T>,
+        mcu: &'static Self::Mcu,
+        _: &'static Storage,
+        _: &'static internal::Channel<InternalTransport>,
     ) -> Self
     where
-        T: internal::Transport<Mcu = Self::Mcu>,
+        Storage: storage::Storage,
+        InternalTransport: internal::Transport<Mcu = Self::Mcu>,
     {
         let device_handler_context = DeviceHandlerContext::new();
 
@@ -51,9 +53,12 @@ where
         }
     }
 
-    async fn run<Storage>(&self, _: &'static Storage)
+    async fn run<Device, Transports, State>(&self, _: Context<Device, Transports, State>)
     where
-        Storage: storage::Storage,
+        Device: lokey::Device<Mcu = Self::Mcu>,
+        Transports: lokey::Transports<Self::Mcu>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>,
     {
         let mut tx_message_service_params =
             <TxMessage::MessageService<'_, Mcu::Driver<'_>> as InitTxMessageService<

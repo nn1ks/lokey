@@ -6,7 +6,7 @@ use embassy_sync::signal::Signal;
 use embassy_time::Duration;
 use generic_array::GenericArray;
 use lokey::util::{error, info, unwrap};
-use lokey::{Address, external, internal, storage};
+use lokey::{Address, AnyState, Context, McuCreator, external, internal, storage};
 use lokey_ble::BleStack;
 use lokey_usb::CreateDriver;
 use trouble_host::prelude::{BluetoothUuid16, appearance};
@@ -72,26 +72,30 @@ where
     type TxMessage = TxMessage;
     type RxMessage = RxMessage;
 
-    async fn create<U>(
+    async fn create<Storage, InternalTransport>(
         config: Self::Config,
-        mcu: &'static Self::Mcu,
         address: Address,
-        internal_channel: &'static internal::Channel<U>,
+        mcu: &'static Self::Mcu,
+        storage: &'static Storage,
+        internal_channel: &'static internal::Channel<InternalTransport>,
     ) -> Self
     where
-        U: internal::Transport<Mcu = Self::Mcu>,
+        Storage: storage::Storage,
+        InternalTransport: internal::Transport<Mcu = Self::Mcu>,
     {
         let usb_transport = lokey_usb::external::Transport::create(
             config.to_usb_config(),
-            mcu,
             address,
+            mcu,
+            storage,
             internal_channel,
         )
         .await;
         let ble_transport = lokey_ble::external::Transport::create(
             config.to_ble_config(),
-            mcu,
             address,
+            mcu,
+            storage,
             internal_channel,
         )
         .await;
@@ -109,9 +113,12 @@ where
         }
     }
 
-    async fn run<Storage>(&self, storage: &'static Storage)
+    async fn run<Device, Transports, State>(&self, context: Context<Device, Transports, State>)
     where
-        Storage: storage::Storage,
+        Device: lokey::Device<Mcu = Self::Mcu>,
+        Transports: lokey::Transports<Self::Mcu>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>,
     {
         let handle_activation_request = async {
             loop {
@@ -158,8 +165,8 @@ where
         join4(
             handle_activation_request,
             handle_internal_messages,
-            self.usb_transport.run(storage),
-            self.ble_transport.run(storage),
+            self.usb_transport.run(context),
+            self.ble_transport.run(context),
         )
         .await;
     }

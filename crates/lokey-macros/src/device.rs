@@ -203,8 +203,9 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
                     ::lokey::external::Channel::new(
                         <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::create(
                             external_transport_config,
-                            mcu,
                             address,
+                            mcu,
+                            storage,
                             internal_channel,
                         )
                         .await
@@ -244,12 +245,12 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             #[::embassy_executor::task]
             async fn __run_external_channel(
                 channel: &'static ::lokey::external::Channel<::lokey::external::DeviceTransport<#device_type_path, #transports_type_path>>,
-                storage: &'static <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::McuCreator<<#device_type_path as ::lokey::Device>::StorageConfig>>::Storage,
+                context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>,
             ) {
                 let message_override = #message_override;
-                channel.run(storage, message_override).await;
+                channel.run(context, message_override).await;
             }
-            spawner.spawn(__run_external_channel(external_channel, storage).unwrap());
+            spawner.spawn(__run_external_channel(external_channel, context).unwrap());
 
             #function
 

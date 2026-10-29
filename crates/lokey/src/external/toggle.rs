@@ -3,7 +3,7 @@
 //! The transport can be activated and deactivated by sending [`Message`] through the internal channel.
 
 use crate::util::{debug, unwrap};
-use crate::{Address, external, internal};
+use crate::{Address, AnyState, Context, McuCreator, external, internal, storage};
 use core::sync::atomic::Ordering;
 use embassy_futures::join::join;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -125,16 +125,18 @@ where
     type TxMessage = TxMessage;
     type RxMessage = RxMessage;
 
-    async fn create<U>(
+    async fn create<Storage, InternalTransport>(
         config: Self::Config,
-        mcu: &'static Self::Mcu,
         address: Address,
-        internal_channel: &'static internal::Channel<U>,
+        mcu: &'static Self::Mcu,
+        storage: &'static Storage,
+        internal_channel: &'static internal::Channel<InternalTransport>,
     ) -> Self
     where
-        U: internal::Transport<Mcu = Self::Mcu>,
+        Storage: storage::Storage,
+        InternalTransport: internal::Transport<Mcu = Self::Mcu>,
     {
-        let transport = T::create(config.transport, mcu, address, internal_channel).await;
+        let transport = T::create(config.transport, address, mcu, storage, internal_channel).await;
         ACTIVE.store(config.active, Ordering::Release);
         transport.set_active(config.active).await;
 
@@ -146,9 +148,12 @@ where
         }
     }
 
-    async fn run<Storage>(&self, _: &'static Storage)
+    async fn run<Device, Transports, State>(&self, _: Context<Device, Transports, State>)
     where
-        Storage: crate::storage::Storage,
+        Device: crate::Device<Mcu = Self::Mcu>,
+        Transports: crate::Transports<Self::Mcu>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>,
     {
         let handle_internal_messages = async {
             let mut receiver = unwrap!(self.internal_channel.receiver::<Message>());

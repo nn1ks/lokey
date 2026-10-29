@@ -16,7 +16,7 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use lokey::storage::WriteTransaction;
 use lokey::util::{debug, error, info, unwrap, warn};
-use lokey::{Address, external, internal, storage};
+use lokey::{Address, AnyState, Context, McuCreator, external, internal, storage};
 use portable_atomic::{AtomicBool, AtomicU8};
 use trouble_host::gap::{GapConfig, PeripheralConfig};
 use trouble_host::gatt::{GattConnection, GattConnectionEvent, GattEvent};
@@ -61,14 +61,16 @@ where
     type TxMessage = TxMessage;
     type RxMessage = RxMessage;
 
-    async fn create<T>(
+    async fn create<Storage, InternalTransport>(
         config: Self::Config,
-        mcu: &'static Self::Mcu,
         _: Address,
-        internal_channel: &'static internal::Channel<T>,
+        mcu: &'static Self::Mcu,
+        _: &'static Storage,
+        internal_channel: &'static internal::Channel<InternalTransport>,
     ) -> Self
     where
-        T: internal::Transport<Mcu = Self::Mcu>,
+        Storage: storage::Storage,
+        InternalTransport: internal::Transport<Mcu = Self::Mcu>,
     {
         Self {
             tx_channel: Channel::new(),
@@ -84,9 +86,12 @@ where
         }
     }
 
-    async fn run<Storage>(&self, storage: &'static Storage)
+    async fn run<Device, Transports, State>(&self, context: Context<Device, Transports, State>)
     where
-        Storage: storage::Storage,
+        Device: lokey::Device<Mcu = Self::Mcu>,
+        Transports: lokey::Transports<Self::Mcu>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>,
     {
         let mut table = AttributeTable::<'_, NoopRawMutex, ATT_MAX>::new();
 
@@ -109,10 +114,10 @@ where
             return;
         };
 
-        let profile_bond_infos = bond_information::read_all_from_storage(storage).await;
+        let profile_bond_infos = bond_information::read_all_from_storage(context.storage).await;
 
         let runner = Runner::new(
-            storage,
+            context.storage,
             tx_message_service,
             rx_message_service,
             &server,

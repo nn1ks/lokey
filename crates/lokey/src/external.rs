@@ -6,7 +6,7 @@ mod r#override;
 pub mod toggle;
 
 use crate::util::declare_const_for_feature_group;
-use crate::{Address, Device, Transports, internal};
+use crate::{Address, AnyState, Context, Device, McuCreator, Transports, internal, storage};
 pub use channel::{Channel, DynChannelRef, Observer, Receiver, TryObserver, TryReceiver};
 use core::any::Any;
 use core::future::Future;
@@ -213,22 +213,30 @@ pub trait Transport: Any {
     type RxMessage: Message + Clone;
 
     /// Creates and initializes the transport instance.
-    fn create<T>(
+    fn create<Storage, InternalTransport>(
         config: Self::Config,
-        mcu: &'static Self::Mcu,
         address: Address,
-        internal_channel: &'static internal::Channel<T>,
+        mcu: &'static Self::Mcu,
+        storage: &'static Storage,
+        internal_channel: &'static internal::Channel<InternalTransport>,
     ) -> impl Future<Output = Self>
     where
-        T: internal::Transport<Mcu = Self::Mcu>;
+        Storage: storage::Storage,
+        InternalTransport: internal::Transport<Mcu = Self::Mcu>;
 
     /// Runs the transport background task.
     ///
     /// This drives ongoing transport work such as receiving incoming message bytes and handling
     /// transport-specific processing.
-    fn run<Storage>(&self, storage: &'static Storage) -> impl Future<Output = ()>
+    fn run<Device, Transports, State>(
+        &self,
+        context: Context<Device, Transports, State>,
+    ) -> impl Future<Output = ()>
     where
-        Storage: crate::storage::Storage;
+        Device: crate::Device<Mcu = Self::Mcu>,
+        Transports: crate::Transports<Self::Mcu>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>;
 
     /// Sends a message through this transport.
     fn send(&self, message: Self::TxMessage) -> impl Future<Output = ()>;

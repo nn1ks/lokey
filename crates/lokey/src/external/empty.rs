@@ -1,7 +1,7 @@
 //! Empty external transport implementation.
 
 use crate::external::NoMessage;
-use crate::{Address, external, internal};
+use crate::{Address, AnyState, Context, McuCreator, external, internal, storage};
 use core::marker::PhantomData;
 
 /// Configuration for the empty external transport.
@@ -23,23 +23,28 @@ where
     type TxMessage = NoMessage;
     type RxMessage = NoMessage;
 
-    async fn create<T>(
+    async fn create<Storage, InternalTransport>(
         _: Self::Config,
-        _: &'static Self::Mcu,
         _: Address,
-        _: &'static internal::Channel<T>,
+        _: &'static Self::Mcu,
+        _: &'static Storage,
+        _: &'static internal::Channel<InternalTransport>,
     ) -> Self
     where
-        T: internal::Transport<Mcu = Self::Mcu>,
+        Storage: storage::Storage,
+        InternalTransport: internal::Transport<Mcu = Self::Mcu>,
     {
         Self {
             phantom: PhantomData,
         }
     }
 
-    async fn run<Storage>(&self, _: &'static Storage)
+    async fn run<Device, Transports, State>(&self, _: Context<Device, Transports, State>)
     where
-        Storage: crate::storage::Storage,
+        Device: crate::Device<Mcu = Self::Mcu>,
+        Transports: crate::Transports<Self::Mcu>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>,
     {
     }
 
