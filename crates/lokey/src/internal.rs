@@ -115,7 +115,7 @@ pub trait Transport: Any {
     ) -> impl Future<Output = ()>
     where
         Device: crate::Device<Mcu = Self::Mcu>,
-        Transports: crate::Transports<Self::Mcu, InternalTransport = Self>,
+        Transports: crate::Transports<Self::Mcu>,
         State: AnyState,
         Self::Mcu: McuCreator<Device::StorageConfig>;
 
