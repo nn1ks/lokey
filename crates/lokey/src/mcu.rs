@@ -39,7 +39,7 @@ pub trait Mcu: Any {
     /// the device.
     ///
     /// This function must be called only once per concrete MCU type.
-    fn run<D, T, S>(&'static self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    fn run<D, T, S>(context: Context<D, T, S>) -> impl Future<Output = ()>
     where
         D: Device<Mcu = Self>,
         T: Transports<Self>,
@@ -60,7 +60,7 @@ mod dummy {
     impl Mcu for DummyMcu {
         type Config = ();
 
-        async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
+        async fn run<D, T, S>(_context: Context<D, T, S>)
         where
             D: Device<Mcu = Self>,
             T: Transports<Self>,

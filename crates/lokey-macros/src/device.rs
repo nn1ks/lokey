@@ -231,7 +231,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             async fn __run_mcu(
                 context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>
             ) {
-                ::lokey::Mcu::run(context.mcu, context).await;
+                ::lokey::Mcu::run(context).await;
             }
             spawner.spawn(__run_mcu(context).unwrap());
 

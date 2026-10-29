@@ -30,7 +30,7 @@ pub struct Rp {}
 impl Mcu for Rp {
     type Config = embassy_rp::config::Config;
 
-    async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
+    async fn run<D, T, S>(_context: Context<D, T, S>)
     where
         D: Device<Mcu = Self>,
         T: Transports<Self>,

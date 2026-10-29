@@ -46,7 +46,7 @@ pub struct Nrf {
 impl Mcu for Nrf {
     type Config = embassy_nrf::config::Config;
 
-    async fn run<D, T, S>(&'static self, _context: Context<D, T, S>)
+    async fn run<D, T, S>(_context: Context<D, T, S>)
     where
         D: Device<Mcu = Self>,
         T: Transports<Self>,
