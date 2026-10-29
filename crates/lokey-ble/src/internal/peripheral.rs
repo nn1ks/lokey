@@ -86,7 +86,7 @@ where
                 else {
                     return;
                 };
-                self.handle_connection(&connection, &ble_stack, &server, context.storage, &bond)
+                self.handle_connection(&connection, ble_stack, &server, context.storage, &bond)
                     .await;
                 current_connection = Some(connection);
             };
@@ -238,7 +238,7 @@ where
                 peer: bond.0.identity.addr,
             },
             None => Advertisement::ConnectableScannableUndirected {
-                adv_data: adv_data,
+                adv_data,
                 scan_data: &[],
             },
         };
@@ -262,7 +262,7 @@ where
                 return None;
             }
         };
-        let connection = match connection.with_attribute_server(&server) {
+        let connection = match connection.with_attribute_server(server) {
             Ok(v) => v,
             Err(e) => {
                 error!("Failed to add attribute server to connection: {}", e);
@@ -371,7 +371,7 @@ where
                 if let Err(e) = server
                     .service
                     .message_to_central
-                    .notify(&connection, &message, true)
+                    .notify(connection, &message, true)
                     .await
                 {
                     error!("Failed to send value: {}", e);

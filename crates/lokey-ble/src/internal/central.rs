@@ -334,7 +334,7 @@ where
         }
 
         let client = {
-            match GattClient::<_, DefaultPacketPool, MAX_SERVICES>::new(ble_stack, &connection)
+            match GattClient::<_, DefaultPacketPool, MAX_SERVICES>::new(ble_stack, connection)
                 .with_timeout(Duration::from_secs(1))
                 .await
             {
