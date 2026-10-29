@@ -18,6 +18,7 @@ pub mod flash;
 mod test;
 
 use crate::util::{error, info, warn};
+use crate::{Device, McuCreator};
 use core::marker::PhantomData;
 pub use default::{
     DefaultReadTransaction, DefaultStorage, DefaultStorageConfig, DefaultWriteTransaction,
@@ -27,6 +28,10 @@ use defmt::Debug2Format;
 use ekv::flash::Flash;
 pub use empty::{EmptyReadTransaction, EmptyStorage, EmptyStorageConfig, EmptyWriteTransaction};
 use generic_array::{ArrayLength, GenericArray};
+
+/// Type alias for the storage used by a device.
+pub type DeviceStorage<D> =
+    <<D as Device>::Mcu as McuCreator<<D as Device>::StorageConfig>>::Storage;
 
 /// Error returned by [`ReadTransaction::read`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

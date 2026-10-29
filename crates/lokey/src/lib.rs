@@ -309,6 +309,7 @@ where
     D: Device,
     T: Transports<D::Mcu>,
     S: AnyState,
+    D::Mcu: McuCreator<D::StorageConfig>,
 {
     /// The address of the device.
     pub address: Address,

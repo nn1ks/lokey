@@ -44,7 +44,7 @@ pub trait Mcu: Any {
         D: Device<Mcu = Self>,
         T: Transports<Self>,
         S: AnyState,
-        Self: Sized;
+        Self: Sized + McuCreator<D::StorageConfig>;
 }
 
 pub use dummy::DummyMcu;
@@ -65,6 +65,7 @@ mod dummy {
             D: Device<Mcu = Self>,
             T: Transports<Self>,
             S: AnyState,
+            Self: McuCreator<D::StorageConfig>,
         {
         }
     }

@@ -184,8 +184,9 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
                     ::lokey::internal::Channel::new(
                         <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::create(
                             internal_transport_config,
-                            mcu,
                             address,
+                            mcu,
+                            storage,
                         )
                         .await
                     )
@@ -234,11 +235,11 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             #[::embassy_executor::task]
             async fn __run_internal_channel(
                 channel: &'static ::lokey::internal::Channel<::lokey::internal::DeviceTransport<#device_type_path, #transports_type_path>>,
-                storage: &'static <<#device_type_path as ::lokey::Device>::Mcu as ::lokey::McuCreator<<#device_type_path as ::lokey::Device>::StorageConfig>>::Storage,
+                context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>,
             ) {
-                channel.run(storage).await;
+                channel.run(context).await;
             }
-            spawner.spawn(__run_internal_channel(internal_channel, storage).unwrap());
+            spawner.spawn(__run_internal_channel(internal_channel, context).unwrap());
 
             #[::embassy_executor::task]
             async fn __run_external_channel(

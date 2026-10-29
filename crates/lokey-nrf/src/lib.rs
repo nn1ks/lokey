@@ -51,6 +51,7 @@ impl Mcu for Nrf {
         D: Device<Mcu = Self>,
         T: Transports<Self>,
         S: AnyState,
+        Self: McuCreator<D::StorageConfig>,
     {
     }
 }

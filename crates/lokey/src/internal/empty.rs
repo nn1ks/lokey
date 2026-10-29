@@ -1,6 +1,6 @@
 //! Empty internal transport implementation.
 
-use crate::{Address, internal};
+use crate::{Address, AnyState, Context, McuCreator, internal, storage};
 use core::marker::PhantomData;
 
 /// Configuration for the empty internal transport.
@@ -14,19 +14,33 @@ pub struct Transport<Mcu> {
     phantom: PhantomData<Mcu>,
 }
 
-impl<Mcu: 'static> internal::Transport for Transport<Mcu> {
+impl<Mcu> internal::Transport for Transport<Mcu>
+where
+    Mcu: 'static,
+{
     type Config = TransportConfig;
     type Mcu = Mcu;
 
-    async fn create(_: Self::Config, _: &'static Self::Mcu, _: Address) -> Self {
+    async fn create<Storage>(
+        _: Self::Config,
+        _: Address,
+        _: &'static Self::Mcu,
+        _: &'static Storage,
+    ) -> Self
+    where
+        Storage: storage::Storage,
+    {
         Self {
             phantom: PhantomData,
         }
     }
 
-    async fn run<Storage>(&self, _: &'static Storage)
+    async fn run<Device, Transports, State>(&self, _: Context<Device, Transports, State>)
     where
-        Storage: crate::storage::Storage,
+        Device: crate::Device<Mcu = Self::Mcu>,
+        Transports: crate::Transports<Self::Mcu, InternalTransport = Self>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>,
     {
     }
 

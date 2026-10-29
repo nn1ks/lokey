@@ -3,6 +3,7 @@ use crate::internal::{
     RECEIVER_SLOTS,
 };
 use crate::util::{error, unwrap};
+use crate::{AnyState, Context, McuCreator};
 use arrayvec::ArrayVec;
 use core::marker::PhantomData;
 use embassy_futures::join::join3;
@@ -47,9 +48,12 @@ impl<Transport: internal::Transport> Channel<Transport> {
     }
 
     /// Runs the internal channel background task, handling incoming and outgoing messages.
-    pub async fn run<Storage>(&self, storage: &'static Storage)
+    pub async fn run<Device, Transports, State>(&self, context: Context<Device, Transports, State>)
     where
-        Storage: crate::storage::Storage,
+        Device: crate::Device<Mcu = Transport::Mcu>,
+        Transports: crate::Transports<Transport::Mcu, InternalTransport = Transport>,
+        State: AnyState,
+        Transport::Mcu: McuCreator<Device::StorageConfig>,
     {
         let handle_messages = async {
             let publisher = unwrap!(self.rx_channel.publisher());
@@ -72,7 +76,7 @@ impl<Transport: internal::Transport> Channel<Transport> {
                 publisher.publish(message).await;
             }
         };
-        join3(handle_messages, send_messages, self.transport.run(storage)).await;
+        join3(handle_messages, send_messages, self.transport.run(context)).await;
     }
 
     /// Converts this channel into a dynamic one.

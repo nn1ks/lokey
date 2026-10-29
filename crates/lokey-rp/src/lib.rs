@@ -35,6 +35,7 @@ impl Mcu for Rp {
         D: Device<Mcu = Self>,
         T: Transports<Self>,
         S: AnyState,
+        Self: McuCreator<D::StorageConfig>,
     {
     }
 }

@@ -4,7 +4,7 @@ mod channel;
 pub mod empty;
 
 use crate::util::declare_const_for_feature_group;
-use crate::{Address, Device, Transports};
+use crate::{Address, AnyState, Context, Device, McuCreator, Transports, storage};
 pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
@@ -96,19 +96,28 @@ pub trait Transport: Any {
     type Mcu: 'static;
 
     /// Creates and initializes the transport instance.
-    fn create(
+    fn create<Storage>(
         config: Self::Config,
-        mcu: &'static Self::Mcu,
         address: Address,
-    ) -> impl Future<Output = Self>;
+        mcu: &'static Self::Mcu,
+        storage: &'static Storage,
+    ) -> impl Future<Output = Self>
+    where
+        Storage: storage::Storage;
 
     /// Runs the transport background task.
     ///
     /// This drives ongoing transport work such as receiving incoming message bytes and handling
     /// transport-specific processing.
-    fn run<Storage>(&self, storage: &'static Storage) -> impl Future<Output = ()>
+    fn run<Device, Transports, State>(
+        &self,
+        context: Context<Device, Transports, State>,
+    ) -> impl Future<Output = ()>
     where
-        Storage: crate::storage::Storage;
+        Device: crate::Device<Mcu = Self::Mcu>,
+        Transports: crate::Transports<Self::Mcu, InternalTransport = Self>,
+        State: AnyState,
+        Self::Mcu: McuCreator<Device::StorageConfig>;
 
     /// Sends a message through this transport.
     fn send(&self, message_bytes: &[u8]) -> impl Future<Output = ()>;
