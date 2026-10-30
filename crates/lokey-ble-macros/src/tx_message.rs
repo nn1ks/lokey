@@ -5,7 +5,9 @@ use syn::DeriveInput;
 use syn::spanned::Spanned;
 
 pub fn tx_message_derive(item: TokenStream) -> syn::Result<TokenStream2> {
-    let DeriveInput { ident, data, .. } = syn::parse(item)?;
+    let DeriveInput {
+        vis, ident, data, ..
+    } = syn::parse(item)?;
     let data_enum = match data {
         syn::Data::Enum(v) => v,
         syn::Data::Struct(_) => {
@@ -98,7 +100,7 @@ pub fn tx_message_derive(item: TokenStream) -> syn::Result<TokenStream2> {
             }
         }
 
-        struct #message_service_ident {
+        #vis struct #message_service_ident {
             services: (#(<#variant_types as ::lokey_ble::external::TxMessage>::MessageService),*),
         }
 
