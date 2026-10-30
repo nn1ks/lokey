@@ -2,5 +2,8 @@
 
 # LED array message IDs
 
-const getLedArrayCapabilitiesRequest :UInt32 = 16;
-const getLedArrayCapabilitiesResponse :UInt32 = 17;
+const getLedArrayHookCapabilitiesRequest :UInt32 = 0x200;
+const getLedArrayHookCapabilitiesResponse :UInt32 = 0x201;
+const getLedArrayHooksRequest :UInt32 = 0x202;
+const getLedArrayHooksResponse :UInt32 = 0x203;
+const setLedArrayHooksRequest :UInt32 = 0x204;

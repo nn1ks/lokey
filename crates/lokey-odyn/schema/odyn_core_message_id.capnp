@@ -2,7 +2,8 @@
 
 # Core message IDs
 
-const unspecified :UInt32 = 0;
-const errorResponse :UInt32 = 1;
-const getDeviceCapabilitiesRequest :UInt32 = 2;
-const getDeviceCapabilitiesResponse :UInt32 = 3;
+const unspecified :UInt32 = 0x0;
+const successResponse :UInt32 = 0x1;
+const errorResponse :UInt32 = 0x2;
+const getDeviceCapabilitiesRequest :UInt32 = 0x3;
+const getDeviceCapabilitiesResponse :UInt32 = 0x4;

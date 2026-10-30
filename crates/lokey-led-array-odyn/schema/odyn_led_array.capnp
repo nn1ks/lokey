@@ -1,8 +1,19 @@
 @0xa7d1fc4a02c316ff;
 
-struct GetLedArrayCapabilitiesRequest {
+struct GetLedArrayHookCapabilitiesRequest {
 }
 
-struct GetLedArrayCapabilitiesResponse {
-  capabilities @0 :UInt64;
+struct GetLedArrayHookCapabilitiesResponse {
+  hooks @0 :UInt64;
+}
+
+struct GetLedArrayHooksRequest {
+}
+
+struct GetLedArrayHooksResponse {
+  hooks @0 :UInt64;
+}
+
+struct SetLedArrayHooksRequest {
+  hooks @0 :UInt64;
 }

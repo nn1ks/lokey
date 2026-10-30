@@ -2,15 +2,15 @@
 
 # Keyboard message IDs
 
-const getNumberOfKeysRequest :UInt32 = 4;
-const getNumberOfKeysResponse :UInt32 = 5;
-const getLayoutRequest :UInt32 = 6;
-const getLayoutResponse :UInt32 = 7;
-const getAvailableActionsRequest :UInt32 = 8;
-const getAvailableActionsResponse :UInt32 = 9;
-const getActiveActionEntriesRequest :UInt32 = 10;
-const getActiveActionEntriesResponse :UInt32 = 11;
-const addActionEntriesRequest :UInt32 = 12;
-const addActionEntriesResponse :UInt32 = 13;
-const updateLayoutRequest :UInt32 = 14;
-const updateLayoutResponse :UInt32 = 15;
+const getNumberOfKeysRequest :UInt32 = 0x100;
+const getNumberOfKeysResponse :UInt32 = 0x101;
+const getLayoutRequest :UInt32 = 0x102;
+const getLayoutResponse :UInt32 = 0x103;
+const getAvailableActionsRequest :UInt32 = 0x104;
+const getAvailableActionsResponse :UInt32 = 0x105;
+const getActiveActionEntriesRequest :UInt32 = 0x106;
+const getActiveActionEntriesResponse :UInt32 = 0x107;
+const addActionEntriesRequest :UInt32 = 0x108;
+const addActionEntriesResponse :UInt32 = 0x109;
+const updateLayoutRequest :UInt32 = 0x10a;
+const updateLayoutResponse :UInt32 = 0x10b;
