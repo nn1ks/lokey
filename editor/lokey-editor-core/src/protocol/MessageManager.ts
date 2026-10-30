@@ -3,13 +3,19 @@ import {
   GetDeviceCapabilitiesRequest,
   GetDeviceCapabilitiesResponse,
   Message,
+  SuccessResponse,
 } from "lokey-editor-odyn/core";
-import {
-  getDeviceCapabilitiesRequest,
-  getDeviceCapabilitiesResponse,
-} from "lokey-editor-odyn/core/message-id";
+import * as coreMessageId from "lokey-editor-odyn/core/message-id";
+import * as ledArrayMessageId from "lokey-editor-odyn/led-array/message-id";
 import PubSub from "./PubSub";
 import { DemoMessageHandler } from "../demo";
+import {
+  GetLedArrayHookCapabilitiesRequest,
+  GetLedArrayHookCapabilitiesResponse,
+  GetLedArrayHooksRequest,
+  GetLedArrayHooksResponse,
+  SetLedArrayHooksRequest,
+} from "lokey-editor-odyn/led-array";
 
 export type MessageManagerTransport = {
   write: (data: Uint8Array) => Promise<void>;
@@ -101,6 +107,7 @@ export class MessageManager {
   >(
     requestId: number,
     requestType: capnp.StructCtor<TRequest>,
+    setRequest: (message: TRequest) => void,
     responseId: number,
     responseType: capnp.StructCtor<TResponse>,
   ): Promise<TResponse> {
@@ -108,9 +115,10 @@ export class MessageManager {
       throw this.readError;
     }
 
-    const requestMessage = new capnp.Message();
-    requestMessage.initRoot(requestType);
-    const payload = new Uint8Array(requestMessage.toArrayBuffer());
+    const capnpRequestMessage = new capnp.Message();
+    const requestMessage = capnpRequestMessage.initRoot(requestType);
+    setRequest(requestMessage);
+    const payload = new Uint8Array(capnpRequestMessage.toArrayBuffer());
 
     const message = new capnp.Message();
     const envelope = message.initRoot(Message);
@@ -149,10 +157,44 @@ export class MessageManager {
 
   async getDeviceCapabilities(): Promise<GetDeviceCapabilitiesResponse> {
     return await this.requestSingle(
-      getDeviceCapabilitiesRequest,
+      coreMessageId.getDeviceCapabilitiesRequest,
       GetDeviceCapabilitiesRequest,
-      getDeviceCapabilitiesResponse,
+      (_request) => {},
+      coreMessageId.getDeviceCapabilitiesResponse,
       GetDeviceCapabilitiesResponse,
+    );
+  }
+
+  async getLedArrayHookCapabilities(): Promise<GetLedArrayHookCapabilitiesResponse> {
+    return await this.requestSingle(
+      ledArrayMessageId.getLedArrayHookCapabilitiesRequest,
+      GetLedArrayHookCapabilitiesRequest,
+      (_request) => {},
+      ledArrayMessageId.getLedArrayHookCapabilitiesResponse,
+      GetLedArrayHookCapabilitiesResponse,
+    );
+  }
+
+  async getLedArrayHooks(): Promise<GetLedArrayHooksResponse> {
+    return await this.requestSingle(
+      ledArrayMessageId.getLedArrayHooksRequest,
+      GetLedArrayHooksRequest,
+      (_request) => {},
+      ledArrayMessageId.getLedArrayHooksResponse,
+      GetLedArrayHooksResponse,
+    );
+  }
+
+  async setLedArrayHooks(hooks: bigint): Promise<void> {
+    let request = SetLedArrayHooksRequest;
+    await this.requestSingle(
+      ledArrayMessageId.setLedArrayHooksRequest,
+      SetLedArrayHooksRequest,
+      (request) => {
+        request.hooks = hooks;
+      },
+      coreMessageId.successResponse,
+      SuccessResponse,
     );
   }
 }
