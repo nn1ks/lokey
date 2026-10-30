@@ -21,10 +21,37 @@
     "./core/device-id": {
       "types": "./src/core/device-id.ts",
       "import": "./src/core/device-id.ts"
+    },
+    "./keyboard": {
+      "types": "./src/keyboard.ts",
+      "import": "./src/keyboard.ts"
+    },
+    "./keyboard/message-id": {
+      "types": "./src/keyboard/message-id.ts",
+      "import": "./src/keyboard/message-id.ts"
+    },
+    "./keyboard/action-id": {
+      "types": "./src/keyboard/action-id.ts",
+      "import": "./src/keyboard/action-id.ts"
+    },
+    "./led-array": {
+      "types": "./src/led-array.ts",
+      "import": "./src/led-array.ts"
+    },
+    "./led-array/message-id": {
+      "types": "./src/led-array/message-id.ts",
+      "import": "./src/led-array/message-id.ts"
+    },
+    "./led-array/hook-id": {
+      "types": "./src/led-array/hook-id.ts",
+      "import": "./src/led-array/hook-id.ts"
     }
   },
   "scripts": {
-    "generate": "capnp-es ../../crates/lokey-odyn/schema/*.capnp --src-prefix=../../crates/lokey-odyn/schema -ojs,dts:src/generated",
+    "generate": "pnpm run generate:core && pnpm run generate:keyboard && pnpm run generate:led-array",
+    "generate:core": "capnp-es ../../crates/lokey-odyn/schema/*.capnp --src-prefix=../../crates/lokey-odyn/schema -ojs,dts:src/generated",
+    "generate:keyboard": "capnp-es ../../crates/lokey-keyboard-odyn/schema/*.capnp --src-prefix=../../crates/lokey-keyboard-odyn/schema -ojs,dts:src/generated",
+    "generate:led-array": "capnp-es ../../crates/lokey-led-array-odyn/schema/*.capnp --src-prefix=../../crates/lokey-led-array-odyn/schema -ojs,dts:src/generated",
     "build": "pnpm run generate && tsc",
     "typecheck": "tsc --noEmit",
     "docs": "typedoc"
