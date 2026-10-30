@@ -96,10 +96,8 @@ export class Transparent implements KeyActionRender {
 export class Layer implements KeyActionRender {
   constructor(public readonly index: number) {}
 
-  render(_level: number, layerCount: number): JSX.Element {
-    const layerName =
-      this.index < layerCount ? `Layer ${this.index + 1}` : "<unknown>";
-
+  render(_level: number, _layerCount: number): JSX.Element {
+    const layerName = `Layer ${this.index + 1}`;
     return <IconSubtitleCombination icon={<Layers2 />} subtitle={layerName} />;
   }
 
@@ -216,7 +214,7 @@ export class KeyCode implements KeyActionRender {
   }
 
   renderTooltip(): JSX.Element {
-    const infoValue = this.infoValue();
+    const infoValue = this.additionalTooltipValue();
 
     return (
       <>
@@ -228,6 +226,14 @@ export class KeyCode implements KeyActionRender {
 
   private displayValue(): string {
     const displayValues: Record<string, string> = {
+      LControl: "Left Control",
+      RControl: "Right Control",
+      LShift: "Left Shift",
+      RShift: "Right Shift",
+      LAlt: "Left Alt",
+      RAlt: "Right Alt",
+      LGui: "Left Gui",
+      RGui: "Right Gui",
       N1: "1",
       N2: "2",
       N3: "3",
@@ -255,7 +261,7 @@ export class KeyCode implements KeyActionRender {
     return displayValues[this.value] ?? this.value;
   }
 
-  private infoValue(): string | null {
+  private additionalTooltipValue(): string | null {
     switch (this.value) {
       case "Minus":
         return "Minus";
