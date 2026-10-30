@@ -42,7 +42,7 @@ lokey = { path = "../lokey", version = "0.0.1" }
 lokey-ble-macros = { path = "../lokey-ble-macros", optional = true}
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 static_cell = "2.1.0"
-trouble-host = { version = "0.8.0", features = ["security", "scan"] }
+trouble-host = { version = "0.8.0", features = ["security", "scan", "legacy-pairing"] }
 typenum = "1.17.0"
 
 [dev-dependencies]
