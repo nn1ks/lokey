@@ -662,14 +662,15 @@ impl Action for DeactivateExternalTransport {
 
 #[cfg(feature = "ble")]
 pub use ble::{
-    BleClear, BleClearActive, BleClearAll, BleDisconnectActive, BleNextProfile, BlePreviousProfile,
-    BleSelectProfile,
+    BleClear, BleClearActive, BleClearAll, BleDisconnectActive, BleInternalCentralClear,
+    BleInternalPeripheralClear, BleNextProfile, BlePreviousProfile, BleSelectProfile,
 };
 
 #[cfg(feature = "ble")]
 mod ble {
     use super::*;
     use lokey_ble::external::Message;
+    use lokey_ble::internal::{CentralMessage, PeripheralMessage};
 
     pub struct BleDisconnectActive;
 
@@ -823,6 +824,54 @@ mod ble {
             context
                 .internal_channel
                 .send(Message::SelectPreviousProfile)
+                .await;
+        }
+
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: AnyState,
+        {
+        }
+    }
+
+    pub struct BleInternalCentralClear(pub Address);
+
+    impl Action for BleInternalCentralClear {
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: AnyState,
+        {
+            context
+                .internal_channel
+                .send(CentralMessage::RemoveBond(self.0))
+                .await;
+        }
+
+        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: AnyState,
+        {
+        }
+    }
+
+    pub struct BleInternalPeripheralClear(pub Address);
+
+    impl Action for BleInternalPeripheralClear {
+        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        where
+            D: Device,
+            T: Transports<D::Mcu>,
+            S: AnyState,
+        {
+            context
+                .internal_channel
+                .send(PeripheralMessage::RemoveBond(self.0))
                 .await;
         }
 
