@@ -79,7 +79,7 @@ export class NoAction implements KeyActionRender {
   }
 
   renderTooltip(): JSX.Element {
-    return <>NoAction</>;
+    return <>None</>;
   }
 }
 
@@ -113,6 +113,8 @@ export class HoldTap<
   constructor(
     public readonly holdAction: H,
     public readonly tapAction: T,
+    /** Tapping term in milliseconds. */
+    public readonly tappingTerm: number = 200,
   ) {}
 
   render(level: number, layerCount: number): JSX.Element {
@@ -152,6 +154,59 @@ export class HoldTap<
           </div>
           <div class="flex min-h-6 items-center justify-center">
             {this.holdAction.renderTooltip()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+export class Sequence<
+  A1 extends KeyAction,
+  A2 extends KeyAction,
+> implements KeyActionRender {
+  constructor(
+    public readonly action1: A1,
+    public readonly action2: A2,
+  ) {}
+
+  render(level: number, layerCount: number): JSX.Element {
+    if (level > 0) return <Ellipsis />;
+
+    return (
+      <Split
+        action1={
+          <Labelled label="1">
+            {this.action1.render(level + 1, layerCount)}
+          </Labelled>
+        }
+        action2={
+          <Labelled label="2">
+            {this.action2.render(level + 1, layerCount)}
+          </Labelled>
+        }
+      />
+    );
+  }
+
+  renderTooltip(): JSX.Element {
+    return (
+      <div class="flex items-stretch gap-2">
+        <div class="flex min-w-12 flex-col items-center gap-1">
+          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
+            1
+          </div>
+          <div class="flex min-h-6 items-center justify-center">
+            {this.action1.renderTooltip()}
+          </div>
+        </div>
+        <div class="w-px bg-neutral-600 dark:bg-neutral-400" />
+        <div class="flex min-w-12 flex-col items-center gap-1">
+          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
+            2
+          </div>
+          <div class="flex min-h-6 items-center justify-center">
+            {this.action2.renderTooltip()}
           </div>
         </div>
       </div>
@@ -357,7 +412,56 @@ export class KeyCode implements KeyActionRender {
   static readonly Comma = new KeyCode("Comma");
   static readonly Dot = new KeyCode("Dot");
   static readonly Slash = new KeyCode("Slash");
+  static readonly CapsLock = new KeyCode("CapsLock");
+  static readonly F1 = new KeyCode("F1");
+  static readonly F2 = new KeyCode("F2");
+  static readonly F3 = new KeyCode("F3");
+  static readonly F4 = new KeyCode("F4");
+  static readonly F5 = new KeyCode("F5");
+  static readonly F6 = new KeyCode("F6");
+  static readonly F7 = new KeyCode("F7");
+  static readonly F8 = new KeyCode("F8");
+  static readonly F9 = new KeyCode("F9");
+  static readonly F10 = new KeyCode("F10");
+  static readonly F11 = new KeyCode("F11");
+  static readonly F12 = new KeyCode("F12");
+  static readonly F13 = new KeyCode("F13");
+  static readonly F14 = new KeyCode("F14");
+  static readonly F15 = new KeyCode("F15");
+  static readonly F16 = new KeyCode("F16");
+  static readonly F17 = new KeyCode("F17");
+  static readonly F18 = new KeyCode("F18");
+  static readonly F19 = new KeyCode("F19");
+  static readonly F20 = new KeyCode("F20");
+  static readonly F21 = new KeyCode("F21");
+  static readonly F22 = new KeyCode("F22");
+  static readonly F23 = new KeyCode("F23");
+  static readonly F24 = new KeyCode("F24");
+  static readonly PrintScreen = new KeyCode("PrintScreen");
+  static readonly ScrollLock = new KeyCode("ScrollLock");
+  static readonly Pause = new KeyCode("Pause");
+  static readonly Insert = new KeyCode("Insert");
+  static readonly Home = new KeyCode("Home");
+  static readonly PageUp = new KeyCode("PageUp");
+  static readonly Delete = new KeyCode("Delete");
+  static readonly End = new KeyCode("PageDown");
+  static readonly Right = new KeyCode("Right");
+  static readonly Left = new KeyCode("Left");
+  static readonly Down = new KeyCode("Down");
 }
 
 export type KeyAction =
-  NoAction | Transparent | Layer | HoldTap<KeyAction, KeyAction> | KeyCode;
+  | NoAction
+  | Transparent
+  | Layer
+  | HoldTap<KeyAction, KeyAction>
+  | Sequence<KeyAction, KeyAction>
+  | KeyCode;
+
+/**
+ * The actions of a single key: either one action shared across all layers, or
+ * one action per layer.
+ */
+export type RootKeyAction =
+  | { kind: "single"; action: KeyAction }
+  | { kind: "perLayer"; actions: KeyAction[] };

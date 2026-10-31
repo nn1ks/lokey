@@ -7,6 +7,7 @@ import {
 } from "lokey-editor-odyn/core";
 import * as coreMessageId from "lokey-editor-odyn/core/message-id";
 import * as ledArrayMessageId from "lokey-editor-odyn/led-array/message-id";
+import * as keyboardMessageId from "lokey-editor-odyn/keyboard/message-id";
 import PubSub from "./PubSub";
 import { DemoMessageHandler } from "../demo";
 import {
@@ -16,6 +17,17 @@ import {
   GetLedArrayHooksResponse,
   SetLedArrayHooksRequest,
 } from "lokey-editor-odyn/led-array";
+import {
+  AddActionEntriesRequest,
+  GetActiveActionEntriesRequest,
+  GetActiveActionEntriesResponse,
+  GetLayoutRequest,
+  GetLayoutResponse,
+  GetNumberOfKeysRequest,
+  GetNumberOfKeysResponse,
+  KeyboardActionEntry,
+  UpdateLayoutRequest,
+} from "lokey-editor-odyn/keyboard";
 
 export type MessageManagerTransport = {
   write: (data: Uint8Array) => Promise<void>;
@@ -185,8 +197,71 @@ export class MessageManager {
     );
   }
 
+  async getNumberOfKeys(): Promise<GetNumberOfKeysResponse> {
+    return await this.requestSingle(
+      keyboardMessageId.getNumberOfKeysRequest,
+      GetNumberOfKeysRequest,
+      (_request) => {},
+      keyboardMessageId.getNumberOfKeysResponse,
+      GetNumberOfKeysResponse,
+    );
+  }
+
+  async getLayout(): Promise<GetLayoutResponse> {
+    return await this.requestSingle(
+      keyboardMessageId.getLayoutRequest,
+      GetLayoutRequest,
+      (_request) => {},
+      keyboardMessageId.getLayoutResponse,
+      GetLayoutResponse,
+    );
+  }
+
+  async getActiveActionEntries(): Promise<GetActiveActionEntriesResponse> {
+    return await this.requestSingle(
+      keyboardMessageId.getActiveActionEntriesRequest,
+      GetActiveActionEntriesRequest,
+      (_request) => {},
+      keyboardMessageId.getActiveActionEntriesResponse,
+      GetActiveActionEntriesResponse,
+    );
+  }
+
+  async addActionEntries(entries: KeyboardActionEntry[]): Promise<void> {
+    await this.requestSingle(
+      keyboardMessageId.addActionEntriesRequest,
+      AddActionEntriesRequest,
+      (request) => {
+        const list = request._initEntries(entries.length);
+        entries.forEach((entry, index) => {
+          const target = list.get(index);
+          target.entryId = entry.entryId;
+          target.action = entry.action;
+        });
+      },
+      coreMessageId.successResponse,
+      SuccessResponse,
+    );
+  }
+
+  async updateLayout(
+    startKeyIndex: number,
+    actionEntryIds: number[],
+  ): Promise<void> {
+    await this.requestSingle(
+      keyboardMessageId.updateLayoutRequest,
+      UpdateLayoutRequest,
+      (request) => {
+        request.startKeyIndex = startKeyIndex;
+        const list = request._initActionEntryIds(actionEntryIds.length);
+        actionEntryIds.forEach((entryId, index) => list.set(index, entryId));
+      },
+      coreMessageId.successResponse,
+      SuccessResponse,
+    );
+  }
+
   async setLedArrayHooks(hooks: bigint): Promise<void> {
-    let request = SetLedArrayHooksRequest;
     await this.requestSingle(
       ledArrayMessageId.setLedArrayHooksRequest,
       SetLedArrayHooksRequest,

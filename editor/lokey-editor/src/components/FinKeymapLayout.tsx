@@ -1,13 +1,23 @@
-import { For, useContext } from "solid-js";
+import { For } from "solid-js";
 import type { Component } from "solid-js";
-import { FinKeyActionsContext } from "../contexts/FinKeyActionsContext";
 import { KeyButton } from "lokey-editor-core/components/keymap";
+import {
+  useKeyboardActions,
+  useSelectedLayer,
+} from "lokey-editor-core/contexts";
 import styles from "./FinKeymapLayout.module.css";
 
 export const FinKeymapLayout: Component = () => {
-  const finKeyActions = useContext(FinKeyActionsContext);
-  const selectedLayer = 0;
-  const keyActions = () => finKeyActions?.[selectedLayer]?.[1] ?? [];
+  const keyboardActions = useKeyboardActions();
+  const selectedLayer = useSelectedLayer();
+
+  const keyActions = () => {
+    const layer = selectedLayer();
+    return keyboardActions
+      .actions()
+      .map((layers) => layers[layer])
+      .filter((action) => action !== undefined);
+  };
 
   return (
     <div

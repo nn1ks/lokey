@@ -1,14 +1,11 @@
 import { Select, createListCollection } from "@ark-ui/solid/select";
-import { createSignal, For } from "solid-js";
+import { For } from "solid-js";
 import type { Component, JSX } from "solid-js";
 import { ChevronsUpDownIcon } from "lucide-solid";
+import { useKeyboardActions } from "../../contexts";
+import { isLayout, layouts } from "../../layouts";
 
-const hostLayoutOptions = [
-  { label: "English (US)", value: "english-us" },
-  { label: "German", value: "german" },
-];
-
-const hostLayoutCollection = createListCollection({ items: hostLayoutOptions });
+const hostLayoutCollection = createListCollection({ items: [...layouts] });
 
 const OptionsButtonList: Component<{ children: JSX.Element }> = (props) => (
   <ul
@@ -49,7 +46,7 @@ const OptionsSection: Component<{ title: string; children: JSX.Element }> = (
 };
 
 export const Options: Component = () => {
-  const [hostLayout, setHostLayout] = createSignal<string[]>(["english-us"]);
+  const keyboardActions = useKeyboardActions();
 
   return (
     <div class="mt-6 flex flex-col gap-6 sm:flex-row">
@@ -57,8 +54,16 @@ export const Options: Component = () => {
         <Select.Root
           class="relative w-40 min-w-40 max-w-40"
           collection={hostLayoutCollection}
-          value={hostLayout()}
-          onValueChange={(details) => setHostLayout(details.value)}
+          value={[keyboardActions.layout()]}
+          onValueChange={(details) => {
+            const value = details.value[0];
+            if (value !== undefined && isLayout(value)) {
+              void keyboardActions.setLayout(value).catch((error) => {
+                // eslint-disable-next-line no-console
+                console.error("Unable to change the host layout.", error);
+              });
+            }
+          }}
         >
           <Select.Control>
             <Select.Trigger
@@ -124,13 +129,13 @@ export const Options: Component = () => {
         </OptionsButtonList>
       </OptionsSection>
 
-      <OptionsSection title="Layout Export">
+      <OptionsSection title="Layout Import/Export">
         <OptionsButtonList>
           <li>
-            <OptionsButton>Export JSON</OptionsButton>
+            <OptionsButton>Import JSON</OptionsButton>
           </li>
           <li>
-            <OptionsButton>Export SVG</OptionsButton>
+            <OptionsButton>Export JSON</OptionsButton>
           </li>
           <li>
             <OptionsButton>Print</OptionsButton>

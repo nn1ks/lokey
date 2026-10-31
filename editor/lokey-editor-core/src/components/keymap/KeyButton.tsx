@@ -1,7 +1,8 @@
 import { Tooltip } from "@ark-ui/solid";
-import type { KeyActionRender } from "../../keyAction";
+import type { KeyActionRender } from "../../key-action";
 import type { Component, JSX } from "solid-js";
 import StyledTooltipContent from "../StyledTooltipContent";
+import { useSelectedLayer, useKeyboardActions } from "../../contexts";
 
 export type KeyButtonProps = {
   keyAction: KeyActionRender;
@@ -9,8 +10,8 @@ export type KeyButtonProps = {
 };
 
 export const KeyButton: Component<KeyButtonProps> = (props) => {
-  const selectedLayer = 0;
-  const layerCount = 2;
+  const selectedLayer = useSelectedLayer();
+  const keyboardActions = useKeyboardActions();
 
   return (
     <Tooltip.Root positioning={{ placement: "bottom", flip: false }}>
@@ -28,7 +29,7 @@ export const KeyButton: Component<KeyButtonProps> = (props) => {
         aria-label="Key action"
         onClick={props.onClick}
       >
-        {props.keyAction.render(selectedLayer, layerCount)}
+        {props.keyAction.render(selectedLayer(), keyboardActions.layerCount())}
       </Tooltip.Trigger>
       <Tooltip.Positioner>
         <StyledTooltipContent>
