@@ -87,6 +87,46 @@ export class GetNumberOfKeysResponse extends $.Struct {
   }
   toString() { return "GetNumberOfKeysResponse_" + super.toString(); }
 }
+export class GetAvailableActionsRequest extends $.Struct {
+  static _capnp = {
+    displayName: "GetAvailableActionsRequest",
+    id: "9ce5a0ecace82ca2",
+    size: new $.ObjectSize(0, 0),
+  };
+  toString() { return "GetAvailableActionsRequest_" + super.toString(); }
+}
+export class GetAvailableActionsResponse extends $.Struct {
+  static _capnp = {
+    displayName: "GetAvailableActionsResponse",
+    id: "99186b6168b6a26b",
+    size: new $.ObjectSize(8, 1),
+  };
+  _adoptAvailableActionIds(value) {
+    $.utils.adopt(value, $.utils.getPointer(0, this));
+  }
+  _disownAvailableActionIds() {
+    return $.utils.disown(this.availableActionIds);
+  }
+  get availableActionIds() {
+    return $.utils.getList(0, $.Uint32List, this);
+  }
+  _hasAvailableActionIds() {
+    return !$.utils.isNull($.utils.getPointer(0, this));
+  }
+  _initAvailableActionIds(length) {
+    return $.utils.initList(0, $.Uint32List, length, this);
+  }
+  set availableActionIds(value) {
+    $.utils.copyFrom(value, $.utils.getPointer(0, this));
+  }
+  get isFinalResponse() {
+    return $.utils.getBit(0, this);
+  }
+  set isFinalResponse(value) {
+    $.utils.setBit(0, value, this);
+  }
+  toString() { return "GetAvailableActionsResponse_" + super.toString(); }
+}
 export class GetLayoutRequest extends $.Struct {
   static _capnp = {
     displayName: "GetLayoutRequest",
@@ -132,46 +172,6 @@ export class GetLayoutResponse extends $.Struct {
     $.utils.setBit(32, value, this);
   }
   toString() { return "GetLayoutResponse_" + super.toString(); }
-}
-export class GetAvailableActionsRequest extends $.Struct {
-  static _capnp = {
-    displayName: "GetAvailableActionsRequest",
-    id: "9ce5a0ecace82ca2",
-    size: new $.ObjectSize(0, 0),
-  };
-  toString() { return "GetAvailableActionsRequest_" + super.toString(); }
-}
-export class GetAvailableActionsResponse extends $.Struct {
-  static _capnp = {
-    displayName: "GetAvailableActionsResponse",
-    id: "99186b6168b6a26b",
-    size: new $.ObjectSize(8, 1),
-  };
-  _adoptAvailableActionIds(value) {
-    $.utils.adopt(value, $.utils.getPointer(0, this));
-  }
-  _disownAvailableActionIds() {
-    return $.utils.disown(this.availableActionIds);
-  }
-  get availableActionIds() {
-    return $.utils.getList(0, $.Uint32List, this);
-  }
-  _hasAvailableActionIds() {
-    return !$.utils.isNull($.utils.getPointer(0, this));
-  }
-  _initAvailableActionIds(length) {
-    return $.utils.initList(0, $.Uint32List, length, this);
-  }
-  set availableActionIds(value) {
-    $.utils.copyFrom(value, $.utils.getPointer(0, this));
-  }
-  get isFinalResponse() {
-    return $.utils.getBit(0, this);
-  }
-  set isFinalResponse(value) {
-    $.utils.setBit(0, value, this);
-  }
-  toString() { return "GetAvailableActionsResponse_" + super.toString(); }
 }
 export class GetActiveActionEntriesRequest extends $.Struct {
   static _capnp = {
@@ -241,20 +241,6 @@ export class AddActionEntriesRequest extends $.Struct {
   }
   toString() { return "AddActionEntriesRequest_" + super.toString(); }
 }
-export class AddActionEntriesResponse extends $.Struct {
-  static _capnp = {
-    displayName: "AddActionEntriesResponse",
-    id: "e59b13c9df1e247a",
-    size: new $.ObjectSize(8, 0),
-  };
-  get success() {
-    return $.utils.getBit(0, this);
-  }
-  set success(value) {
-    $.utils.setBit(0, value, this);
-  }
-  toString() { return "AddActionEntriesResponse_" + super.toString(); }
-}
 export class UpdateLayoutRequest extends $.Struct {
   static _capnp = {
     displayName: "UpdateLayoutRequest",
@@ -287,20 +273,6 @@ export class UpdateLayoutRequest extends $.Struct {
   }
   toString() { return "UpdateLayoutRequest_" + super.toString(); }
 }
-export class UpdateLayoutResponse extends $.Struct {
-  static _capnp = {
-    displayName: "UpdateLayoutResponse",
-    id: "ad32cf0f3c97cf67",
-    size: new $.ObjectSize(8, 0),
-  };
-  get success() {
-    return $.utils.getBit(0, this);
-  }
-  set success(value) {
-    $.utils.setBit(0, value, this);
-  }
-  toString() { return "UpdateLayoutResponse_" + super.toString(); }
-}
 export class NoneAction extends $.Struct {
   static _capnp = {
     displayName: "NoneAction",
@@ -324,13 +296,23 @@ export class KeyCodeAction extends $.Struct {
     size: new $.ObjectSize(8, 0),
   };
   get keyCode() {
-    return $.utils.getUint32(0, this);
+    return $.utils.getUint16(0, this);
   }
   set keyCode(value) {
-    $.utils.setUint32(0, value, this);
+    $.utils.setUint16(0, value, this);
+  }
+  get type() {
+    return $.utils.getUint16(2, this);
+  }
+  set type(value) {
+    $.utils.setUint16(2, value, this);
   }
   toString() { return "KeyCodeAction_" + super.toString(); }
 }
+export const KeyCodeType = {
+  KEYBOARD: 0,
+  CONSUMER: 1
+};
 export class LayerAction extends $.Struct {
   static _capnp = {
     displayName: "LayerAction",
@@ -414,6 +396,26 @@ export class HoldTapAction extends $.Struct {
     $.utils.setUint32(8, value, this);
   }
   toString() { return "HoldTapAction_" + super.toString(); }
+}
+export class SequenceAction extends $.Struct {
+  static _capnp = {
+    displayName: "SequenceAction",
+    id: "869162bde6e0074f",
+    size: new $.ObjectSize(8, 0),
+  };
+  get action1EntryId() {
+    return $.utils.getUint32(0, this);
+  }
+  set action1EntryId(value) {
+    $.utils.setUint32(0, value, this);
+  }
+  get action2EntryId() {
+    return $.utils.getUint32(4, this);
+  }
+  set action2EntryId(value) {
+    $.utils.setUint32(4, value, this);
+  }
+  toString() { return "SequenceAction_" + super.toString(); }
 }
 GetActiveActionEntriesResponse._Entries = $.CompositeList(KeyboardActionEntry);
 AddActionEntriesRequest._Entries = $.CompositeList(KeyboardActionEntry);

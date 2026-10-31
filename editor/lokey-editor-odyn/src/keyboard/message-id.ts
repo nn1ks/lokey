@@ -10,6 +10,4 @@ export const getAvailableActionsResponse = 0x105;
 export const getActiveActionEntriesRequest = 0x106;
 export const getActiveActionEntriesResponse = 0x107;
 export const addActionEntriesRequest = 0x108;
-export const addActionEntriesResponse = 0x109;
-export const updateLayoutRequest = 0x10a;
-export const updateLayoutResponse = 0x10b;
+export const updateLayoutRequest = 0x109;

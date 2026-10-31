@@ -19,6 +19,14 @@ struct GetNumberOfKeysResponse {
   numKeys @0 :UInt32;
 }
 
+struct GetAvailableActionsRequest {
+}
+
+struct GetAvailableActionsResponse {
+  availableActionIds @0 :List(UInt32);
+  isFinalResponse @1 :Bool;
+}
+
 struct GetLayoutRequest {
 }
 
@@ -26,14 +34,6 @@ struct GetLayoutResponse {
   startKeyIndex @0 :UInt32;
   actionEntryIds @1 :List(UInt32);
   isFinalResponse @2 :Bool;
-}
-
-struct GetAvailableActionsRequest {
-}
-
-struct GetAvailableActionsResponse {
-  availableActionIds @0 :List(UInt32);
-  isFinalResponse @1 :Bool;
 }
 
 struct GetActiveActionEntriesRequest {
@@ -48,17 +48,9 @@ struct AddActionEntriesRequest {
   entries @0 :List(KeyboardActionEntry);
 }
 
-struct AddActionEntriesResponse {
-  success @0 :Bool;
-}
-
 struct UpdateLayoutRequest {
   startKeyIndex @0 :UInt32;
   actionEntryIds @1 :List(UInt32);
-}
-
-struct UpdateLayoutResponse {
-  success @0 :Bool;
 }
 
 # Actions
@@ -70,7 +62,13 @@ struct TransparentAction {
 }
 
 struct KeyCodeAction {
-  keyCode @0 :UInt32;
+  keyCode @0 :UInt16;
+  type @1 :KeyCodeType;
+}
+
+enum KeyCodeType {
+  keyboard @0;
+  consumer @1;
 }
 
 struct LayerAction {
@@ -86,4 +84,9 @@ struct HoldTapAction {
   holdActionEntryId @0 :UInt32;
   tapActionEntryId @1 :UInt32;
   tappingTerm @2 :UInt32;
+}
+
+struct SequenceAction {
+  action1EntryId @0 :UInt32;
+  action2EntryId @1 :UInt32;
 }

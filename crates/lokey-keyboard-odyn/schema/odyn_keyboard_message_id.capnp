@@ -11,6 +11,4 @@ const getAvailableActionsResponse :UInt32 = 0x105;
 const getActiveActionEntriesRequest :UInt32 = 0x106;
 const getActiveActionEntriesResponse :UInt32 = 0x107;
 const addActionEntriesRequest :UInt32 = 0x108;
-const addActionEntriesResponse :UInt32 = 0x109;
-const updateLayoutRequest :UInt32 = 0x10a;
-const updateLayoutResponse :UInt32 = 0x10b;
+const updateLayoutRequest :UInt32 = 0x109;

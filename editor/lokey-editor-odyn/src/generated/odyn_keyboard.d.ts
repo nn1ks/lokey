@@ -50,6 +50,30 @@ export declare class GetNumberOfKeysResponse extends $.Struct {
   set numKeys(value: number);
   toString(): string;
 }
+export declare class GetAvailableActionsRequest extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  toString(): string;
+}
+export declare class GetAvailableActionsResponse extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  _adoptAvailableActionIds(value: $.Orphan<$.List<number>>): void;
+  _disownAvailableActionIds(): $.Orphan<$.List<number>>;
+  get availableActionIds(): $.List<number>;
+  _hasAvailableActionIds(): boolean;
+  _initAvailableActionIds(length: number): $.List<number>;
+  set availableActionIds(value: $.List<number>);
+  get isFinalResponse(): boolean;
+  set isFinalResponse(value: boolean);
+  toString(): string;
+}
 export declare class GetLayoutRequest extends $.Struct {
   static readonly _capnp: {
     displayName: string;
@@ -72,30 +96,6 @@ export declare class GetLayoutResponse extends $.Struct {
   _hasActionEntryIds(): boolean;
   _initActionEntryIds(length: number): $.List<number>;
   set actionEntryIds(value: $.List<number>);
-  get isFinalResponse(): boolean;
-  set isFinalResponse(value: boolean);
-  toString(): string;
-}
-export declare class GetAvailableActionsRequest extends $.Struct {
-  static readonly _capnp: {
-    displayName: string;
-    id: string;
-    size: $.ObjectSize;
-  };
-  toString(): string;
-}
-export declare class GetAvailableActionsResponse extends $.Struct {
-  static readonly _capnp: {
-    displayName: string;
-    id: string;
-    size: $.ObjectSize;
-  };
-  _adoptAvailableActionIds(value: $.Orphan<$.List<number>>): void;
-  _disownAvailableActionIds(): $.Orphan<$.List<number>>;
-  get availableActionIds(): $.List<number>;
-  _hasAvailableActionIds(): boolean;
-  _initAvailableActionIds(length: number): $.List<number>;
-  set availableActionIds(value: $.List<number>);
   get isFinalResponse(): boolean;
   set isFinalResponse(value: boolean);
   toString(): string;
@@ -140,16 +140,6 @@ export declare class AddActionEntriesRequest extends $.Struct {
   set entries(value: $.List<KeyboardActionEntry>);
   toString(): string;
 }
-export declare class AddActionEntriesResponse extends $.Struct {
-  static readonly _capnp: {
-    displayName: string;
-    id: string;
-    size: $.ObjectSize;
-  };
-  get success(): boolean;
-  set success(value: boolean);
-  toString(): string;
-}
 export declare class UpdateLayoutRequest extends $.Struct {
   static readonly _capnp: {
     displayName: string;
@@ -164,16 +154,6 @@ export declare class UpdateLayoutRequest extends $.Struct {
   _hasActionEntryIds(): boolean;
   _initActionEntryIds(length: number): $.List<number>;
   set actionEntryIds(value: $.List<number>);
-  toString(): string;
-}
-export declare class UpdateLayoutResponse extends $.Struct {
-  static readonly _capnp: {
-    displayName: string;
-    id: string;
-    size: $.ObjectSize;
-  };
-  get success(): boolean;
-  set success(value: boolean);
   toString(): string;
 }
 export declare class NoneAction extends $.Struct {
@@ -200,8 +180,15 @@ export declare class KeyCodeAction extends $.Struct {
   };
   get keyCode(): number;
   set keyCode(value: number);
+  get type(): KeyCodeType;
+  set type(value: KeyCodeType);
   toString(): string;
 }
+export declare const KeyCodeType: {
+  readonly KEYBOARD: 0;
+  readonly CONSUMER: 1;
+};
+export type KeyCodeType = (typeof KeyCodeType)[keyof typeof KeyCodeType];
 export declare class LayerAction extends $.Struct {
   static readonly _capnp: {
     displayName: string;
@@ -244,5 +231,17 @@ export declare class HoldTapAction extends $.Struct {
   set tapActionEntryId(value: number);
   get tappingTerm(): number;
   set tappingTerm(value: number);
+  toString(): string;
+}
+export declare class SequenceAction extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  get action1EntryId(): number;
+  set action1EntryId(value: number);
+  get action2EntryId(): number;
+  set action2EntryId(value: number);
   toString(): string;
 }
