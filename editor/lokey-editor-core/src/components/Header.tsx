@@ -18,7 +18,7 @@ export const Header: Component<HeaderProps> = (props) => {
           fixed top-0 left-0 z-100 flex items-center justify-between
           h-(--header-height) px-4 w-full border-b
           border-neutral-300 bg-neutral-200/70
-          dark:border-neutral-800 dark:bg-neutral-800/70
+          dark:border-neutral-750 dark:bg-neutral-800/70
           backdrop-blur-md
         "
       >
