@@ -1,5 +1,5 @@
 import * as capnp from "capnp-es";
-import { defaultState } from "./defaultState";
+import { defaultState } from "./default-state";
 import { State, numKeys, ActionId, ActionEntryId } from "./shared";
 import {
   GetDeviceCapabilitiesResponse,
