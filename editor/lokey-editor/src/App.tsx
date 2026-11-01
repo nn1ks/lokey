@@ -16,6 +16,7 @@ import {
   ConnectionProvider,
   DeviceIdProvider,
   MessageManagerContext,
+  ToastProvider,
   useConnection,
   useDeviceId,
 } from "lokey-editor-core/contexts";
@@ -24,7 +25,11 @@ import { FinPage } from "./components/FinPage";
 import { Portal } from "solid-js/web";
 import { createToaster } from "@ark-ui/solid";
 
-export const toaster = createToaster({ placement: "bottom-end" });
+export const toaster = createToaster({
+  placement: "bottom-end",
+  overlap: false,
+  gap: 10,
+});
 
 const AppContent: Component = () => {
   const { connection } = useConnection();
@@ -114,9 +119,11 @@ const DeviceContent: Component = () => {
 
 const App: Component = () => {
   return (
-    <ConnectionProvider>
-      <AppContent />
-    </ConnectionProvider>
+    <ToastProvider toaster={toaster}>
+      <ConnectionProvider>
+        <AppContent />
+      </ConnectionProvider>
+    </ToastProvider>
   );
 };
 
