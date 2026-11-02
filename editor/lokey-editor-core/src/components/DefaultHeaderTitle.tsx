@@ -3,25 +3,23 @@ import type { Component } from "solid-js";
 export const DefaultHeaderTitle: Component = () => {
   return (
     <>
-      <span class="block size-5.5 opacity-90">
+      <span class="block size-5.5">
         <img
           src="/logo-black.svg"
           alt=""
           width="24"
           height="24"
-          class="size-full dark:hidden"
+          class="size-full -mt-px dark:hidden"
         />
         <img
           src="/logo-white.svg"
           alt=""
           width="24"
           height="24"
-          class="hidden size-full dark:block"
+          class="hidden size-full -mt-px dark:block"
         />
       </span>
-      <span class="select-none text-[1.075rem] font-semibold">
-        Lokey Editor
-      </span>
+      <span class="select-none text-md font-semibold">Lokey Editor</span>
     </>
   );
 };
