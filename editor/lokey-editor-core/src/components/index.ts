@@ -1,3 +1,4 @@
+export { ConfirmDialog } from "./ConfirmDialog";
 export { DefaultHeaderTitle } from "./DefaultHeaderTitle";
 export { Header } from "./Header";
 export { PageHeading } from "./PageHeading";
