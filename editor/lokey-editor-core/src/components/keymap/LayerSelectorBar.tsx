@@ -76,7 +76,7 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = (props) => {
         label="Move selected layer left"
         tooltip="Move layer up"
         icon={<ChevronLeft size={18} strokeWidth={2} />}
-        disabled={!hasSelectedLayer()}
+        disabled={!hasSelectedLayer() || props.selected === 0}
         onClick={() => {
           if (props.selected !== undefined) props.onMoveLeft?.(props.selected);
         }}
@@ -86,7 +86,9 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = (props) => {
         label="Move selected layer right"
         tooltip="Move layer down"
         icon={<ChevronRight size={18} strokeWidth={2} />}
-        disabled={!hasSelectedLayer()}
+        disabled={
+          !hasSelectedLayer() || props.selected === props.layerCount - 1
+        }
         onClick={() => {
           if (props.selected !== undefined) props.onMoveRight?.(props.selected);
         }}

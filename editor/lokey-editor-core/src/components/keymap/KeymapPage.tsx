@@ -65,6 +65,16 @@ const KeymapContent: Component<KeymapPageProps> = (props) => {
             layerCount={keyboardActions.layerCount()}
             selected={selectedLayer()}
             onSelect={setSelectedLayer}
+            onMoveLeft={(layer) => {
+              if (layer <= 0) return;
+              void keyboardActions.moveLayer(layer, layer - 1);
+              setSelectedLayer(layer - 1);
+            }}
+            onMoveRight={(layer) => {
+              if (layer >= keyboardActions.layerCount() - 1) return;
+              void keyboardActions.moveLayer(layer, layer + 1);
+              setSelectedLayer(layer + 1);
+            }}
             onCreate={() => {
               const newLayer = keyboardActions.layerCount();
               void keyboardActions.addLayer();

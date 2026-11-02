@@ -174,6 +174,47 @@ export class KeyboardActionContextValue {
     await this.#persist(next);
   }
 
+  async moveLayer(from: number, to: number): Promise<void> {
+    const current = this.#requireKeys();
+    const layerCount = this.layerCount();
+
+    if (from < 0 || from >= layerCount) {
+      throw new Error(
+        `Layer ${from} is out of range, expected 0..${layerCount - 1}.`,
+      );
+    }
+    if (to < 0 || to >= layerCount) {
+      throw new Error(
+        `Layer ${to} is out of range, expected 0..${layerCount - 1}.`,
+      );
+    }
+    if (from === to) {
+      return;
+    }
+
+    const next = current.map((key): RootKeyAction => {
+      if (key.kind === "single") {
+        return { kind: "single", action: remapLayer(key.action, from, to) };
+      }
+
+      const actions = [...key.actions];
+      while (actions.length < layerCount) {
+        actions.push(noneAction);
+      }
+
+      const [moved] = actions.splice(from, 1);
+      actions.splice(to, 0, moved ?? noneAction);
+
+      return {
+        kind: "perLayer",
+        actions: actions.map((action) => remapLayer(action, from, to)),
+      };
+    });
+
+    this.#setKeys(next);
+    await this.#persist(next);
+  }
+
   #requireKeys(): RootKeyAction[] {
     const keys = this.#keys();
     if (!keys) {
@@ -364,6 +405,47 @@ function resolveKeys(
     );
   }
   return keys;
+}
+
+/**
+ * Maps a layer index through a move operation: the moved layer takes the target
+ * index and the layers in between shift by one.
+ */
+function remapLayerIndex(index: number, from: number, to: number): number {
+  if (index === from) {
+    return to;
+  }
+
+  if (from < to) {
+    return index > from && index <= to ? index - 1 : index;
+  }
+
+  return index >= to && index < from ? index + 1 : index;
+}
+
+/** Rewrites the layer indices referenced by an action after a layer move. */
+function remapLayer(action: KeyAction, from: number, to: number): KeyAction {
+  if (action instanceof Layer) {
+    const index = remapLayerIndex(action.index, from, to);
+    return index === action.index ? action : new Layer(index);
+  }
+
+  if (action instanceof HoldTap) {
+    return new HoldTap(
+      remapLayer(action.holdAction, from, to),
+      remapLayer(action.tapAction, from, to),
+      action.tappingTerm,
+    );
+  }
+
+  if (action instanceof Sequence) {
+    return new Sequence(
+      remapLayer(action.action1, from, to),
+      remapLayer(action.action2, from, to),
+    );
+  }
+
+  return action;
 }
 
 function encodeAction(
