@@ -41,7 +41,7 @@ export const Header: Component<HeaderProps> = (props) => {
                 <Button
                   class="
                     bg-neutral-400/30! hover:bg-neutral-500/30!
-                    dark:bg-neutral-700/30! dark:hover:bg-neutral-600/30!
+                    dark:bg-neutral-600/30! dark:hover:bg-neutral-500/30!
                   "
                   onClick={() => void disconnect()}
                 >
@@ -53,7 +53,7 @@ export const Header: Component<HeaderProps> = (props) => {
           <ThemeButton
             class="
               bg-neutral-400/30! hover:bg-neutral-500/30!
-              dark:bg-neutral-700/30! dark:hover:bg-neutral-600/30!
+              dark:bg-neutral-600/30! dark:hover:bg-neutral-500/30!
             "
           />
         </div>
