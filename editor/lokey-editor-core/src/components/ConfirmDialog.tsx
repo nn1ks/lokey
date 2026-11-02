@@ -35,7 +35,7 @@ export const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
               {props.title}
             </Dialog.Title>
             <Show when={props.description}>
-              <Dialog.Description class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+              <Dialog.Description class="mt-2 text-md text-neutral-600 dark:text-neutral-400">
                 {props.description}
               </Dialog.Description>
             </Show>
