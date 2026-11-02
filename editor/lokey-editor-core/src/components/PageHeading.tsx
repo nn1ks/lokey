@@ -13,7 +13,7 @@ export const PageHeading: Component<PageHeadingProps> = (props) => {
       <div
         class="
           flex size-11 flex-none items-center justify-center rounded-lg
-          border border-neutral-200 bg-neutral-100
+          border border-neutral-300 bg-neutral-150
           dark:border-neutral-800 dark:bg-neutral-900
         "
       >

@@ -4,5 +4,6 @@ export { PageHeading } from "./PageHeading";
 export { PoweredByLokey } from "./PoweredByLokey";
 export { PageTabs, PageTabTriggerContent, Tabs } from "./PageTabs";
 export { StyledTooltipContent } from "./StyledTooltipContent";
+export { ThemeButton } from "./ThemeButton";
 export { Toaster } from "./Toaster";
 export { WithoutPagePadding } from "./WithoutPagePadding";

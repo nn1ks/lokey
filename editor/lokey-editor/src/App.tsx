@@ -16,6 +16,7 @@ import {
   ConnectionProvider,
   DeviceIdProvider,
   MessageManagerContext,
+  ThemeProvider,
   ToastProvider,
   useConnection,
   useDeviceId,
@@ -119,11 +120,13 @@ const DeviceContent: Component = () => {
 
 const App: Component = () => {
   return (
-    <ToastProvider toaster={toaster}>
-      <ConnectionProvider>
-        <AppContent />
-      </ConnectionProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider toaster={toaster}>
+        <ConnectionProvider>
+          <AppContent />
+        </ConnectionProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 };
 

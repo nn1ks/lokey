@@ -3,6 +3,7 @@ import type { Component, JSX } from "solid-js";
 
 import { useConnection } from "../contexts";
 import Button from "./Button";
+import ThemeButton from "./ThemeButton";
 
 type HeaderProps = {
   title: JSX.Element;
@@ -24,22 +25,38 @@ export const Header: Component<HeaderProps> = (props) => {
       >
         <div class="flex items-center gap-2">{props.title}</div>
 
-        <Show
-          when={connection().status === "connected" ? connection() : undefined}
-        >
-          {(connected) => {
-            const isDemo = () => {
-              const state = connected();
-              return state.status === "connected" && state.isDemo;
-            };
+        <div class="flex items-center gap-2">
+          <Show
+            when={
+              connection().status === "connected" ? connection() : undefined
+            }
+          >
+            {(connected) => {
+              const isDemo = () => {
+                const state = connected();
+                return state.status === "connected" && state.isDemo;
+              };
 
-            return (
-              <Button onClick={() => void disconnect()}>
-                {isDemo() ? "Leave Demo" : "Disconnect"}
-              </Button>
-            );
-          }}
-        </Show>
+              return (
+                <Button
+                  class="
+                    bg-neutral-400/30! hover:bg-neutral-500/30!
+                    dark:bg-neutral-700/30! dark:hover:bg-neutral-600/30!
+                  "
+                  onClick={() => void disconnect()}
+                >
+                  {isDemo() ? "Leave Demo" : "Disconnect"}
+                </Button>
+              );
+            }}
+          </Show>
+          <ThemeButton
+            class="
+              bg-neutral-400/30! hover:bg-neutral-500/30!
+              dark:bg-neutral-700/30! dark:hover:bg-neutral-600/30!
+            "
+          />
+        </div>
       </header>
       <div class="h-(--header-height)"></div>
     </>

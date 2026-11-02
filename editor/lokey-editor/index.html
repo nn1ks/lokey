@@ -5,6 +5,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#000000" />
         <title>Lokey Editor</title>
+        <script>
+            (() => {
+                const stored = localStorage.getItem("lokey-theme");
+                const theme =
+                    stored === "light" || stored === "dark"
+                        ? stored
+                        : matchMedia("(prefers-color-scheme: dark)").matches
+                          ? "dark"
+                          : "light";
+                document.documentElement.classList.toggle(
+                    "dark",
+                    theme === "dark",
+                );
+                document.documentElement.style.colorScheme = theme;
+            })();
+        </script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>

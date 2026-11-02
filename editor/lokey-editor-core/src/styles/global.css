@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source "../";
 
 :root {
@@ -12,13 +14,11 @@
   --page-padding-x: 0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
+.dark {
+  color-scheme: dark;
 
-    --lokey-accent-color: hsl(48, 100%, 78%);
-    /*--lokey-accent-color-background: hsl(48 100% 78% / 14%);*/
-  }
+  --lokey-accent-color: hsl(48, 100%, 78%);
+  /*--lokey-accent-color-background: hsl(48 100% 78% / 14%);*/
 }
 
 @theme inline {

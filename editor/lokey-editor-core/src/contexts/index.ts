@@ -4,4 +4,5 @@ export * from "./KeyboardActionContext";
 export * from "./LedArrayContext";
 export * from "./MessageManagerContext";
 export * from "./SelectedLayerContext";
+export * from "./ThemeContext";
 export * from "./ToastContext";

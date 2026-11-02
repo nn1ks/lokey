@@ -4,12 +4,14 @@ import { KeyButton } from "lokey-editor-core/components/keymap";
 import {
   useKeyboardActions,
   useSelectedLayer,
+  useTheme,
 } from "lokey-editor-core/contexts";
 import styles from "./FinKeymapLayout.module.css";
 
 export const FinKeymapLayout: Component = () => {
   const keyboardActions = useKeyboardActions();
   const selectedLayer = useSelectedLayer();
+  const { theme } = useTheme();
 
   const keyActions = () => {
     const layer = selectedLayer();
@@ -36,13 +38,13 @@ export const FinKeymapLayout: Component = () => {
         [--layout-container-padding:20px]
       "
     >
-      <picture class="block h-auto w-[1100px] min-w-[1100px] pointer-events-none select-none">
-        <source
-          srcset="/device-fin-dark.svg"
-          media="(prefers-color-scheme: dark)"
-        />
-        <img src="/device-fin-light.svg" alt="Fin keyboard layout" />
-      </picture>
+      <img
+        class="block h-auto w-[1100px] min-w-[1100px] pointer-events-none select-none"
+        src={
+          theme() === "dark" ? "/device-fin-dark.svg" : "/device-fin-light.svg"
+        }
+        alt="Fin keyboard layout"
+      />
       <div class={styles.key_button_container}>
         <For each={keyActions()}>
           {(action) => <KeyButton keyAction={action} />}

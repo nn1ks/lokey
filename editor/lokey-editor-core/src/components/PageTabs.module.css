@@ -11,9 +11,11 @@
   display: flex;
   justify-content: center;
   gap: 0.25rem;
-  @apply border-b;
-  @apply border-neutral-300;
-  @apply dark:border-neutral-800;
+  @apply border-b border-neutral-300;
+}
+
+:global(.dark) .root > [data-scope="tabs"][data-part="list"] {
+  @apply border-neutral-800;
 }
 
 .root > [data-scope="tabs"][data-part="list"] [data-part="trigger"] {
@@ -24,14 +26,26 @@
   cursor: pointer;
   padding: 9px 12px;
   @apply text-neutral-500;
-  @apply dark:text-neutral-400;
+}
+
+:global(.dark)
+  .root
+  > [data-scope="tabs"][data-part="list"]
+  [data-part="trigger"] {
+  @apply text-neutral-400;
 }
 
 .root
   > [data-scope="tabs"][data-part="list"]
   [data-part="trigger"]:not([data-selected]):hover {
   @apply text-neutral-700;
-  @apply dark:text-neutral-300;
+}
+
+:global(.dark)
+  .root
+  > [data-scope="tabs"][data-part="list"]
+  [data-part="trigger"]:not([data-selected]):hover {
+  @apply text-neutral-300;
 }
 
 .root
