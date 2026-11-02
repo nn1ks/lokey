@@ -1,8 +1,9 @@
 import { Select, createListCollection } from "@ark-ui/solid/select";
-import { For } from "solid-js";
+import { For, splitProps } from "solid-js";
 import type { Component, JSX } from "solid-js";
 import { ChevronsUpDownIcon } from "lucide-solid";
-import { useKeyboardActions } from "../../contexts";
+import type { ButtonProps } from "../Button";
+import { useKeyboardActions, useToast } from "../../contexts";
 import { isLayout, layouts } from "../../layouts";
 
 const hostLayoutCollection = createListCollection({ items: [...layouts] });
@@ -18,17 +19,26 @@ const OptionsButtonList: Component<{ children: JSX.Element }> = (props) => (
   </ul>
 );
 
-const OptionsButton: Component<{ children: JSX.Element }> = (props) => (
-  <button
-    class="
-      w-fit cursor-pointer bg-transparent
-      underline decoration-dashed
-      hover:text-neutral-900 dark:hover:text-neutral-100
-    "
-  >
-    {props.children}
-  </button>
-);
+const OptionsButton: Component<ButtonProps> = (props) => {
+  const [local, rest] = splitProps(props, ["children", "class"]);
+
+  return (
+    <button
+      {...rest}
+      type="button"
+      class={[
+        "w-fit cursor-pointer bg-transparent",
+        "underline decoration-dashed",
+        "hover:text-neutral-900 dark:hover:text-neutral-100",
+        local.class ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {local.children}
+    </button>
+  );
+};
 
 const OptionsSection: Component<{ title: string; children: JSX.Element }> = (
   props,
@@ -47,6 +57,7 @@ const OptionsSection: Component<{ title: string; children: JSX.Element }> = (
 
 export const Options: Component = () => {
   const keyboardActions = useKeyboardActions();
+  const toast = useToast();
 
   return (
     <div class="mt-6 flex flex-col gap-6 sm:flex-row">
@@ -90,7 +101,7 @@ export const Options: Component = () => {
             <Select.Content
               class="
                 z-1000 min-w-(--reference-width) overflow-hidden rounded-xl border
-                shadow-[0_4px_8px_rgb(0_0_0/10%)]
+                shadow-md
                 border-neutral-200 bg-neutral-50 text-neutral-900
                 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100
               "
@@ -118,13 +129,44 @@ export const Options: Component = () => {
       <OptionsSection title="Global Settings">
         <OptionsButtonList>
           <li>
-            <OptionsButton>Key Behaviour</OptionsButton>
+            <OptionsButton
+              onClick={() => {
+                toast.createToast({
+                  title: "Not supported yet",
+                  description:
+                    "Global key behaviour settings are not supported yet.",
+                  type: "info",
+                });
+              }}
+            >
+              Key Behaviour
+            </OptionsButton>
           </li>
           <li>
-            <OptionsButton>Macros</OptionsButton>
+            <OptionsButton
+              onClick={() => {
+                toast.createToast({
+                  title: "Not supported yet",
+                  description: "Global macro settings are not supported yet.",
+                  type: "info",
+                });
+              }}
+            >
+              Macros
+            </OptionsButton>
           </li>
           <li>
-            <OptionsButton>Combos</OptionsButton>
+            <OptionsButton
+              onClick={() => {
+                toast.createToast({
+                  title: "Not supported yet",
+                  description: "Combos are not supported yet.",
+                  type: "info",
+                });
+              }}
+            >
+              Combos
+            </OptionsButton>
           </li>
         </OptionsButtonList>
       </OptionsSection>
