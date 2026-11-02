@@ -1,6 +1,6 @@
-import Image from 'next/image';
-import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import { appName, gitConfig } from './shared';
+import Image from "next/image";
+import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
+import { appName, gitConfig } from "./shared";
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -12,14 +12,14 @@ export function baseOptions(): BaseLayoutProps {
             alt=""
             width={22}
             height={22}
-            className="dark:hidden"
+            className="-mt-0.5 dark:hidden"
           />
           <Image
             src="/logo-white.svg"
             alt=""
             width={22}
             height={22}
-            className="hidden dark:block"
+            className="-mt-0.5 hidden dark:block"
           />
           <span>{appName}</span>
         </span>
