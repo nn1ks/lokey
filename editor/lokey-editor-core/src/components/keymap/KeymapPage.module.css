@@ -1,0 +1,19 @@
+.printRoot {
+  color: inherit;
+}
+
+@media screen {
+  [data-print-root] {
+    display: none;
+  }
+}
+
+@media print {
+  body:has([data-print-root]) > *:not(:has([data-print-root])) {
+    display: none !important;
+  }
+
+  body:has([data-print-root]) [data-print-root] {
+    display: block !important;
+  }
+}

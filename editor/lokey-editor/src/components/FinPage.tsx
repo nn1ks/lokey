@@ -8,6 +8,7 @@ import {
 import { LedArrayPage } from "lokey-editor-core/components/led-array";
 import { KeymapPage } from "lokey-editor-core/components/keymap";
 import FinKeymapLayout from "./FinKeymapLayout";
+import FinKeymapLayoutPrint from "./FinKeymapLayoutPrint";
 
 export const FinPage: Component = () => {
   return (
@@ -22,7 +23,10 @@ export const FinPage: Component = () => {
       </Tabs.List>
 
       <Tabs.Content value="keymap">
-        <KeymapPage class="max-w-[calc(1130px+2*var(--page-padding-x)+1px)]">
+        <KeymapPage
+          class="max-w-[calc(1130px+2*var(--page-padding-x)+1px)]"
+          printView={FinKeymapLayoutPrint}
+        >
           <FinKeymapLayout />
         </KeymapPage>
       </Tabs.Content>

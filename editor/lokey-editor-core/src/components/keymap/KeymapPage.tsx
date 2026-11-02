@@ -1,8 +1,10 @@
 import { Keyboard } from "lucide-solid";
-import { createEffect, createSignal } from "solid-js";
+import { Show, createEffect, createSignal } from "solid-js";
 import type { Component, JSX } from "solid-js";
+import { Dynamic, Portal } from "solid-js/web";
 import LayerSelectorBar from "./LayerSelectorBar";
 import Options from "./Options";
+import styles from "./KeymapPage.module.css";
 import PageHeading from "../PageHeading";
 import PoweredByLokey from "../PoweredByLokey";
 import WithoutPagePadding from "../WithoutPagePadding";
@@ -16,6 +18,8 @@ import {
 export type KeymapPageProps = {
   children: JSX.Element;
   class?: string;
+  /** View that is rendered instead of the page when printing. */
+  printView?: Component;
 };
 
 const KeymapContent: Component<KeymapPageProps> = (props) => {
@@ -65,9 +69,19 @@ const KeymapContent: Component<KeymapPageProps> = (props) => {
           />
         </WithoutPagePadding>
         {props.children}
-        <Options />
+        <Options onPrint={props.printView ? () => window.print() : undefined} />
         <PoweredByLokey />
       </main>
+
+      <Show when={props.printView}>
+        {(printView) => (
+          <Portal>
+            <div data-print-root class={styles.printRoot}>
+              <Dynamic component={printView()} />
+            </div>
+          </Portal>
+        )}
+      </Show>
     </SelectedLayerContext.Provider>
   );
 };

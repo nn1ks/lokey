@@ -1,5 +1,5 @@
 import { Select, createListCollection } from "@ark-ui/solid/select";
-import { For, splitProps } from "solid-js";
+import { For, Show, splitProps } from "solid-js";
 import type { Component, JSX } from "solid-js";
 import { ChevronsUpDownIcon } from "lucide-solid";
 import type { ButtonProps } from "../Button";
@@ -55,7 +55,11 @@ const OptionsSection: Component<{ title: string; children: JSX.Element }> = (
   );
 };
 
-export const Options: Component = () => {
+export type OptionsProps = {
+  onPrint?: () => void;
+};
+
+export const Options: Component<OptionsProps> = (props) => {
   const keyboardActions = useKeyboardActions();
   const toast = useToast();
 
@@ -179,9 +183,13 @@ export const Options: Component = () => {
           <li>
             <OptionsButton>Export JSON</OptionsButton>
           </li>
-          <li>
-            <OptionsButton>Print</OptionsButton>
-          </li>
+          <Show when={props.onPrint}>
+            <li>
+              <OptionsButton onClick={() => props.onPrint?.()}>
+                Print
+              </OptionsButton>
+            </li>
+          </Show>
         </OptionsButtonList>
       </OptionsSection>
     </div>

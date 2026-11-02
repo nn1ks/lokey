@@ -14,7 +14,7 @@ import {
 import type { Component, JSX, ParentProps } from "solid-js";
 
 export interface KeyActionRender {
-  render(level: number, layerCount: number): JSX.Element;
+  render(level: number): JSX.Element;
   renderTooltip(): JSX.Element;
 }
 
@@ -74,7 +74,7 @@ export const Split: Component<{
 );
 
 export class NoAction implements KeyActionRender {
-  render(_level: number, _layerCount: number): JSX.Element {
+  render(_level: number): JSX.Element {
     return <CircleOff />;
   }
 
@@ -84,7 +84,7 @@ export class NoAction implements KeyActionRender {
 }
 
 export class Transparent implements KeyActionRender {
-  render(_level: number, _layerCount: number): JSX.Element {
+  render(_level: number): JSX.Element {
     return <CircleChevronDown />;
   }
 
@@ -96,7 +96,7 @@ export class Transparent implements KeyActionRender {
 export class Layer implements KeyActionRender {
   constructor(public readonly index: number) {}
 
-  render(_level: number, _layerCount: number): JSX.Element {
+  render(_level: number): JSX.Element {
     const layerName = `Layer ${this.index + 1}`;
     return <IconSubtitleCombination icon={<Layers2 />} subtitle={layerName} />;
   }
@@ -117,19 +117,19 @@ export class HoldTap<
     public readonly tappingTerm: number = 200,
   ) {}
 
-  render(level: number, layerCount: number): JSX.Element {
+  render(level: number): JSX.Element {
     if (level > 0) return <Ellipsis />;
 
     return (
       <Split
         action1={
           <Labelled label="Tap">
-            {this.tapAction.render(level + 1, layerCount)}
+            {this.tapAction.render(level + 1)}
           </Labelled>
         }
         action2={
           <Labelled label="Hold">
-            {this.holdAction.render(level + 1, layerCount)}
+            {this.holdAction.render(level + 1)}
           </Labelled>
         }
       />
@@ -170,19 +170,19 @@ export class Sequence<
     public readonly action2: A2,
   ) {}
 
-  render(level: number, layerCount: number): JSX.Element {
+  render(level: number): JSX.Element {
     if (level > 0) return <Ellipsis />;
 
     return (
       <Split
         action1={
           <Labelled label="1">
-            {this.action1.render(level + 1, layerCount)}
+            {this.action1.render(level + 1)}
           </Labelled>
         }
         action2={
           <Labelled label="2">
-            {this.action2.render(level + 1, layerCount)}
+            {this.action2.render(level + 1)}
           </Labelled>
         }
       />
@@ -217,7 +217,7 @@ export class Sequence<
 export class KeyCode implements KeyActionRender {
   private constructor(public readonly value: string) {}
 
-  render(_level: number, _layerCount: number): JSX.Element {
+  render(_level: number): JSX.Element {
     switch (this) {
       case KeyCode.LControl:
         return <TextSubtitleCombination text="Ctrl" subtitle="Left" />;
