@@ -120,6 +120,34 @@ export class KeyboardActionContextValue {
     await this.#persist(next);
   }
 
+  async addLayer(): Promise<void> {
+    const current = this.#requireKeys();
+    const layerCount = this.layerCount();
+
+    const next = current.map((key): RootKeyAction => {
+      if (key.kind === "single") {
+        return {
+          kind: "perLayer",
+          actions: [
+            ...Array.from({ length: layerCount }, () => key.action),
+            noneAction,
+          ],
+        };
+      }
+
+      const actions = [...key.actions];
+      while (actions.length < layerCount) {
+        actions.push(noneAction);
+      }
+      actions.push(noneAction);
+
+      return { kind: "perLayer", actions };
+    });
+
+    this.#setKeys(next);
+    await this.#persist(next);
+  }
+
   async deleteLayer(layer: number): Promise<void> {
     const current = this.#requireKeys();
     const layerCount = this.layerCount();

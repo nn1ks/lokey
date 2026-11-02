@@ -65,6 +65,11 @@ const KeymapContent: Component<KeymapPageProps> = (props) => {
             layerCount={keyboardActions.layerCount()}
             selected={selectedLayer()}
             onSelect={setSelectedLayer}
+            onCreate={() => {
+              const newLayer = keyboardActions.layerCount();
+              void keyboardActions.addLayer();
+              setSelectedLayer(newLayer);
+            }}
             onRemove={removeLayer}
           />
         </WithoutPagePadding>
