@@ -20,7 +20,7 @@ export const PageHeading: Component<PageHeadingProps> = (props) => {
         {props.icon}
       </div>
       <div class="flex min-w-0 flex-1 flex-col">
-        <h1 class="m-0 text-lg leading-6 font-medium text-neutral-800 dark:text-neutral-200">
+        <h1 class="m-0 text-md leading-6 font-medium text-neutral-800 dark:text-neutral-200">
           {props.title}
         </h1>
         <div class="text-md leading-5 text-neutral-500">

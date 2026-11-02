@@ -19,7 +19,9 @@ export const DefaultHeaderTitle: Component = () => {
           class="hidden size-full -mt-px dark:block"
         />
       </span>
-      <span class="select-none text-md font-semibold">Lokey Editor</span>
+      <span class="select-none text-md font-semibold text-neutral-800 dark:text-neutral-200">
+        Lokey Editor
+      </span>
     </>
   );
 };

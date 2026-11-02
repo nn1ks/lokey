@@ -16,7 +16,7 @@ export const PageTabTriggerContent: Component<PageTabTriggerContentProps> = (
   props,
 ) => {
   return (
-    <div class="flex items-center gap-1.5 text-[0.95em] mt-[1px] [&_svg]:size-4.5">
+    <div class="flex items-center gap-1.5 text-[0.95rem] mt-px [&_svg]:size-4.5">
       {props.icon}
       <span>{props.title}</span>
     </div>
