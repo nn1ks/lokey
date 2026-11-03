@@ -123,14 +123,10 @@ export class HoldTap<
     return (
       <Split
         action1={
-          <Labelled label="Tap">
-            {this.tapAction.render(level + 1)}
-          </Labelled>
+          <Labelled label="Tap">{this.tapAction.render(level + 1)}</Labelled>
         }
         action2={
-          <Labelled label="Hold">
-            {this.holdAction.render(level + 1)}
-          </Labelled>
+          <Labelled label="Hold">{this.holdAction.render(level + 1)}</Labelled>
         }
       />
     );
@@ -176,14 +172,10 @@ export class Sequence<
     return (
       <Split
         action1={
-          <Labelled label="1">
-            {this.action1.render(level + 1)}
-          </Labelled>
+          <Labelled label="1">{this.action1.render(level + 1)}</Labelled>
         }
         action2={
-          <Labelled label="2">
-            {this.action2.render(level + 1)}
-          </Labelled>
+          <Labelled label="2">{this.action2.render(level + 1)}</Labelled>
         }
       />
     );
@@ -413,6 +405,19 @@ export class KeyCode implements KeyActionRender {
   static readonly Dot = new KeyCode("Dot");
   static readonly Slash = new KeyCode("Slash");
   static readonly CapsLock = new KeyCode("CapsLock");
+  static readonly PrintScreen = new KeyCode("PrintScreen");
+  static readonly ScrollLock = new KeyCode("ScrollLock");
+  static readonly Pause = new KeyCode("Pause");
+  static readonly Insert = new KeyCode("Insert");
+  static readonly Home = new KeyCode("Home");
+  static readonly PageUp = new KeyCode("PageUp");
+  static readonly Delete = new KeyCode("Delete");
+  static readonly End = new KeyCode("End");
+  static readonly PageDown = new KeyCode("PageDown");
+  static readonly Right = new KeyCode("Right");
+  static readonly Left = new KeyCode("Left");
+  static readonly Down = new KeyCode("Down");
+  static readonly Up = new KeyCode("Up");
   static readonly F1 = new KeyCode("F1");
   static readonly F2 = new KeyCode("F2");
   static readonly F3 = new KeyCode("F3");
@@ -437,17 +442,110 @@ export class KeyCode implements KeyActionRender {
   static readonly F22 = new KeyCode("F22");
   static readonly F23 = new KeyCode("F23");
   static readonly F24 = new KeyCode("F24");
-  static readonly PrintScreen = new KeyCode("PrintScreen");
-  static readonly ScrollLock = new KeyCode("ScrollLock");
-  static readonly Pause = new KeyCode("Pause");
-  static readonly Insert = new KeyCode("Insert");
-  static readonly Home = new KeyCode("Home");
-  static readonly PageUp = new KeyCode("PageUp");
-  static readonly Delete = new KeyCode("Delete");
-  static readonly End = new KeyCode("PageDown");
-  static readonly Right = new KeyCode("Right");
-  static readonly Left = new KeyCode("Left");
-  static readonly Down = new KeyCode("Down");
+  static readonly NumLock = new KeyCode("NumLock");
+  static readonly KpSlash = new KeyCode("KpSlash");
+  static readonly KpAsterisk = new KeyCode("KpAsterisk");
+  static readonly KpMinus = new KeyCode("KpMinus");
+  static readonly KpPlus = new KeyCode("KpPlus");
+  static readonly KpEnter = new KeyCode("KpEnter");
+  static readonly KpDot = new KeyCode("KpDot");
+  static readonly KpEqual = new KeyCode("KpEqual");
+  static readonly Kp1 = new KeyCode("Kp1");
+  static readonly Kp2 = new KeyCode("Kp2");
+  static readonly Kp3 = new KeyCode("Kp3");
+  static readonly Kp4 = new KeyCode("Kp4");
+  static readonly Kp5 = new KeyCode("Kp5");
+  static readonly Kp6 = new KeyCode("Kp6");
+  static readonly Kp7 = new KeyCode("Kp7");
+  static readonly Kp8 = new KeyCode("Kp8");
+  static readonly Kp9 = new KeyCode("Kp9");
+  static readonly Kp0 = new KeyCode("Kp0");
+  static readonly NonUsBackslash = new KeyCode("NonUsBackslash");
+  static readonly Application = new KeyCode("Application");
+  static readonly Power = new KeyCode("Power");
+  static readonly Execute = new KeyCode("Execute");
+  static readonly Help = new KeyCode("Help");
+  static readonly Menu = new KeyCode("Menu");
+  static readonly Select = new KeyCode("Select");
+  static readonly Stop = new KeyCode("Stop");
+  static readonly Again = new KeyCode("Again");
+  static readonly Undo = new KeyCode("Undo");
+  static readonly Cut = new KeyCode("Cut");
+  static readonly Copy = new KeyCode("Copy");
+  static readonly Paste = new KeyCode("Paste");
+  static readonly Find = new KeyCode("Find");
+  static readonly Mute = new KeyCode("Mute");
+  static readonly VolumeUp = new KeyCode("VolumeUp");
+  static readonly VolumeDown = new KeyCode("VolumeDown");
+  static readonly LockingCapsLock = new KeyCode("LockingCapsLock");
+  static readonly LockingNumLock = new KeyCode("LockingNumLock");
+  static readonly LockingScrollLock = new KeyCode("LockingScrollLock");
+  static readonly KpComma = new KeyCode("KpComma");
+  static readonly KpEqualSign = new KeyCode("KpEqualSign");
+  static readonly International1 = new KeyCode("International1");
+  static readonly International2 = new KeyCode("International2");
+  static readonly International3 = new KeyCode("International3");
+  static readonly International4 = new KeyCode("International4");
+  static readonly International5 = new KeyCode("International5");
+  static readonly International6 = new KeyCode("International6");
+  static readonly International7 = new KeyCode("International7");
+  static readonly International8 = new KeyCode("International8");
+  static readonly International9 = new KeyCode("International9");
+  static readonly Lang1 = new KeyCode("Lang1");
+  static readonly Lang2 = new KeyCode("Lang2");
+  static readonly Lang3 = new KeyCode("Lang3");
+  static readonly Lang4 = new KeyCode("Lang4");
+  static readonly Lang5 = new KeyCode("Lang5");
+  static readonly Lang6 = new KeyCode("Lang6");
+  static readonly Lang7 = new KeyCode("Lang7");
+  static readonly Lang8 = new KeyCode("Lang8");
+  static readonly Lang9 = new KeyCode("Lang9");
+  static readonly Kp00 = new KeyCode("Kp00");
+  static readonly Kp000 = new KeyCode("Kp000");
+  static readonly KpThousandsSeparator = new KeyCode("KpThousandsSeparator");
+  static readonly KpDecimalSeparator = new KeyCode("KpDecimalSeparator");
+  static readonly KpCurrencyUnit = new KeyCode("KpCurrencyUnit");
+  static readonly KpCurrencySubunit = new KeyCode("KpCurrencySubunit");
+  static readonly KpLeftParen = new KeyCode("KpLeftParen");
+  static readonly KpRightParen = new KeyCode("KpRightParen");
+  static readonly KpLeftBrace = new KeyCode("KpLeftBrace");
+  static readonly KpRightBrace = new KeyCode("KpRightBrace");
+  static readonly KpTab = new KeyCode("KpTab");
+  static readonly KpBackspace = new KeyCode("KpBackspace");
+  static readonly KpA = new KeyCode("KpA");
+  static readonly KpB = new KeyCode("KpB");
+  static readonly KpC = new KeyCode("KpC");
+  static readonly KpD = new KeyCode("KpD");
+  static readonly KpE = new KeyCode("KpE");
+  static readonly KpF = new KeyCode("KpF");
+  static readonly KpXor = new KeyCode("KpXor");
+  static readonly KpCaret = new KeyCode("KpCaret");
+  static readonly KpPercent = new KeyCode("KpPercent");
+  static readonly KpLessThan = new KeyCode("KpLessThan");
+  static readonly KpGreaterThan = new KeyCode("KpGreaterThan");
+  static readonly KpAmpersand = new KeyCode("KpAmpersand");
+  static readonly KpDoubleAmpersand = new KeyCode("KpDoubleAmpersand");
+  static readonly KpPipe = new KeyCode("KpPipe");
+  static readonly KpDoublePipe = new KeyCode("KpDoublePipe");
+  static readonly KpColon = new KeyCode("KpColon");
+  static readonly KpHash = new KeyCode("KpHash");
+  static readonly KpSpace = new KeyCode("KpSpace");
+  static readonly KpAt = new KeyCode("KpAt");
+  static readonly KpExclamation = new KeyCode("KpExclamation");
+  static readonly KpMemoryStore = new KeyCode("KpMemoryStore");
+  static readonly KpMemoryRecall = new KeyCode("KpMemoryRecall");
+  static readonly KpMemoryClear = new KeyCode("KpMemoryClear");
+  static readonly KpMemoryAdd = new KeyCode("KpMemoryAdd");
+  static readonly KpMemorySubtract = new KeyCode("KpMemorySubtract");
+  static readonly KpMemoryMultiply = new KeyCode("KpMemoryMultiply");
+  static readonly KpMemoryDivide = new KeyCode("KpMemoryDivide");
+  static readonly KpPlusMinus = new KeyCode("KpPlusMinus");
+  static readonly KpClear = new KeyCode("KpClear");
+  static readonly KpClearEntry = new KeyCode("KpClearEntry");
+  static readonly KpBinary = new KeyCode("KpBinary");
+  static readonly KpOctal = new KeyCode("KpOctal");
+  static readonly KpDecimal = new KeyCode("KpDecimal");
+  static readonly KpHexadecimal = new KeyCode("KpHexadecimal");
 }
 
 export type KeyAction =
