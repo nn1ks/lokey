@@ -65,6 +65,12 @@
         "default": "./dist/contexts/index.js"
       }
     },
+    "./key-action": {
+      "import": {
+        "types": "./dist/key-action/index.d.ts",
+        "default": "./dist/key-action/index.js"
+      }
+    },
     "./protocol": {
       "import": {
         "types": "./dist/protocol/index.d.ts",
@@ -89,6 +95,9 @@
       ],
       "contexts": [
         "./dist/contexts/index.d.ts"
+      ],
+      "key-action": [
+        "./dist/key-action/index.d.ts"
       ],
       "protocol": [
         "./dist/protocol/index.d.ts"

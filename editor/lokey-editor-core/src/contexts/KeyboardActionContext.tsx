@@ -8,34 +8,21 @@ import {
   useContext,
 } from "solid-js";
 import type { Accessor, Component, ParentProps } from "solid-js";
-import * as capnp from "capnp-es";
 import {
   GetActiveActionEntriesResponse,
   GetLayoutResponse,
-  HoldTapAction,
-  KeyboardAction as KeyboardActionStruct,
   KeyboardActionEntry,
-  LayerAction,
-  NoneAction,
-  PerLayerAction,
-  SequenceAction,
-  TransparentAction,
 } from "lokey-editor-odyn/keyboard";
-import * as keyboardActionId from "lokey-editor-odyn/keyboard/action-id";
-import {
-  HoldTap,
-  KeyCode,
-  Layer,
-  NoAction,
-  Sequence,
-  Transparent,
-} from "../key-action";
+import { NoAction } from "../key-action/actions/none";
 import type { KeyAction, RootKeyAction } from "../key-action";
-import { decodeKeyState, encodeKeyCode } from "../key-action/convert";
-import type { Layout } from "../key-action/convert";
+import { actionRegistry } from "../key-action/builtins";
+import { decodeKeyState, encodeKeyState } from "../key-action/codec/key-state";
+import type { ActionRegistry } from "../key-action/registry";
+import type { Layout } from "../layouts";
 import { useConnection } from "./ConnectionContext";
 import { useMessageManager } from ".";
 import type { MessageManager } from "../protocol/MessageManager";
+import { ActionRegistryContextProvider } from "./ActionRegistryContext";
 
 const noneAction: KeyAction = new NoAction();
 
@@ -46,6 +33,7 @@ export class KeyboardActionContextValue {
   readonly #keys: Accessor<RootKeyAction[] | undefined>;
   readonly #setKeys: (keys: RootKeyAction[]) => void;
   readonly #messageManager: MessageManager;
+  readonly #registry: ActionRegistry;
   /** The host layout used to translate key codes. */
   readonly layout: Accessor<Layout>;
   readonly #setLayout: (layout: Layout) => void;
@@ -56,6 +44,7 @@ export class KeyboardActionContextValue {
     keys: Accessor<RootKeyAction[] | undefined>;
     setKeys: (keys: RootKeyAction[]) => void;
     messageManager: MessageManager;
+    registry: ActionRegistry;
     layout: Accessor<Layout>;
     setLayout: (layout: Layout) => void;
   }) {
@@ -64,6 +53,7 @@ export class KeyboardActionContextValue {
     this.#keys = options.keys;
     this.#setKeys = options.setKeys;
     this.#messageManager = options.messageManager;
+    this.#registry = options.registry;
     this.layout = options.layout;
     this.#setLayout = options.setLayout;
   }
@@ -194,7 +184,10 @@ export class KeyboardActionContextValue {
 
     const next = current.map((key): RootKeyAction => {
       if (key.kind === "single") {
-        return { kind: "single", action: remapLayer(key.action, from, to) };
+        return {
+          kind: "single",
+          action: remapLayer(key.action, from, to, this.#registry),
+        };
       }
 
       const actions = [...key.actions];
@@ -207,7 +200,9 @@ export class KeyboardActionContextValue {
 
       return {
         kind: "perLayer",
-        actions: actions.map((action) => remapLayer(action, from, to)),
+        actions: actions.map((action) =>
+          remapLayer(action, from, to, this.#registry),
+        ),
       };
     });
 
@@ -229,36 +224,15 @@ export class KeyboardActionContextValue {
   ): Promise<void> {
     const entries: KeyboardActionEntry[] = [];
     let nextEntryId = 0;
-    const allocate = () => nextEntryId++;
 
-    const encode = (action: KeyAction): number => {
-      if (action instanceof KeyCode) {
-        const actionEntries = encodeKeyCode(action, layout, allocate);
-        entries.push(
-          actionEntries.rootActionEntry,
-          ...actionEntries.childActionEntries,
-        );
-        return actionEntries.rootActionEntry.entryId;
-      }
-
-      const entryId = allocate();
-      entries.push(buildActionEntry(entryId, encodeAction(action, encode)));
-      return entryId;
-    };
-
-    const keyEntryIds = keys.map((key) => {
-      if (key.kind === "single") {
-        return encode(key.action);
-      }
-
-      const actionEntryIds = key.actions.map((action) => encode(action));
-      const layers = key.actions.map((_, index) => index);
-      const entryId = allocate();
-      entries.push(
-        buildActionEntry(entryId, buildPerLayerAction(actionEntryIds, layers)),
-      );
-      return entryId;
-    });
+    const keyEntryIds = keys.map((key) =>
+      encodeKeyState(key, {
+        registry: this.#registry,
+        layout,
+        allocateEntryId: () => nextEntryId++,
+        pushEntry: (entry) => entries.push(entry),
+      }),
+    );
 
     await this.#messageManager.addActionEntries(entries);
     await this.#messageManager.updateLayout(0, keyEntryIds);
@@ -269,6 +243,7 @@ const KeyboardActionContext = createContext<KeyboardActionContextValue>();
 
 export type KeyboardActionContextProviderProps = ParentProps<{
   layout?: Layout;
+  registry?: ActionRegistry;
 }>;
 
 export const KeyboardActionContextProvider: Component<
@@ -276,6 +251,7 @@ export const KeyboardActionContextProvider: Component<
 > = (props) => {
   const { connection } = useConnection();
   const messageManager = useMessageManager();
+  const registry = props.registry ?? actionRegistry;
   const [layout, setLayout] = createSignal<Layout>(
     props.layout ?? "english-us",
   );
@@ -315,7 +291,15 @@ export const KeyboardActionContextProvider: Component<
       return;
     }
 
-    setKeys(resolveKeys(rawLayout(), rawEntries(), untrack(layout)));
+    setKeys(
+      resolveKeys(
+        rawLayout(),
+        rawEntries(),
+        untrack(layout),
+        registry,
+        noneAction,
+      ),
+    );
   });
 
   const layerCount = createMemo(() => {
@@ -357,14 +341,17 @@ export const KeyboardActionContextProvider: Component<
     keys,
     setKeys: (next) => setKeys(next),
     messageManager,
+    registry,
     layout,
     setLayout,
   });
 
   return (
-    <KeyboardActionContext.Provider value={value}>
-      {props.children}
-    </KeyboardActionContext.Provider>
+    <ActionRegistryContextProvider registry={registry}>
+      <KeyboardActionContext.Provider value={value}>
+        {props.children}
+      </KeyboardActionContext.Provider>
+    </ActionRegistryContextProvider>
   );
 };
 
@@ -384,6 +371,8 @@ function resolveKeys(
   layout: GetLayoutResponse,
   entriesResponse: GetActiveActionEntriesResponse,
   keyCodeLayout: Layout,
+  registry: ActionRegistry,
+  noneAction: KeyAction,
 ): RootKeyAction[] {
   const entries = new Map<number, KeyboardActionEntry>();
   const entryList = entriesResponse.entries;
@@ -400,7 +389,13 @@ function resolveKeys(
     const entry = resolveEntry(actionEntryIds.get(i));
     keys.push(
       entry
-        ? decodeKeyState(entry, resolveEntry, keyCodeLayout)
+        ? decodeKeyState(
+            entry,
+            resolveEntry,
+            registry,
+            keyCodeLayout,
+            noneAction,
+          )
         : { kind: "single", action: noneAction },
     );
   }
@@ -424,129 +419,19 @@ function remapLayerIndex(index: number, from: number, to: number): number {
 }
 
 /** Rewrites the layer indices referenced by an action after a layer move. */
-function remapLayer(action: KeyAction, from: number, to: number): KeyAction {
-  if (action instanceof Layer) {
-    const index = remapLayerIndex(action.index, from, to);
-    return index === action.index ? action : new Layer(index);
-  }
-
-  if (action instanceof HoldTap) {
-    return new HoldTap(
-      remapLayer(action.holdAction, from, to),
-      remapLayer(action.tapAction, from, to),
-      action.tappingTerm,
-    );
-  }
-
-  if (action instanceof Sequence) {
-    return new Sequence(
-      remapLayer(action.action1, from, to),
-      remapLayer(action.action2, from, to),
-    );
-  }
-
-  return action;
-}
-
-function encodeAction(
+function remapLayer(
   action: KeyAction,
-  encodeChild: (action: KeyAction) => number,
-): KeyboardActionStruct {
-  if (action instanceof NoAction) {
-    return buildAction(keyboardActionId.none, NoneAction, () => {});
+  from: number,
+  to: number,
+  registry: ActionRegistry,
+): KeyAction {
+  const definition = registry.byId(action.actionId);
+  if (!definition) {
+    return action;
   }
 
-  if (action instanceof Transparent) {
-    return buildAction(
-      keyboardActionId.transparent,
-      TransparentAction,
-      () => {},
-    );
-  }
-
-  if (action instanceof Layer) {
-    return buildAction(keyboardActionId.layer, LayerAction, (layerAction) => {
-      layerAction.layer = action.index;
-    });
-  }
-
-  if (action instanceof HoldTap) {
-    const holdActionEntryId = encodeChild(action.holdAction);
-    const tapActionEntryId = encodeChild(action.tapAction);
-
-    return buildAction(
-      keyboardActionId.holdTap,
-      HoldTapAction,
-      (holdTapAction) => {
-        holdTapAction.holdActionEntryId = holdActionEntryId;
-        holdTapAction.tapActionEntryId = tapActionEntryId;
-        holdTapAction.tappingTerm = action.tappingTerm;
-      },
-    );
-  }
-
-  if (action instanceof Sequence) {
-    const action1EntryId = encodeChild(action.action1);
-    const action2EntryId = encodeChild(action.action2);
-
-    return buildAction(
-      keyboardActionId.sequence,
-      SequenceAction,
-      (sequenceAction) => {
-        sequenceAction.action1EntryId = action1EntryId;
-        sequenceAction.action2EntryId = action2EntryId;
-      },
-    );
-  }
-
-  throw new Error("Unsupported keyboard action.");
-}
-
-function buildAction<T extends capnp.Struct>(
-  actionId: number,
-  actionType: capnp.StructCtor<T>,
-  setAction: (action: T) => void,
-): KeyboardActionStruct {
-  const capnpMessage = new capnp.Message();
-  const actionWrapper = capnpMessage.initRoot(KeyboardActionStruct);
-  actionWrapper.actionId = actionId;
-
-  const capnpMessageInner = new capnp.Message();
-  const action = capnpMessageInner.initRoot(actionType);
-  setAction(action);
-  const serializedAction = capnpMessageInner.toArrayBuffer();
-  actionWrapper
-    ._initPayload(serializedAction.byteLength)
-    .copyBuffer(serializedAction);
-
-  return actionWrapper;
-}
-
-function buildPerLayerAction(
-  actionEntryIds: number[],
-  layers: number[],
-): KeyboardActionStruct {
-  if (actionEntryIds.length !== layers.length) {
-    throw new Error(
-      `A per-layer action requires the same number of entry IDs and layers, got ${actionEntryIds.length} and ${layers.length}.`,
-    );
-  }
-
-  return buildAction(keyboardActionId.perLayer, PerLayerAction, (action) => {
-    const ids = action._initActionEntryIds(actionEntryIds.length);
-    actionEntryIds.forEach((entryId, index) => ids.set(index, entryId));
-    const layerList = action._initLayers(layers.length);
-    layers.forEach((layer, index) => layerList.set(index, layer));
+  return definition.remap(action, {
+    remapLayer: (index) => remapLayerIndex(index, from, to),
+    remapAction: (child) => remapLayer(child, from, to, registry),
   });
-}
-
-function buildActionEntry(
-  entryId: number,
-  action: KeyboardActionStruct,
-): KeyboardActionEntry {
-  const capnpMessage = new capnp.Message();
-  const entry = capnpMessage.initRoot(KeyboardActionEntry);
-  entry.entryId = entryId;
-  entry.action = action;
-  return entry;
 }

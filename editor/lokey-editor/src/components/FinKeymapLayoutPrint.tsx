@@ -1,10 +1,11 @@
 import { For } from "solid-js";
 import type { Component } from "solid-js";
-import type { KeyActionRender } from "lokey-editor-core";
+import type { KeyAction } from "lokey-editor-core";
+import { ActionRenderer } from "lokey-editor-core/components/keymap";
 import { useKeyboardActions } from "lokey-editor-core/contexts";
 import styles from "./FinKeymapLayout.module.css";
 
-const PrintKey: Component<{ keyAction: KeyActionRender }> = (props) => {
+const PrintKey: Component<{ keyAction: KeyAction }> = (props) => {
   return (
     <>
       <div
@@ -16,7 +17,7 @@ const PrintKey: Component<{ keyAction: KeyActionRender }> = (props) => {
           [&_svg]:size-[1.4em] [&_svg]:stroke-[1.8]
         "
       >
-        {props.keyAction.render(0)}
+        <ActionRenderer action={props.keyAction} level={0} />
       </div>
       {/* `KeyButton` renders two elements (the trigger and the tooltip
           positioner), so the print cells need a matching placeholder to keep

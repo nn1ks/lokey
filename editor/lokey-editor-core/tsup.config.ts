@@ -65,6 +65,10 @@ const preset_options: preset.PresetOptions = {
       name: 'contexts',
     },
     {
+      entry: 'src/key-action/index.ts',
+      name: 'key-action',
+    },
+    {
       entry: 'src/protocol/index.ts',
       name: 'protocol',
     },

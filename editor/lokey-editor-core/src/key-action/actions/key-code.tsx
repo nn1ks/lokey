@@ -1,277 +1,35 @@
+import * as capnp from "capnp-es";
 import {
   ArrowBigUp,
   ArrowRightToLine,
-  CircleChevronDown,
-  CircleOff,
   Command,
   CornerDownLeft,
   Delete,
-  Ellipsis,
-  Layers2,
   Option,
   Space as SpaceIcon,
 } from "lucide-solid";
-import type { Component, JSX, ParentProps } from "solid-js";
+import {
+  KeyCodeAction,
+  KeyCodeType,
+  SequenceAction,
+} from "lokey-editor-odyn/keyboard";
+import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
+import type { Layout } from "../../layouts";
+import type { KeyAction } from "../action";
+import type { ActionEntries } from "../codec/entries";
+import { buildAction, buildActionEntry } from "../codec/entries";
+import { defineAction } from "../definition";
+import { englishUsKeyCodes } from "../layouts/english-us";
+import { germanKeyCodes } from "../layouts/german";
+import type { KeyCodeEncoding } from "../layouts/types";
+import { IconSubtitleCombination, TextSubtitleCombination } from "../render";
 
-export interface KeyActionRender {
-  render(level: number): JSX.Element;
-  renderTooltip(): JSX.Element;
-}
+export class KeyCode implements KeyAction {
+  readonly actionId = ActionId.keyCode;
 
-export const TextSubtitleCombination: Component<{
-  text: string;
-  subtitle: string;
-}> = (props) => (
-  <div class="relative mt-0.5 flex flex-col items-center">
-    <div>{props.text}</div>
-    <div class="text-[9px]">{props.subtitle}</div>
-  </div>
-);
-
-export const IconSubtitleCombination: Component<{
-  icon: JSX.Element;
-  subtitle: string;
-}> = (props) => (
-  <div class="relative mt-0.5 flex flex-col items-center">
-    <div>{props.icon}</div>
-    <div class="-mt-1 text-[9px]">{props.subtitle}</div>
-  </div>
-);
-
-export const Labelled: Component<ParentProps<{ label: string }>> = (props) => (
-  <div class="relative flex h-full w-full items-center justify-center">
-    <div
-      class="
-        absolute left-0 ml-0.5 h-full text-center text-[7px] font-semibold
-        tracking-widest text-neutral-500 [text-orientation:sideways]
-        [writing-mode:sideways-lr] uppercase
-      "
-    >
-      {props.label}
-    </div>
-    {props.children}
-  </div>
-);
-
-export const Split: Component<{
-  action1: JSX.Element;
-  action2: JSX.Element;
-}> = (props) => (
-  <div class="h-full w-full">
-    <div class="flex h-1/2 min-h-1/2 items-center justify-center text-[0.8em]">
-      {props.action1}
-    </div>
-    <div
-      class="
-        absolute top-1/2 w-full -translate-y-1/2 border-t-[1.8px]
-        border-dashed border-neutral-400 dark:border-neutral-600
-      "
-    />
-    <div class="flex h-1/2 min-h-1/2 items-center justify-center text-[0.8em]">
-      {props.action2}
-    </div>
-  </div>
-);
-
-export class NoAction implements KeyActionRender {
-  render(_level: number): JSX.Element {
-    return <CircleOff />;
-  }
-
-  renderTooltip(): JSX.Element {
-    return <>None</>;
-  }
-}
-
-export class Transparent implements KeyActionRender {
-  render(_level: number): JSX.Element {
-    return <CircleChevronDown />;
-  }
-
-  renderTooltip(): JSX.Element {
-    return <>Transparent</>;
-  }
-}
-
-export class Layer implements KeyActionRender {
-  constructor(public readonly index: number) {}
-
-  render(_level: number): JSX.Element {
-    const layerName = `Layer ${this.index + 1}`;
-    return <IconSubtitleCombination icon={<Layers2 />} subtitle={layerName} />;
-  }
-
-  renderTooltip(): JSX.Element {
-    return <>Layer {this.index + 1}</>;
-  }
-}
-
-export class HoldTap<
-  H extends KeyAction,
-  T extends KeyAction,
-> implements KeyActionRender {
-  constructor(
-    public readonly holdAction: H,
-    public readonly tapAction: T,
-    /** Tapping term in milliseconds. */
-    public readonly tappingTerm: number = 200,
-  ) {}
-
-  render(level: number): JSX.Element {
-    if (level > 0) return <Ellipsis />;
-
-    return (
-      <Split
-        action1={
-          <Labelled label="Tap">{this.tapAction.render(level + 1)}</Labelled>
-        }
-        action2={
-          <Labelled label="Hold">{this.holdAction.render(level + 1)}</Labelled>
-        }
-      />
-    );
-  }
-
-  renderTooltip(): JSX.Element {
-    return (
-      <div class="flex items-stretch gap-2">
-        <div class="flex min-w-12 flex-col items-center gap-1">
-          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
-            Tap
-          </div>
-          <div class="flex min-h-6 items-center justify-center">
-            {this.tapAction.renderTooltip()}
-          </div>
-        </div>
-        <div class="w-px bg-neutral-600 dark:bg-neutral-400" />
-        <div class="flex min-w-12 flex-col items-center gap-1">
-          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
-            Hold
-          </div>
-          <div class="flex min-h-6 items-center justify-center">
-            {this.holdAction.renderTooltip()}
-          </div>
-        </div>
-      </div>
-    );
-  }
-}
-
-export class Sequence<
-  A1 extends KeyAction,
-  A2 extends KeyAction,
-> implements KeyActionRender {
-  constructor(
-    public readonly action1: A1,
-    public readonly action2: A2,
-  ) {}
-
-  render(level: number): JSX.Element {
-    if (level > 0) return <Ellipsis />;
-
-    return (
-      <Split
-        action1={
-          <Labelled label="1">{this.action1.render(level + 1)}</Labelled>
-        }
-        action2={
-          <Labelled label="2">{this.action2.render(level + 1)}</Labelled>
-        }
-      />
-    );
-  }
-
-  renderTooltip(): JSX.Element {
-    return (
-      <div class="flex items-stretch gap-2">
-        <div class="flex min-w-12 flex-col items-center gap-1">
-          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
-            1
-          </div>
-          <div class="flex min-h-6 items-center justify-center">
-            {this.action1.renderTooltip()}
-          </div>
-        </div>
-        <div class="w-px bg-neutral-600 dark:bg-neutral-400" />
-        <div class="flex min-w-12 flex-col items-center gap-1">
-          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
-            2
-          </div>
-          <div class="flex min-h-6 items-center justify-center">
-            {this.action2.renderTooltip()}
-          </div>
-        </div>
-      </div>
-    );
-  }
-}
-
-export class KeyCode implements KeyActionRender {
   private constructor(public readonly value: string) {}
 
-  render(_level: number): JSX.Element {
-    switch (this) {
-      case KeyCode.LControl:
-        return <TextSubtitleCombination text="Ctrl" subtitle="Left" />;
-      case KeyCode.RControl:
-        return <TextSubtitleCombination text="Ctrl" subtitle="Right" />;
-      case KeyCode.LShift:
-        return (
-          <IconSubtitleCombination
-            icon={<ArrowBigUp />}
-            subtitle="Left Shift"
-          />
-        );
-      case KeyCode.RShift:
-        return (
-          <IconSubtitleCombination
-            icon={<ArrowBigUp />}
-            subtitle="Right Shift"
-          />
-        );
-      case KeyCode.LAlt:
-        return (
-          <IconSubtitleCombination icon={<Option />} subtitle="Left Alt" />
-        );
-      case KeyCode.RAlt:
-        return (
-          <IconSubtitleCombination icon={<Option />} subtitle="Right Alt" />
-        );
-      case KeyCode.LGui:
-        return (
-          <IconSubtitleCombination icon={<Command />} subtitle="Left Super" />
-        );
-      case KeyCode.RGui:
-        return (
-          <IconSubtitleCombination icon={<Command />} subtitle="Right Super" />
-        );
-      case KeyCode.Enter:
-        return <CornerDownLeft />;
-      case KeyCode.Escape:
-        return <>ESC</>;
-      case KeyCode.Backspace:
-        return <Delete />;
-      case KeyCode.Tab:
-        return <ArrowRightToLine />;
-      case KeyCode.Space:
-        return <SpaceIcon />;
-      default:
-        return <>{this.displayValue()}</>;
-    }
-  }
-
-  renderTooltip(): JSX.Element {
-    const infoValue = this.additionalTooltipValue();
-
-    return (
-      <>
-        {this.displayValue()}
-        {infoValue !== null && <> ({infoValue})</>}
-      </>
-    );
-  }
-
-  private displayValue(): string {
+  displayValue(): string {
     const displayValues: Record<string, string> = {
       LControl: "Left Control",
       RControl: "Right Control",
@@ -308,7 +66,7 @@ export class KeyCode implements KeyActionRender {
     return displayValues[this.value] ?? this.value;
   }
 
-  private additionalTooltipValue(): string | null {
+  additionalTooltipValue(): string | null {
     switch (this.value) {
       case "Minus":
         return "Minus";
@@ -548,18 +306,204 @@ export class KeyCode implements KeyActionRender {
   static readonly KpHexadecimal = new KeyCode("KpHexadecimal");
 }
 
-export type KeyAction =
-  | NoAction
-  | Transparent
-  | Layer
-  | HoldTap<KeyAction, KeyAction>
-  | Sequence<KeyAction, KeyAction>
-  | KeyCode;
+const keyCodesByLayout = {
+  "english-us": englishUsKeyCodes(KeyCode),
+  german: germanKeyCodes(KeyCode),
+};
 
-/**
- * The actions of a single key: either one action shared across all layers, or
- * one action per layer.
- */
-export type RootKeyAction =
-  | { kind: "single"; action: KeyAction }
-  | { kind: "perLayer"; actions: KeyAction[] };
+type ReverseKeyCodes = {
+  simple: Map<number, KeyCode>;
+  sequence: Map<string, KeyCode>;
+};
+
+function buildReverseKeyCodes(
+  encodings: Map<KeyCode, KeyCodeEncoding>,
+): ReverseKeyCodes {
+  const simple = new Map<number, KeyCode>();
+  const sequence = new Map<string, KeyCode>();
+
+  for (const [keyCode, encoding] of encodings) {
+    switch (encoding.kind) {
+      case "simple":
+        simple.set(encoding.keyCode, keyCode);
+        break;
+      case "sequence":
+        sequence.set(`${encoding.modifier}:${encoding.keyCode}`, keyCode);
+        break;
+    }
+  }
+
+  return { simple, sequence };
+}
+
+const reverseKeyCodesByLayout = {
+  "english-us": buildReverseKeyCodes(keyCodesByLayout["english-us"]),
+  german: buildReverseKeyCodes(keyCodesByLayout.german),
+};
+
+export function keyCodesForLayout(
+  layout: Layout,
+): Map<KeyCode, KeyCodeEncoding> {
+  return keyCodesByLayout[layout];
+}
+
+export function reverseKeyCodes(layout: Layout): ReverseKeyCodes {
+  return reverseKeyCodesByLayout[layout];
+}
+
+export const keyCodeActionDefinition = defineAction<KeyCode>({
+  actionId: ActionId.keyCode,
+  label: "Key Code",
+  encode: (action, ctx) => {
+    const encoding = keyCodesForLayout(ctx.layout).get(action);
+    if (!encoding) {
+      throw new Error(`Unexpected key code "${action.value}".`);
+    }
+
+    switch (encoding.kind) {
+      case "simple":
+        return encodeKeyCodeSimple(encoding.keyCode, ctx.allocateEntryId);
+      case "sequence":
+        return encodeKeyCodeSequence(
+          encoding.modifier,
+          encoding.keyCode,
+          ctx.allocateEntryId,
+        );
+    }
+  },
+  decode: (payload, ctx) => {
+    const message = new capnp.Message(payload, false);
+    const keyCodeAction = message.getRoot(KeyCodeAction);
+
+    if (keyCodeAction.type !== KeyCodeType.KEYBOARD) {
+      throw new Error("Consumer key codes are not supported yet.");
+    }
+
+    const keyCode = reverseKeyCodes(ctx.layout).simple.get(
+      keyCodeAction.keyCode,
+    );
+    if (!keyCode) {
+      throw new Error(
+        `Unknown key code 0x${keyCodeAction.keyCode.toString(16)} for layout ${ctx.layout}.`,
+      );
+    }
+
+    return keyCode;
+  },
+  render: (action) => {
+    switch (action) {
+      case KeyCode.LControl:
+        return <TextSubtitleCombination text="Ctrl" subtitle="Left" />;
+      case KeyCode.RControl:
+        return <TextSubtitleCombination text="Ctrl" subtitle="Right" />;
+      case KeyCode.LShift:
+        return (
+          <IconSubtitleCombination
+            icon={<ArrowBigUp />}
+            subtitle="Left Shift"
+          />
+        );
+      case KeyCode.RShift:
+        return (
+          <IconSubtitleCombination
+            icon={<ArrowBigUp />}
+            subtitle="Right Shift"
+          />
+        );
+      case KeyCode.LAlt:
+        return (
+          <IconSubtitleCombination icon={<Option />} subtitle="Left Alt" />
+        );
+      case KeyCode.RAlt:
+        return (
+          <IconSubtitleCombination icon={<Option />} subtitle="Right Alt" />
+        );
+      case KeyCode.LGui:
+        return (
+          <IconSubtitleCombination icon={<Command />} subtitle="Left Super" />
+        );
+      case KeyCode.RGui:
+        return (
+          <IconSubtitleCombination icon={<Command />} subtitle="Right Super" />
+        );
+      case KeyCode.Enter:
+        return <CornerDownLeft />;
+      case KeyCode.Escape:
+        return <>ESC</>;
+      case KeyCode.Backspace:
+        return <Delete />;
+      case KeyCode.Tab:
+        return <ArrowRightToLine />;
+      case KeyCode.Space:
+        return <SpaceIcon />;
+      default:
+        return <>{action.displayValue()}</>;
+    }
+  },
+  renderTooltip: (action) => {
+    const infoValue = action.additionalTooltipValue();
+
+    return (
+      <>
+        {action.displayValue()}
+        {infoValue !== null && <> ({infoValue})</>}
+      </>
+    );
+  },
+  remap: (action) => action,
+  children: () => [],
+});
+
+function encodeKeyCodeSimple(
+  value: number,
+  allocateEntryId: () => number,
+): ActionEntries {
+  return {
+    rootActionEntry: buildActionEntry(
+      allocateEntryId(),
+      buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
+        action.keyCode = value;
+        action.type = KeyCodeType.KEYBOARD;
+      }),
+    ),
+    childActionEntries: [],
+  };
+}
+
+function encodeKeyCodeSequence(
+  keyCode1: number,
+  keyCode2: number,
+  allocateEntryId: () => number,
+): ActionEntries {
+  const entryId1 = allocateEntryId();
+  const entryId2 = allocateEntryId();
+
+  const entry1 = buildActionEntry(
+    entryId1,
+    buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
+      action.keyCode = keyCode1;
+      action.type = KeyCodeType.KEYBOARD;
+    }),
+  );
+  const entry2 = buildActionEntry(
+    entryId2,
+    buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
+      action.keyCode = keyCode2;
+      action.type = KeyCodeType.KEYBOARD;
+    }),
+  );
+
+  const sequenceAction = buildAction(
+    ActionId.sequence,
+    SequenceAction,
+    (action) => {
+      action.action1EntryId = entryId1;
+      action.action2EntryId = entryId2;
+    },
+  );
+
+  return {
+    rootActionEntry: buildActionEntry(allocateEntryId(), sequenceAction),
+    childActionEntries: [entry1, entry2],
+  };
+}

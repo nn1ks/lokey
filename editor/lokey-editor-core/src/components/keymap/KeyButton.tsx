@@ -1,10 +1,11 @@
 import { Tooltip } from "@ark-ui/solid";
-import type { KeyActionRender } from "../../key-action";
+import type { KeyAction } from "../../key-action";
 import type { Component, JSX } from "solid-js";
 import StyledTooltipContent from "../StyledTooltipContent";
+import { ActionRenderer, ActionTooltipRenderer } from "./ActionRenderer";
 
 export type KeyButtonProps = {
-  keyAction: KeyActionRender;
+  keyAction: KeyAction;
   onClick?: JSX.EventHandler<HTMLButtonElement, MouseEvent>;
 };
 
@@ -25,11 +26,11 @@ export const KeyButton: Component<KeyButtonProps> = (props) => {
         aria-label="Key action"
         onClick={props.onClick}
       >
-        {props.keyAction.render(0)}
+        <ActionRenderer action={props.keyAction} level={0} />
       </Tooltip.Trigger>
       <Tooltip.Positioner>
         <StyledTooltipContent>
-          {props.keyAction.renderTooltip()}
+          <ActionTooltipRenderer action={props.keyAction} />
         </StyledTooltipContent>
       </Tooltip.Positioner>
     </Tooltip.Root>
