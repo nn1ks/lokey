@@ -25,27 +25,27 @@
   font-weight: 500;
   cursor: pointer;
   padding: 9px 12px;
-  @apply text-neutral-500;
+  @apply text-neutral-600;
 }
 
 :global(.dark)
   .root
   > [data-scope="tabs"][data-part="list"]
   [data-part="trigger"] {
-  @apply text-neutral-400;
+  @apply text-neutral-350;
 }
 
 .root
   > [data-scope="tabs"][data-part="list"]
   [data-part="trigger"]:not([data-selected]):hover {
-  @apply text-neutral-700;
+  @apply text-neutral-750;
 }
 
 :global(.dark)
   .root
   > [data-scope="tabs"][data-part="list"]
   [data-part="trigger"]:not([data-selected]):hover {
-  @apply text-neutral-300;
+  @apply text-neutral-200;
 }
 
 .root

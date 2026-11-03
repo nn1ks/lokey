@@ -7,7 +7,7 @@
 :root {
   color-scheme: light;
 
-  --lokey-accent-color: hsl(50, 100%, 34%);
+  --lokey-accent-color: hsl(50, 100%, 32%);
   /*--lokey-accent-color-background: hsl(48 100% 78% / 14%);*/
 
   --header-height: 56px;
