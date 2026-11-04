@@ -8,6 +8,7 @@ export type {
   ActionDefinition,
   DecodeContext,
   EncodeContext,
+  PickerContext,
   RemapContext,
   RenderContext,
 } from "./definition";

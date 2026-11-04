@@ -15,6 +15,7 @@ import {
   useKeyboardActions,
   useToast,
 } from "../../contexts";
+import { actionRegistry } from "../../key-action/builtins";
 
 export type KeymapPageProps = {
   children: JSX.Element;
@@ -129,7 +130,7 @@ const KeymapContent: Component<KeymapPageProps> = (props) => {
 
 export const KeymapPage: Component<KeymapPageProps> = (props) => {
   return (
-    <KeyboardActionContextProvider>
+    <KeyboardActionContextProvider registry={actionRegistry}>
       <KeymapContent {...props} />
     </KeyboardActionContextProvider>
   );

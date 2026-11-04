@@ -15,7 +15,6 @@ import {
 } from "lokey-editor-odyn/keyboard";
 import { NoAction } from "../key-action/actions/none";
 import type { KeyAction, RootKeyAction } from "../key-action";
-import { actionRegistry } from "../key-action/builtins";
 import { decodeKeyState, encodeKeyState } from "../key-action/codec/key-state";
 import type { ActionRegistry } from "../key-action/registry";
 import type { Layout } from "../layouts";
@@ -243,7 +242,7 @@ const KeyboardActionContext = createContext<KeyboardActionContextValue>();
 
 export type KeyboardActionContextProviderProps = ParentProps<{
   layout?: Layout;
-  registry?: ActionRegistry;
+  registry: ActionRegistry;
 }>;
 
 export const KeyboardActionContextProvider: Component<
@@ -251,7 +250,7 @@ export const KeyboardActionContextProvider: Component<
 > = (props) => {
   const { connection } = useConnection();
   const messageManager = useMessageManager();
-  const registry = props.registry ?? actionRegistry;
+  const registry = props.registry;
   const [layout, setLayout] = createSignal<Layout>(
     props.layout ?? "english-us",
   );

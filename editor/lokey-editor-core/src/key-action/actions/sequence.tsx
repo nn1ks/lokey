@@ -1,10 +1,15 @@
 import * as capnp from "capnp-es";
 import { Ellipsis } from "lucide-solid";
+import { createSignal } from "solid-js";
+import type { Component } from "solid-js";
 import { SequenceAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
+import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
+import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
 import type { KeyAction } from "../action";
 import { buildAction, buildActionEntry } from "../codec/entries";
 import { defineAction } from "../definition";
+import type { PickerContext } from "../definition";
 import { Labelled, Split } from "../render";
 import { KeyCode, keyCodesForLayout, reverseKeyCodes } from "./key-code";
 
@@ -19,6 +24,45 @@ export class Sequence<
     readonly action2: A2,
   ) {}
 }
+
+const withSequenceChildren = (
+  action: Sequence,
+  children: KeyAction[],
+): Sequence => new Sequence(children[0]!, children[1]!);
+
+const SequencePicker: Component<{
+  action: Sequence;
+  ctx: PickerContext;
+}> = (props) => {
+  const [currentAction, setCurrentAction] = createSignal(props.action);
+
+  return (
+    <div class="flex flex-col gap-2">
+      <ActionPickerHeader
+        label="Sequence"
+        onSelect={() => props.ctx.onSelect(currentAction())}
+      />
+      <ActionPickerChildRow
+        label="1"
+        action={currentAction().action1}
+        onSelect={(action) => {
+          const children = [currentAction().action1, currentAction().action2];
+          children[0] = action;
+          setCurrentAction(withSequenceChildren(currentAction(), children));
+        }}
+      />
+      <ActionPickerChildRow
+        label="2"
+        action={currentAction().action2}
+        onSelect={(action) => {
+          const children = [currentAction().action1, currentAction().action2];
+          children[1] = action;
+          setCurrentAction(withSequenceChildren(currentAction(), children));
+        }}
+      />
+    </div>
+  );
+};
 
 export const sequenceActionDefinition = defineAction<Sequence>({
   actionId: ActionId.sequence,
@@ -64,16 +108,8 @@ export const sequenceActionDefinition = defineAction<Sequence>({
 
     return (
       <Split
-        action1={
-          <Labelled label="1">
-            {ctx.renderAction(action.action1, level + 1)}
-          </Labelled>
-        }
-        action2={
-          <Labelled label="2">
-            {ctx.renderAction(action.action2, level + 1)}
-          </Labelled>
-        }
+        action1={ctx.renderAction(action.action1, level + 1)}
+        action2={ctx.renderAction(action.action2, level + 1)}
       />
     );
   },
@@ -104,4 +140,6 @@ export const sequenceActionDefinition = defineAction<Sequence>({
       ctx.remapAction(action.action2),
     ),
   children: (action) => [action.action1, action.action2],
+  renderPicker: (action, ctx) => <SequencePicker action={action} ctx={ctx} />,
+  withChildren: withSequenceChildren,
 });

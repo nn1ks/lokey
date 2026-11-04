@@ -1,4 +1,8 @@
-import type { Component, JSX, ParentProps } from "solid-js";
+import type { Component, JSX, ParentComponent, ParentProps } from "solid-js";
+
+export const Small: ParentComponent = (props) => (
+  <div class="text-[0.75em]">{props.children}</div>
+);
 
 export const TextSubtitleCombination: Component<{
   text: string;
@@ -6,7 +10,17 @@ export const TextSubtitleCombination: Component<{
 }> = (props) => (
   <div class="relative mt-0.5 flex flex-col items-center">
     <div>{props.text}</div>
-    <div class="text-[9px]">{props.subtitle}</div>
+    <div class="text-[9px] leading-2.5">{props.subtitle}</div>
+  </div>
+);
+
+export const SmallTextSubtitleCombination: Component<{
+  text: string;
+  subtitle: string;
+}> = (props) => (
+  <div class="relative mt-0.5 flex flex-col items-center">
+    <div class="text-[0.75em]">{props.text}</div>
+    <div class="text-[9px] leading-2.5">{props.subtitle}</div>
   </div>
 );
 
@@ -14,9 +28,9 @@ export const IconSubtitleCombination: Component<{
   icon: JSX.Element;
   subtitle: string;
 }> = (props) => (
-  <div class="relative mt-0.5 flex flex-col items-center">
+  <div class="relative mt-0.5 flex flex-col items-center gap-1">
     <div>{props.icon}</div>
-    <div class="-mt-1 text-[9px]">{props.subtitle}</div>
+    <div class="-mt-1 text-[9px] leading-2.5">{props.subtitle}</div>
   </div>
 );
 
@@ -31,7 +45,7 @@ export const Labelled: Component<ParentProps<{ label: string }>> = (props) => (
     >
       {props.label}
     </div>
-    {props.children}
+    <div class="px-3">{props.children}</div>
   </div>
 );
 

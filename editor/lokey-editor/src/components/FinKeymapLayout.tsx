@@ -1,5 +1,6 @@
 import { For } from "solid-js";
 import type { Component } from "solid-js";
+import type { KeyAction } from "lokey-editor-core";
 import { KeyButton } from "lokey-editor-core/components/keymap";
 import {
   useKeyboardActions,
@@ -17,8 +18,13 @@ export const FinKeymapLayout: Component = () => {
     const layer = selectedLayer();
     return keyboardActions
       .actions()
-      .map((layers) => layers[layer])
-      .filter((action) => action !== undefined);
+      .map((layers, keyIndex) => ({ keyIndex, layer, action: layers[layer] }))
+      .filter(
+        (
+          entry,
+        ): entry is { keyIndex: number; layer: number; action: KeyAction } =>
+          entry.action !== undefined,
+      );
   };
 
   return (
@@ -47,7 +53,18 @@ export const FinKeymapLayout: Component = () => {
       />
       <div class={styles.key_button_container}>
         <For each={keyActions()}>
-          {(action) => <KeyButton keyAction={action} />}
+          {(entry) => (
+            <KeyButton
+              keyAction={entry.action}
+              onSelect={(action) => {
+                void keyboardActions.setAction(
+                  entry.keyIndex,
+                  entry.layer,
+                  action,
+                );
+              }}
+            />
+          )}
         </For>
       </div>
     </div>

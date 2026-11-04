@@ -33,6 +33,13 @@ export interface RenderContext {
   renderTooltip(action: KeyAction): JSX.Element;
 }
 
+export interface PickerContext {
+  /** Selects the action and closes the picker. */
+  onSelect(action: KeyAction): void;
+  /** Renders a child action for display in the picker. */
+  renderAction(action: KeyAction): JSX.Element;
+}
+
 export interface ActionDefinition<A extends KeyAction> {
   /** The protocol action ID. Must be unique across all registered actions. */
   readonly actionId: number;
@@ -47,6 +54,17 @@ export interface ActionDefinition<A extends KeyAction> {
 
   remap(action: A, ctx: RemapContext): A;
   children(action: A): KeyAction[];
+
+  /**
+   * Renders a preview for the action picker. Optional; falls back to `render`.
+   * Composite actions should implement this to expose their children.
+   */
+  renderPicker?(action: A, ctx: PickerContext): JSX.Element;
+  /**
+   * Rebuilds the action with new children. Optional; only needed for composite
+   * actions that expose their children in the picker.
+   */
+  withChildren?(action: A, children: KeyAction[]): A;
 }
 
 /** Identity helper that preserves the concrete action type. */
