@@ -73,7 +73,7 @@ const ActionGrid: Component<{
   onSelect: (action: KeyAction) => void;
   selectedAction?: KeyAction;
 }> = (props) => (
-  <div class="grid grid-cols-[repeat(auto-fill,minmax(56px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
+  <div class="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
     <For each={props.entries}>
       {(entry) => (
         <Tooltip.Root positioning={{ placement: "bottom", flip: false }}>
@@ -81,7 +81,7 @@ const ActionGrid: Component<{
             type="button"
             aria-label={entry.label}
             class={`
-              relative flex h-14 sm:h-16 w-full cursor-pointer items-center justify-center
+              relative flex h-16 w-full cursor-pointer items-center justify-center
               rounded-lg overflow
               text-neutral-900 bg-neutral-200 hover:bg-neutral-300
               dark:text-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700
