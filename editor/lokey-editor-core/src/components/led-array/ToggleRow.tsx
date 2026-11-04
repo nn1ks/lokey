@@ -20,7 +20,9 @@ export const ToggleRow: Component<ToggleRowProps> = (props) => {
     >
       <Switch.Label class="flex min-w-0 flex-1 flex-col">
         <div>{props.label}</div>
-        <div class="text-neutral-500">{props.description}</div>
+        <div class="text-neutral-500 dark:text-neutral-400">
+          {props.description}
+        </div>
       </Switch.Label>
       <Switch.Control
         class="
