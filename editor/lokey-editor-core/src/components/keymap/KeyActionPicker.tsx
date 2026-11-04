@@ -21,7 +21,7 @@ import type { KeyCodeCategory } from "./key-code-groups";
 import { Unordered } from "../../key-action/actions/unordered";
 
 export type KeyActionPickerProps = {
-  onSelect: (action: KeyAction) => void;
+  onSelect: (action: KeyAction, close: boolean) => void;
   selectedAction?: KeyAction;
 };
 
@@ -125,7 +125,7 @@ const ActionGrid: Component<{
 
 const PickerActionList: Component<{
   entries: readonly PickerEntry[];
-  onSelect: (action: KeyAction) => void;
+  onSelect: (action: KeyAction, close: boolean) => void;
   selectedAction?: KeyAction;
 }> = (props) => (
   <div class="flex flex-col gap-4">
@@ -205,7 +205,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
         <div class="flex flex-col gap-4">
           <ActionGrid
             entries={leafActionEntries()}
-            onSelect={props.onSelect}
+            onSelect={(action) => props.onSelect(action, true)}
             selectedAction={props.selectedAction}
           />
           <PickerActionList
@@ -220,7 +220,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
           <Tabs.Content value={category} class="data-[state=closed]:hidden">
             <ActionGrid
               entries={keyCodeEntries.get(category)!}
-              onSelect={props.onSelect}
+              onSelect={(action) => props.onSelect(action, true)}
               selectedAction={props.selectedAction}
             />
           </Tabs.Content>

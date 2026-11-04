@@ -6,7 +6,7 @@ import { ActionRenderer } from "./ActionRenderer";
 
 export type ActionPickerRendererProps = {
   action: KeyAction;
-  onSelect: (action: KeyAction) => void;
+  onSelect: (action: KeyAction, close: boolean) => void;
 };
 
 export const ActionPickerRenderer: Component<ActionPickerRendererProps> = (
@@ -15,7 +15,7 @@ export const ActionPickerRenderer: Component<ActionPickerRendererProps> = (
   const registry = useActionRegistry();
 
   const ctx = (): PickerContext => ({
-    onSelect: (action) => props.onSelect(action),
+    onSelect: (action, close) => props.onSelect(action, close),
     renderAction: (action) => <ActionRenderer action={action} level={0} />,
   });
 

@@ -39,7 +39,7 @@ const UnorderedPicker: Component<{
     <div class="flex flex-col gap-2">
       <ActionPickerHeader
         label="Unordered"
-        onSelect={() => props.ctx.onSelect(currentAction())}
+        onSelect={() => props.ctx.onSelect(currentAction(), true)}
       />
       <ActionPickerChildRow
         label="1"
@@ -48,6 +48,7 @@ const UnorderedPicker: Component<{
           const children = [currentAction().action1, currentAction().action2];
           children[0] = action;
           setCurrentAction(withUnorderedChildren(currentAction(), children));
+          props.ctx.onSelect(currentAction(), false);
         }}
       />
       <ActionPickerChildRow
@@ -57,6 +58,7 @@ const UnorderedPicker: Component<{
           const children = [currentAction().action1, currentAction().action2];
           children[1] = action;
           setCurrentAction(withUnorderedChildren(currentAction(), children));
+          props.ctx.onSelect(currentAction(), false);
         }}
       />
     </div>

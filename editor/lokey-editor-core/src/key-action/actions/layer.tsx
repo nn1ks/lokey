@@ -41,7 +41,7 @@ const LayerPicker: Component<{
     <div class="flex flex-col gap-2">
       <ActionPickerHeader
         label="Layer"
-        onSelect={() => props.ctx.onSelect(props.action)}
+        onSelect={() => props.ctx.onSelect(props.action, true)}
       />
       <Select.Root
         collection={collection()}
@@ -49,7 +49,7 @@ const LayerPicker: Component<{
         onSelect={(details) => {
           const value = details.value[0];
           if (value !== undefined) {
-            props.ctx.onSelect(new Layer(Number(value)));
+            props.ctx.onSelect(new Layer(Number(value)), false);
           }
         }}
       >

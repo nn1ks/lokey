@@ -68,9 +68,11 @@ export const KeyActionPickerDialog: Component<KeyActionPickerDialogProps> = (
               }
             >
               <KeyActionPicker
-                onSelect={(action) => {
+                onSelect={(action, close) => {
                   props.onSelect(action);
-                  props.onOpenChange(false);
+                  if (close) {
+                    props.onOpenChange(false);
+                  }
                 }}
                 selectedAction={props.selectedAction}
               />

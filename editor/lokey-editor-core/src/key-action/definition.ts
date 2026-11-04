@@ -35,7 +35,7 @@ export interface RenderContext {
 
 export interface PickerContext {
   /** Selects the action and closes the picker. */
-  onSelect(action: KeyAction): void;
+  onSelect(action: KeyAction, close: boolean): void;
   /** Renders a child action for display in the picker. */
   renderAction(action: KeyAction): JSX.Element;
 }

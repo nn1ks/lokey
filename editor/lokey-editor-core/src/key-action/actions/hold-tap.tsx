@@ -45,7 +45,7 @@ const HoldTapPicker: Component<{
     <div class="flex flex-col gap-2">
       <ActionPickerHeader
         label="Hold Tap"
-        onSelect={() => props.ctx.onSelect(currentAction())}
+        onSelect={() => props.ctx.onSelect(currentAction(), true)}
       />
       <div class="flex items-center justify-between rounded-sm px-3 h-9 text-left text-sm bg-neutral-50 dark:bg-neutral-900">
         <span>Tapping Term</span>
@@ -54,6 +54,7 @@ const HoldTapPicker: Component<{
           min={0}
           max={10000}
           step={50}
+          onValueCommit={() => props.ctx.onSelect(currentAction(), false)}
           onValueChange={(details) => {
             if (!Number.isNaN(details.valueAsNumber)) {
               setCurrentAction(
@@ -68,6 +69,7 @@ const HoldTapPicker: Component<{
               class="flex w-6 h-full cursor-pointer items-center justify-center rounded-l-full border-r
                 bg-neutral-200 text-neutral-700 hover:bg-neutral-300 border-neutral-300
                 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 dark:border-neutral-700"
+              onClick={() => props.ctx.onSelect(currentAction(), false)}
             >
               −
             </NumberInput.DecrementTrigger>
@@ -79,6 +81,7 @@ const HoldTapPicker: Component<{
               class="flex w-6 h-full cursor-pointer items-center justify-center rounded-r-full border-l
                 bg-neutral-200 text-neutral-700 hover:bg-neutral-300 border-neutral-300
                 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 dark:border-neutral-700"
+              onClick={() => props.ctx.onSelect(currentAction(), false)}
             >
               +
             </NumberInput.IncrementTrigger>
@@ -89,26 +92,28 @@ const HoldTapPicker: Component<{
       <ActionPickerChildRow
         label="Hold"
         action={currentAction().holdAction}
-        onSelect={(action) =>
+        onSelect={(action) => {
           setCurrentAction(
             withHoldTapChildren(currentAction(), [
               action,
               currentAction().tapAction,
             ]),
-          )
-        }
+          );
+          props.ctx.onSelect(currentAction(), false);
+        }}
       />
       <ActionPickerChildRow
         label="Tap"
         action={currentAction().tapAction}
-        onSelect={(action) =>
+        onSelect={(action) => {
           setCurrentAction(
             withHoldTapChildren(currentAction(), [
               currentAction().holdAction,
               action,
             ]),
-          )
-        }
+          );
+          props.ctx.onSelect(currentAction(), false);
+        }}
       />
     </div>
   );

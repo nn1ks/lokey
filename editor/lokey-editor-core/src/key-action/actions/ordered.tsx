@@ -38,7 +38,7 @@ const OrderedPicker: Component<{
     <div class="flex flex-col gap-2">
       <ActionPickerHeader
         label="Ordered"
-        onSelect={() => props.ctx.onSelect(currentAction())}
+        onSelect={() => props.ctx.onSelect(currentAction(), true)}
       />
       <ActionPickerChildRow
         label="1"
@@ -47,6 +47,7 @@ const OrderedPicker: Component<{
           const children = [currentAction().action1, currentAction().action2];
           children[0] = action;
           setCurrentAction(withOrderedChildren(currentAction(), children));
+          props.ctx.onSelect(currentAction(), false);
         }}
       />
       <ActionPickerChildRow
@@ -56,6 +57,7 @@ const OrderedPicker: Component<{
           const children = [currentAction().action1, currentAction().action2];
           children[1] = action;
           setCurrentAction(withOrderedChildren(currentAction(), children));
+          props.ctx.onSelect(currentAction(), false);
         }}
       />
     </div>
