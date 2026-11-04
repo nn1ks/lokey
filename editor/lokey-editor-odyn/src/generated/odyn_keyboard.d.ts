@@ -233,7 +233,19 @@ export declare class HoldTapAction extends $.Struct {
   set tappingTerm(value: number);
   toString(): string;
 }
-export declare class SequenceAction extends $.Struct {
+export declare class OrderedAction extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  get action1EntryId(): number;
+  set action1EntryId(value: number);
+  get action2EntryId(): number;
+  set action2EntryId(value: number);
+  toString(): string;
+}
+export declare class UnorderedAction extends $.Struct {
   static readonly _capnp: {
     displayName: string;
     id: string;

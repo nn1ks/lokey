@@ -6,7 +6,7 @@ import { HoldTap } from "../../key-action/actions/hold-tap";
 import { KeyCode } from "../../key-action/actions/key-code";
 import { Layer } from "../../key-action/actions/layer";
 import { None } from "../../key-action/actions/none";
-import { Sequence } from "../../key-action/actions/sequence";
+import { Ordered } from "../../key-action/actions/ordered";
 import { Transparent } from "../../key-action/actions/transparent";
 import type { KeyAction } from "../../key-action/action";
 import StyledTooltipContent from "../StyledTooltipContent";
@@ -149,8 +149,8 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
 
   const pickerActionEntries: readonly PickerEntry[] = [
     { action: new Layer(0), label: "Layer" },
-    { action: new HoldTap(new None(), new None()), label: "Hold/Tap" },
-    { action: new Sequence(new None(), new None()), label: "Sequence" },
+    { action: new HoldTap(new None(), new None()), label: "Hold Tap" },
+    { action: new Ordered(new None(), new None()), label: "Ordered" },
   ];
 
   const leafActionEntries: readonly PickerEntry[] = [

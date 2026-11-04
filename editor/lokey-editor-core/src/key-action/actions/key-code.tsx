@@ -21,7 +21,7 @@ import {
 import {
   KeyCodeAction,
   KeyCodeType,
-  SequenceAction,
+  OrderedAction,
 } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import type { Layout } from "../../layouts";
@@ -825,8 +825,8 @@ function encodeKeyCodeSequence(
   );
 
   const sequenceAction = buildAction(
-    ActionId.sequence,
-    SequenceAction,
+    ActionId.ordered,
+    OrderedAction,
     (action) => {
       action.action1EntryId = entryId1;
       action.action2EntryId = entryId2;

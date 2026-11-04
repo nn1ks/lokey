@@ -397,10 +397,10 @@ export class HoldTapAction extends $.Struct {
   }
   toString() { return "HoldTapAction_" + super.toString(); }
 }
-export class SequenceAction extends $.Struct {
+export class OrderedAction extends $.Struct {
   static _capnp = {
-    displayName: "SequenceAction",
-    id: "869162bde6e0074f",
+    displayName: "OrderedAction",
+    id: "c5b8bc4dea8c138a",
     size: new $.ObjectSize(8, 0),
   };
   get action1EntryId() {
@@ -415,7 +415,27 @@ export class SequenceAction extends $.Struct {
   set action2EntryId(value) {
     $.utils.setUint32(4, value, this);
   }
-  toString() { return "SequenceAction_" + super.toString(); }
+  toString() { return "OrderedAction_" + super.toString(); }
+}
+export class UnorderedAction extends $.Struct {
+  static _capnp = {
+    displayName: "UnorderedAction",
+    id: "a92ff91549ce250a",
+    size: new $.ObjectSize(8, 0),
+  };
+  get action1EntryId() {
+    return $.utils.getUint32(0, this);
+  }
+  set action1EntryId(value) {
+    $.utils.setUint32(0, value, this);
+  }
+  get action2EntryId() {
+    return $.utils.getUint32(4, this);
+  }
+  set action2EntryId(value) {
+    $.utils.setUint32(4, value, this);
+  }
+  toString() { return "UnorderedAction_" + super.toString(); }
 }
 GetActiveActionEntriesResponse._Entries = $.CompositeList(KeyboardActionEntry);
 AddActionEntriesRequest._Entries = $.CompositeList(KeyboardActionEntry);

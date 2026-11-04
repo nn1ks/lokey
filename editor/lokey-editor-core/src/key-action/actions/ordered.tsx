@@ -2,7 +2,7 @@ import * as capnp from "capnp-es";
 import { Ellipsis } from "lucide-solid";
 import { createSignal } from "solid-js";
 import type { Component } from "solid-js";
-import { SequenceAction } from "lokey-editor-odyn/keyboard";
+import { OrderedAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
@@ -13,11 +13,11 @@ import type { PickerContext } from "../definition";
 import { Labelled, Split } from "../render";
 import { KeyCode, keyCodesForLayout, reverseKeyCodes } from "./key-code";
 
-export class Sequence<
+export class Ordered<
   A1 extends KeyAction = KeyAction,
   A2 extends KeyAction = KeyAction,
 > implements KeyAction {
-  readonly actionId = ActionId.sequence;
+  readonly actionId = ActionId.ordered;
 
   constructor(
     readonly action1: A1,
@@ -25,13 +25,11 @@ export class Sequence<
   ) {}
 }
 
-const withSequenceChildren = (
-  action: Sequence,
-  children: KeyAction[],
-): Sequence => new Sequence(children[0]!, children[1]!);
+const withOrderedChildren = (action: Ordered, children: KeyAction[]): Ordered =>
+  new Ordered(children[0]!, children[1]!);
 
-const SequencePicker: Component<{
-  action: Sequence;
+const OrederedPicker: Component<{
+  action: Ordered;
   ctx: PickerContext;
 }> = (props) => {
   const [currentAction, setCurrentAction] = createSignal(props.action);
@@ -39,7 +37,7 @@ const SequencePicker: Component<{
   return (
     <div class="flex flex-col gap-2">
       <ActionPickerHeader
-        label="Sequence"
+        label="Ordered"
         onSelect={() => props.ctx.onSelect(currentAction())}
       />
       <ActionPickerChildRow
@@ -48,7 +46,7 @@ const SequencePicker: Component<{
         onSelect={(action) => {
           const children = [currentAction().action1, currentAction().action2];
           children[0] = action;
-          setCurrentAction(withSequenceChildren(currentAction(), children));
+          setCurrentAction(withOrderedChildren(currentAction(), children));
         }}
       />
       <ActionPickerChildRow
@@ -57,16 +55,16 @@ const SequencePicker: Component<{
         onSelect={(action) => {
           const children = [currentAction().action1, currentAction().action2];
           children[1] = action;
-          setCurrentAction(withSequenceChildren(currentAction(), children));
+          setCurrentAction(withOrderedChildren(currentAction(), children));
         }}
       />
     </div>
   );
 };
 
-export const sequenceActionDefinition = defineAction<Sequence>({
-  actionId: ActionId.sequence,
-  label: "Sequence",
+export const orderedActionDefinition = defineAction<Ordered>({
+  actionId: ActionId.ordered,
+  label: "Ordered",
   encode: (action, ctx) => {
     const action1EntryId = ctx.encodeChild(action.action1);
     const action2EntryId = ctx.encodeChild(action.action2);
@@ -74,9 +72,9 @@ export const sequenceActionDefinition = defineAction<Sequence>({
     return {
       rootActionEntry: buildActionEntry(
         ctx.allocateEntryId(),
-        buildAction(ActionId.sequence, SequenceAction, (sequenceAction) => {
-          sequenceAction.action1EntryId = action1EntryId;
-          sequenceAction.action2EntryId = action2EntryId;
+        buildAction(ActionId.ordered, OrderedAction, (orderedAction) => {
+          orderedAction.action1EntryId = action1EntryId;
+          orderedAction.action2EntryId = action2EntryId;
         }),
       ),
       childActionEntries: [],
@@ -84,9 +82,9 @@ export const sequenceActionDefinition = defineAction<Sequence>({
   },
   decode: (payload, ctx) => {
     const message = new capnp.Message(payload, false);
-    const sequenceAction = message.getRoot(SequenceAction);
-    const action1 = ctx.decodeChild(sequenceAction.action1EntryId);
-    const action2 = ctx.decodeChild(sequenceAction.action2EntryId);
+    const orderedAction = message.getRoot(OrderedAction);
+    const action1 = ctx.decodeChild(orderedAction.action1EntryId);
+    const action2 = ctx.decodeChild(orderedAction.action2EntryId);
 
     // A sequence that encodes a single character (e.g. German "=" as
     // Shift+0) collapses back into that key code.
@@ -101,7 +99,7 @@ export const sequenceActionDefinition = defineAction<Sequence>({
       }
     }
 
-    return new Sequence(action1, action2);
+    return new Ordered(action1, action2);
   },
   render: (action, level, ctx) => {
     if (level > 0) return <Ellipsis />;
@@ -135,11 +133,11 @@ export const sequenceActionDefinition = defineAction<Sequence>({
     </div>
   ),
   remap: (action, ctx) =>
-    new Sequence(
+    new Ordered(
       ctx.remapAction(action.action1),
       ctx.remapAction(action.action2),
     ),
   children: (action) => [action.action1, action.action2],
-  renderPicker: (action, ctx) => <SequencePicker action={action} ctx={ctx} />,
-  withChildren: withSequenceChildren,
+  renderPicker: (action, ctx) => <OrederedPicker action={action} ctx={ctx} />,
+  withChildren: withOrderedChildren,
 });

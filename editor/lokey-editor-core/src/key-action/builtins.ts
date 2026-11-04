@@ -2,7 +2,7 @@ import { holdTapActionDefinition } from "./actions/hold-tap";
 import { keyCodeActionDefinition } from "./actions/key-code";
 import { layerActionDefinition } from "./actions/layer";
 import { noneActionDefinition } from "./actions/none";
-import { sequenceActionDefinition } from "./actions/sequence";
+import { orderedActionDefinition } from "./actions/ordered";
 import { transparentActionDefinition } from "./actions/transparent";
 import type { ActionRegistry } from "./registry";
 import { createActionRegistry } from "./registry";
@@ -14,7 +14,7 @@ export function createDefaultRegistry(): ActionRegistry {
   registry.register(transparentActionDefinition);
   registry.register(layerActionDefinition);
   registry.register(holdTapActionDefinition);
-  registry.register(sequenceActionDefinition);
+  registry.register(orderedActionDefinition);
   registry.register(keyCodeActionDefinition);
   return registry;
 }

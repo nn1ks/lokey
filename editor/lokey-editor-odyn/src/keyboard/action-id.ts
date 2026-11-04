@@ -8,4 +8,5 @@ export const keyCode = 3;
 export const layer = 4;
 export const perLayer = 5;
 export const holdTap = 6;
-export const sequence = 7;
+export const ordered = 7;
+export const unordered = 8;
