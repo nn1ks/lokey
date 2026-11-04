@@ -47,14 +47,12 @@ export const KeyButton: Component<KeyButtonProps> = (props) => {
           </StyledTooltipContent>
         </Tooltip.Positioner>
       </Tooltip.Root>
-      <Show when={pickerOpen()}>
-        <KeyActionPickerDialog
-          open={pickerOpen()}
-          onOpenChange={setPickerOpen}
-          onSelect={(action) => props.onSelect?.(action)}
-          selectedAction={props.keyAction}
-        />
-      </Show>
+      <KeyActionPickerDialog
+        open={pickerOpen()}
+        onOpenChange={setPickerOpen}
+        onSelect={(action) => props.onSelect?.(action)}
+        selectedAction={props.keyAction}
+      />
     </>
   );
 };

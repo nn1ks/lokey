@@ -1,5 +1,5 @@
 import { Tabs, Tooltip } from "@ark-ui/solid";
-import { For, createEffect, createSignal } from "solid-js";
+import { For, createEffect, createMemo, createSignal } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { Component } from "solid-js";
 import { HoldTap } from "../../key-action/actions/hold-tap";
@@ -17,6 +17,7 @@ import {
   keyCodeCategoryOrder,
   keyCodeGroups,
 } from "./key-code-groups";
+import type { KeyCodeCategory } from "./key-code-groups";
 import { Unordered } from "../../key-action/actions/unordered";
 
 export type KeyActionPickerProps = {
@@ -68,6 +69,16 @@ const tabs = [
   })),
   { value: "behaviour", label: "Behaviour" },
 ];
+
+const keyCodeEntries = new Map<KeyCodeCategory, readonly PickerEntry[]>(
+  keyCodeCategoryOrder.map((category) => [
+    category,
+    keyCodeGroups[category].map((keyCode) => ({
+      action: keyCode,
+      label: keyCode.displayValue(),
+    })),
+  ]),
+);
 
 const ActionGrid: Component<{
   entries: readonly PickerEntry[];
@@ -148,22 +159,24 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
     }
   });
 
-  const pickerActionEntries: readonly PickerEntry[] = [
+  const pickerActionEntries = createMemo<readonly PickerEntry[]>(() => [
     { action: new Layer(0), label: "Layer" },
     { action: new HoldTap(new None(), new None()), label: "Hold Tap" },
     { action: new Ordered(new None(), new None()), label: "Ordered" },
     { action: new Unordered(new None(), new None()), label: "Unordered" },
-  ];
+  ]);
 
-  const leafActionEntries: readonly PickerEntry[] = [
+  const leafActionEntries = createMemo<readonly PickerEntry[]>(() => [
     { action: new None(), label: "None" },
     { action: new Transparent(), label: "Transparent" },
-  ];
+  ]);
 
   return (
     <Tabs.Root
       value={activeTab()}
       onValueChange={(details) => setActiveTab(details.value)}
+      lazyMount
+      unmountOnExit
       class="flex flex-col gap-3"
     >
       <Tabs.List class="flex flex-wrap gap-1">
@@ -191,12 +204,12 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
       <Tabs.Content value="behaviour" class="data-[state=closed]:hidden">
         <div class="flex flex-col gap-4">
           <ActionGrid
-            entries={leafActionEntries}
+            entries={leafActionEntries()}
             onSelect={props.onSelect}
             selectedAction={props.selectedAction}
           />
           <PickerActionList
-            entries={pickerActionEntries}
+            entries={pickerActionEntries()}
             onSelect={props.onSelect}
             selectedAction={props.selectedAction}
           />
@@ -206,10 +219,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
         {(category) => (
           <Tabs.Content value={category} class="data-[state=closed]:hidden">
             <ActionGrid
-              entries={keyCodeGroups[category].map((keyCode) => ({
-                action: keyCode,
-                label: keyCode.displayValue(),
-              }))}
+              entries={keyCodeEntries.get(category)!}
               onSelect={props.onSelect}
               selectedAction={props.selectedAction}
             />

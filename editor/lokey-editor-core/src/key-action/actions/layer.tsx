@@ -1,7 +1,7 @@
 import { Select, createListCollection } from "@ark-ui/solid/select";
 import * as capnp from "capnp-es";
 import { ChevronsUpDownIcon, Layers2 } from "lucide-solid";
-import { For } from "solid-js";
+import { For, createMemo } from "solid-js";
 import type { Component } from "solid-js";
 import { Portal } from "solid-js/web";
 import { LayerAction } from "lokey-editor-odyn/keyboard";
@@ -25,12 +25,17 @@ const LayerPicker: Component<{
   ctx: PickerContext;
 }> = (props) => {
   const keyboardActions = useKeyboardActions();
-  const collection = createListCollection({
-    items: Array.from({ length: keyboardActions.layerCount() }, (_, index) => ({
-      value: String(index),
-      label: `Layer ${index + 1}`,
-    })),
-  });
+  const collection = createMemo(() =>
+    createListCollection({
+      items: Array.from(
+        { length: keyboardActions.layerCount() },
+        (_, index) => ({
+          value: String(index),
+          label: `Layer ${index + 1}`,
+        }),
+      ),
+    }),
+  );
 
   return (
     <div class="flex flex-col gap-2">
@@ -39,7 +44,7 @@ const LayerPicker: Component<{
         onSelect={() => props.ctx.onSelect(props.action)}
       />
       <Select.Root
-        collection={collection}
+        collection={collection()}
         value={[String(props.action.index)]}
         onSelect={(details) => {
           const value = details.value[0];
@@ -73,7 +78,7 @@ const LayerPicker: Component<{
                 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100
               "
             >
-              <For each={collection.items}>
+              <For each={collection().items}>
                 {(item) => (
                   <Select.Item
                     class="
