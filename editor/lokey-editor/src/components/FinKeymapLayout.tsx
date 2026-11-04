@@ -1,6 +1,5 @@
-import { For } from "solid-js";
+import { Index, Show, createMemo } from "solid-js";
 import type { Component } from "solid-js";
-import type { KeyAction } from "lokey-editor-core";
 import { KeyButton } from "lokey-editor-core/components/keymap";
 import {
   useKeyboardActions,
@@ -14,18 +13,12 @@ export const FinKeymapLayout: Component = () => {
   const selectedLayer = useSelectedLayer();
   const { theme } = useTheme();
 
-  const keyActions = () => {
-    const layer = selectedLayer();
-    return keyboardActions
-      .actions()
-      .map((layers, keyIndex) => ({ keyIndex, layer, action: layers[layer] }))
-      .filter(
-        (
-          entry,
-        ): entry is { keyIndex: number; layer: number; action: KeyAction } =>
-          entry.action !== undefined,
-      );
-  };
+  const keyIndices = createMemo(() =>
+    Array.from(
+      { length: keyboardActions.actions().length },
+      (_, index) => index,
+    ),
+  );
 
   return (
     <div
@@ -52,20 +45,31 @@ export const FinKeymapLayout: Component = () => {
         alt="Fin keyboard layout"
       />
       <div class={styles.key_button_container}>
-        <For each={keyActions()}>
-          {(entry) => (
-            <KeyButton
-              keyAction={entry.action}
-              onSelect={(action) => {
-                void keyboardActions.setAction(
-                  entry.keyIndex,
-                  entry.layer,
-                  action,
-                );
-              }}
-            />
-          )}
-        </For>
+        <Index each={keyIndices()}>
+          {(keyIndex) => {
+            const action = createMemo(() => {
+              const layer = selectedLayer();
+              return keyboardActions.actions()[keyIndex()]?.[layer];
+            });
+
+            return (
+              <Show when={action()}>
+                {(action) => (
+                  <KeyButton
+                    keyAction={action()}
+                    onSelect={(newAction) => {
+                      void keyboardActions.setAction(
+                        keyIndex(),
+                        selectedLayer(),
+                        newAction,
+                      );
+                    }}
+                  />
+                )}
+              </Show>
+            );
+          }}
+        </Index>
       </div>
     </div>
   );
