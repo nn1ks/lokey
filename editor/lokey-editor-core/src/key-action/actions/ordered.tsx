@@ -28,7 +28,7 @@ export class Ordered<
 const withOrderedChildren = (action: Ordered, children: KeyAction[]): Ordered =>
   new Ordered(children[0]!, children[1]!);
 
-const OrederedPicker: Component<{
+const OrderedPicker: Component<{
   action: Ordered;
   ctx: PickerContext;
 }> = (props) => {
@@ -138,6 +138,6 @@ export const orderedActionDefinition = defineAction<Ordered>({
       ctx.remapAction(action.action2),
     ),
   children: (action) => [action.action1, action.action2],
-  renderPicker: (action, ctx) => <OrederedPicker action={action} ctx={ctx} />,
+  renderPicker: (action, ctx) => <OrderedPicker action={action} ctx={ctx} />,
   withChildren: withOrderedChildren,
 });

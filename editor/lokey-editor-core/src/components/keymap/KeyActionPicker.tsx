@@ -17,6 +17,7 @@ import {
   keyCodeCategoryOrder,
   keyCodeGroups,
 } from "./key-code-groups";
+import { Unordered } from "../../key-action/actions/unordered";
 
 export type KeyActionPickerProps = {
   onSelect: (action: KeyAction) => void;
@@ -151,6 +152,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
     { action: new Layer(0), label: "Layer" },
     { action: new HoldTap(new None(), new None()), label: "Hold Tap" },
     { action: new Ordered(new None(), new None()), label: "Ordered" },
+    { action: new Unordered(new None(), new None()), label: "Unordered" },
   ];
 
   const leafActionEntries: readonly PickerEntry[] = [
