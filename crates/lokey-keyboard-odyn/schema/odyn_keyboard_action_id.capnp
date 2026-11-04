@@ -9,4 +9,5 @@ const keyCode :UInt32 = 3;
 const layer :UInt32 = 4;
 const perLayer :UInt32 = 5;
 const holdTap :UInt32 = 6;
-const sequence :UInt32 = 7;
+const ordered :UInt32 = 7;
+const unordered :UInt32 = 8;

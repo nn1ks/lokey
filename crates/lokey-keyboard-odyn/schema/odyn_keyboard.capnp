@@ -86,7 +86,12 @@ struct HoldTapAction {
   tappingTerm @2 :UInt32;
 }
 
-struct SequenceAction {
+struct OrderedAction {
+  action1EntryId @0 :UInt32;
+  action2EntryId @1 :UInt32;
+}
+
+struct UnorderedAction {
   action1EntryId @0 :UInt32;
   action2EntryId @1 :UInt32;
 }
