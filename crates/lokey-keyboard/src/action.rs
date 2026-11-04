@@ -185,17 +185,17 @@ impl Action for NoOp {
     }
 }
 
-pub struct Concurrent<A> {
+pub struct Unordered<A> {
     action_container: A,
 }
 
-impl<A> Concurrent<A> {
+impl<A> Unordered<A> {
     pub const fn new(action_container: A) -> Self {
         Self { action_container }
     }
 }
 
-impl<A: ConcurrentActionContainer> Action for Concurrent<A> {
+impl<A: ConcurrentActionContainer> Action for Unordered<A> {
     async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
     where
         D: Device,
@@ -215,17 +215,17 @@ impl<A: ConcurrentActionContainer> Action for Concurrent<A> {
     }
 }
 
-pub struct Sequence<A> {
+pub struct Ordered<A> {
     action_container: A,
 }
 
-impl<A> Sequence<A> {
+impl<A> Ordered<A> {
     pub const fn new(action_container: A) -> Self {
         Self { action_container }
     }
 }
 
-impl<A: ActionContainer> Action for Sequence<A> {
+impl<A: ActionContainer> Action for Ordered<A> {
     async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
     where
         D: Device,
