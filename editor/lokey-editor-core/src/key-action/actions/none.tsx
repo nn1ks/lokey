@@ -5,11 +5,11 @@ import type { KeyAction } from "../action";
 import { buildAction, buildActionEntry } from "../codec/entries";
 import { defineAction } from "../definition";
 
-export class NoAction implements KeyAction {
+export class None implements KeyAction {
   readonly actionId = ActionId.none;
 }
 
-export const noActionDefinition = defineAction<NoAction>({
+export const noneActionDefinition = defineAction<None>({
   actionId: ActionId.none,
   label: "None",
   encode: (_action, ctx) => ({
@@ -19,7 +19,7 @@ export const noActionDefinition = defineAction<NoAction>({
     ),
     childActionEntries: [],
   }),
-  decode: () => new NoAction(),
+  decode: () => new None(),
   render: () => <CircleOff />,
   renderTooltip: () => <>None</>,
   remap: (action) => action,

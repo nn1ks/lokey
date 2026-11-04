@@ -2,7 +2,7 @@ import { Ellipsis } from "lucide-solid";
 import { Show, createSignal } from "solid-js";
 import type { Component } from "solid-js";
 import type { KeyAction } from "../../key-action";
-import { NoAction } from "../../key-action/actions/none";
+import { None } from "../../key-action/actions/none";
 import KeyActionPicker from "./KeyActionPicker";
 
 export type ActionPickerChildRowProps = {
@@ -15,7 +15,7 @@ export const ActionPickerChildRow: Component<ActionPickerChildRowProps> = (
   props,
 ) => {
   const [pickerOpen, setPickerOpen] = createSignal(
-    !(props.action instanceof NoAction),
+    !(props.action instanceof None),
   );
 
   return (
@@ -31,7 +31,7 @@ export const ActionPickerChildRow: Component<ActionPickerChildRowProps> = (
         <span>{props.label}</span>
         <div class="text-neutral-500 dark:text-neutral-400">
           <Show
-            when={props.action instanceof NoAction}
+            when={props.action instanceof None}
             fallback={<Ellipsis size="20" class="stroke-1.5" />}
           >
             <span>None</span>

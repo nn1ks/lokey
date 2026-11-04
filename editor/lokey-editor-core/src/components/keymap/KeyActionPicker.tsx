@@ -5,7 +5,7 @@ import type { Component } from "solid-js";
 import { HoldTap } from "../../key-action/actions/hold-tap";
 import { KeyCode } from "../../key-action/actions/key-code";
 import { Layer } from "../../key-action/actions/layer";
-import { NoAction } from "../../key-action/actions/none";
+import { None } from "../../key-action/actions/none";
 import { Sequence } from "../../key-action/actions/sequence";
 import { Transparent } from "../../key-action/actions/transparent";
 import type { KeyAction } from "../../key-action/action";
@@ -149,12 +149,12 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
 
   const pickerActionEntries: readonly PickerEntry[] = [
     { action: new Layer(0), label: "Layer" },
-    { action: new HoldTap(new NoAction(), new NoAction()), label: "Hold/Tap" },
-    { action: new Sequence(new NoAction(), new NoAction()), label: "Sequence" },
+    { action: new HoldTap(new None(), new None()), label: "Hold/Tap" },
+    { action: new Sequence(new None(), new None()), label: "Sequence" },
   ];
 
   const leafActionEntries: readonly PickerEntry[] = [
-    { action: new NoAction(), label: "None" },
+    { action: new None(), label: "None" },
     { action: new Transparent(), label: "Transparent" },
   ];
 

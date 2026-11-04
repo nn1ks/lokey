@@ -1,11 +1,4 @@
-import type { HoldTap } from "./hold-tap";
-import type { KeyCode } from "./key-code";
-import type { Layer } from "./layer";
-import type { NoAction } from "./none";
-import type { Sequence } from "./sequence";
-import type { Transparent } from "./transparent";
-
-export { NoAction, noActionDefinition } from "./none";
+export { None, noneActionDefinition } from "./none";
 export { Transparent, transparentActionDefinition } from "./transparent";
 export { Layer, layerActionDefinition } from "./layer";
 export { HoldTap, holdTapActionDefinition } from "./hold-tap";

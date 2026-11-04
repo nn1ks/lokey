@@ -13,7 +13,7 @@ import {
   GetLayoutResponse,
   KeyboardActionEntry,
 } from "lokey-editor-odyn/keyboard";
-import { NoAction } from "../key-action/actions/none";
+import { None } from "../key-action/actions/none";
 import type { KeyAction, RootKeyAction } from "../key-action";
 import { decodeKeyState, encodeKeyState } from "../key-action/codec/key-state";
 import type { ActionRegistry } from "../key-action/registry";
@@ -23,7 +23,7 @@ import { useMessageManager } from ".";
 import type { MessageManager } from "../protocol/MessageManager";
 import { ActionRegistryContextProvider } from "./ActionRegistryContext";
 
-const noneAction: KeyAction = new NoAction();
+const noneAction: KeyAction = new None();
 
 export class KeyboardActionContextValue {
   readonly layerCount: Accessor<number>;

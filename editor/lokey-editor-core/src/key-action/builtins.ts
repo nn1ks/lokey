@@ -1,7 +1,7 @@
 import { holdTapActionDefinition } from "./actions/hold-tap";
 import { keyCodeActionDefinition } from "./actions/key-code";
 import { layerActionDefinition } from "./actions/layer";
-import { noActionDefinition } from "./actions/none";
+import { noneActionDefinition } from "./actions/none";
 import { sequenceActionDefinition } from "./actions/sequence";
 import { transparentActionDefinition } from "./actions/transparent";
 import type { ActionRegistry } from "./registry";
@@ -10,7 +10,7 @@ import { createActionRegistry } from "./registry";
 /** Creates a registry populated with the built-in action definitions. */
 export function createDefaultRegistry(): ActionRegistry {
   const registry = createActionRegistry();
-  registry.register(noActionDefinition);
+  registry.register(noneActionDefinition);
   registry.register(transparentActionDefinition);
   registry.register(layerActionDefinition);
   registry.register(holdTapActionDefinition);
