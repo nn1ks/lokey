@@ -1,4 +1,4 @@
-import { Ellipsis } from "lucide-solid";
+import { ChevronRight, Ellipsis } from "lucide-solid";
 import { Show, createSignal } from "solid-js";
 import type { Component } from "solid-js";
 import type { KeyAction } from "../../key-action";
@@ -22,13 +22,20 @@ export const ActionPickerChildRow: Component<ActionPickerChildRowProps> = (
     <div class="flex flex-col gap-2">
       <button
         type="button"
-        class="flex items-center justify-between rounded-sm px-3 h-9 text-left text-sm
+        class="flex items-center justify-between rounded-sm pl-2 pr-3 h-9 text-left text-sm
           hover:cursor-pointer
           bg-neutral-50 hover:bg-white dark:bg-neutral-900 dark:hover:bg-neutral-950
           transition-colors duration-50"
         onClick={() => setPickerOpen((open) => !open)}
       >
-        <span>{props.label}</span>
+        <div class="flex items-center gap-1">
+          <ChevronRight
+            size="20"
+            class={`-mt-px text-neutral-500 dark:text-neutral-400 transition-transform duration-50
+              ${pickerOpen() ? "rotate-90" : ""}`}
+          />
+          <span>{props.label}</span>
+        </div>
         <div class="text-neutral-500 dark:text-neutral-400">
           <Show
             when={props.action instanceof None}
