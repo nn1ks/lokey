@@ -1,6 +1,9 @@
-import { Index, Show, createMemo } from "solid-js";
+import { Index, Show, createMemo, createSignal } from "solid-js";
 import type { Component } from "solid-js";
-import { KeyButton } from "lokey-editor-core/components/keymap";
+import {
+  KeyActionPickerDialog,
+  KeyButton,
+} from "lokey-editor-core/components/keymap";
 import {
   useKeyboardActions,
   useSelectedLayer,
@@ -12,6 +15,18 @@ export const FinKeymapLayout: Component = () => {
   const keyboardActions = useKeyboardActions();
   const selectedLayer = useSelectedLayer();
   const { theme } = useTheme();
+
+  const [selectedKey, setSelectedKey] = createSignal<{
+    keyIndex: number;
+    layer: number;
+  }>();
+
+  const selectedAction = () => {
+    const key = selectedKey();
+    return key
+      ? keyboardActions.actions()[key.keyIndex]?.[key.layer]
+      : undefined;
+  };
 
   const keyIndices = createMemo(() =>
     Array.from(
@@ -57,13 +72,12 @@ export const FinKeymapLayout: Component = () => {
                 {(action) => (
                   <KeyButton
                     keyAction={action()}
-                    onSelect={(newAction) => {
-                      void keyboardActions.setAction(
-                        keyIndex(),
-                        selectedLayer(),
-                        newAction,
-                      );
-                    }}
+                    onClick={() =>
+                      setSelectedKey({
+                        keyIndex: keyIndex(),
+                        layer: selectedLayer(),
+                      })
+                    }
                   />
                 )}
               </Show>
@@ -71,6 +85,21 @@ export const FinKeymapLayout: Component = () => {
           }}
         </Index>
       </div>
+      <KeyActionPickerDialog
+        open={selectedKey() !== undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedKey(undefined);
+          }
+        }}
+        onSelect={(action) => {
+          const key = selectedKey();
+          if (key) {
+            void keyboardActions.setAction(key.keyIndex, key.layer, action);
+          }
+        }}
+        selectedAction={selectedAction()}
+      />
     </div>
   );
 };
