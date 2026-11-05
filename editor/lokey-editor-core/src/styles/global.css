@@ -33,6 +33,6 @@ body {
   font-family: Inter, sans-serif;
   @apply bg-white;
   @apply dark:bg-black;
-  @apply text-neutral-950;
-  @apply dark:text-neutral-50;
+  @apply text-neutral-900;
+  @apply dark:text-neutral-100;
 }
