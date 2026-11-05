@@ -151,10 +151,30 @@ export const Options: Component<OptionsProps> = (props) => {
       <OptionsSection title="Layout Import/Export">
         <OptionsButtonList>
           <li>
-            <OptionsButton>Import JSON</OptionsButton>
+            <OptionsButton
+              onClick={() => {
+                toast.createToast({
+                  title: "Not supported yet",
+                  description: "JSON import is not supported yet.",
+                  type: "info",
+                });
+              }}
+            >
+              Import JSON
+            </OptionsButton>
           </li>
           <li>
-            <OptionsButton>Export JSON</OptionsButton>
+            <OptionsButton
+              onClick={() => {
+                toast.createToast({
+                  title: "Not supported yet",
+                  description: "JSON export is not supported yet.",
+                  type: "info",
+                });
+              }}
+            >
+              Export JSON
+            </OptionsButton>
           </li>
           <Show when={props.onPrint}>
             <li>
