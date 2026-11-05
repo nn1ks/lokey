@@ -10,7 +10,9 @@ export const TextSubtitleCombination: Component<{
 }> = (props) => (
   <div class="relative mt-0.5 flex flex-col items-center">
     <div>{props.text}</div>
-    <div class="text-[9px] leading-2.5">{props.subtitle}</div>
+    <div class="text-[9px] leading-2.5 text-neutral-500 dark:text-neutral-400">
+      {props.subtitle}
+    </div>
   </div>
 );
 
@@ -20,7 +22,9 @@ export const SmallTextSubtitleCombination: Component<{
 }> = (props) => (
   <div class="relative mt-0.5 flex flex-col items-center">
     <div class="text-[0.75em]">{props.text}</div>
-    <div class="text-[9px] leading-2.5">{props.subtitle}</div>
+    <div class="text-[9px] leading-2.5 text-neutral-500 dark:text-neutral-400">
+      {props.subtitle}
+    </div>
   </div>
 );
 
@@ -30,7 +34,9 @@ export const IconSubtitleCombination: Component<{
 }> = (props) => (
   <div class="relative mt-0.5 flex flex-col items-center gap-1">
     <div>{props.icon}</div>
-    <div class="-mt-1 text-[9px] leading-2.5">{props.subtitle}</div>
+    <div class="-mt-1 text-[9px] leading-2.5 text-neutral-500 dark:text-neutral-400">
+      {props.subtitle}
+    </div>
   </div>
 );
 
@@ -39,7 +45,7 @@ export const Labelled: Component<ParentProps<{ label: string }>> = (props) => (
     <div
       class="
         absolute left-0 ml-0.5 h-full text-center text-[7px] font-semibold
-        tracking-widest text-neutral-500 [text-orientation:sideways]
+        tracking-widest text-neutral-500 dark:text-neutral-400 [text-orientation:sideways]
         [writing-mode:sideways-lr] uppercase
       "
     >
