@@ -137,33 +137,6 @@ export const Options: Component<OptionsProps> = (props) => {
               onClick={() => {
                 toast.createToast({
                   title: "Not supported yet",
-                  description:
-                    "Global key behaviour settings are not supported yet.",
-                  type: "info",
-                });
-              }}
-            >
-              Key Behaviour
-            </OptionsButton>
-          </li>
-          <li>
-            <OptionsButton
-              onClick={() => {
-                toast.createToast({
-                  title: "Not supported yet",
-                  description: "Global macro settings are not supported yet.",
-                  type: "info",
-                });
-              }}
-            >
-              Macros
-            </OptionsButton>
-          </li>
-          <li>
-            <OptionsButton
-              onClick={() => {
-                toast.createToast({
-                  title: "Not supported yet",
                   description: "Combos are not supported yet.",
                   type: "info",
                 });
