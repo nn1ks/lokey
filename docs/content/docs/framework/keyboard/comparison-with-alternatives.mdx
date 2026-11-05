@@ -13,7 +13,7 @@ The following table compares Lokey with two popular keyboard firmware alternativ
 | **BLE Dongle** | ✅ | ❌ | ✅ |
 | **Dynamic BLE Roles**[^dynamic-ble-roles] | ✅ | ❌ | ❌ |
 | **Split Keyboard** | ✅[^lokey-split-keyboard] | ✅ | ✅ |
-| **Runtime Remapping** | ❌ | ✅[^qmk-runtime-remapping] | ✅[^zmk-runtime-remapping] |
+| **Runtime Remapping** | ✅[^lokey-runtime-remapping] | ✅[^qmk-runtime-remapping] | ✅[^zmk-runtime-remapping] |
 | **Rotary Encoder** | ❌ | ✅ | ✅ |
 | **Display** | ❌ | ✅ | ✅ |
 | **Backlight/RGB** | ❌ | ✅ | ✅ |
@@ -36,5 +36,6 @@ The following table compares Lokey with two popular keyboard firmware alternativ
 
 [^dynamic-ble-roles]: Dynamic BLE roles let a device switch between central and peripheral roles at runtime. For example, this allows switching between using a BLE dongle and connecting directly to a host over BLE without reflashing the device. Lokey supports this at runtime, while in ZMK the role is fixed at compile time.
 [^lokey-split-keyboard]: Lokey currently only supports split keyboards where the halves communicate over BLE. Serial communication between halves is planned.
+[^lokey-runtime-remapping]: Lokey can be remapped at runtime with Lokey Editor
 [^qmk-runtime-remapping]: QMK can be remapped at runtime with Via/Vial
 [^zmk-runtime-remapping]: ZMK can be remapped at runtime with ZMK Studio
