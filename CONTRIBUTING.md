@@ -148,6 +148,16 @@ Use `npm run build` for a production build.
 - Keep PRs focused and small when possible
 - Update docs and examples when behavior changes
 
+## Commit message conventions
+
+- If a change only affects one crate (see crates in [crates/](/crates/)), prefix the commit message with `<crate-name>:`
+  - Example: `lokey-keyboard: Add HoldTap action`
+- If a change only affects Lokey Editor (see [editor/](/editor/)), prefix the commit message with `editor:`
+  - Example: `editor: Add support for device xyz`
+- If a change only affects the documentation website (see [docs/](/docs/)), prefix the commit message with `docs:`
+  - Example: `docs: Fix broken link in troubleshooting page`
+- Otherwise, don't add a prefix to the commit message
+
 ## License
 
 By contributing, you agree that your work is dual-licensed under Apache-2.0 or MIT, consistent with the project licenses.
