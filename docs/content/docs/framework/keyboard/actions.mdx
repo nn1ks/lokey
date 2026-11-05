@@ -68,20 +68,20 @@ Sticky::new(Key::LCtrl)
     .ignore_modifiers(true) // optional, defaults to true
 ```
 
-### Sequence
+### Ordered
 
-The [`Sequence`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/action/struct.Sequence.html) action executes a sequence of other actions in order. Each action in the sequence is executed after the previous one has completed.
+The [`Ordered`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/action/struct.Ordered.html) action activates multiple other actions in the order they are listed. On key press, it calls each child's `on_press` in order. On release, it calls each child's `on_release` in reverse order.
 
 ```rust title="Example"
-// Sends the key codes "A", "B" and "C" in order
-Sequence::new((Key::A, Key::B, Key::C))
+// Presses "A", "B" and "C" in order, then releases them in reverse order
+Ordered::new((Key::A, Key::B, Key::C))
 ```
 
-### Concurrent
+### Unordered
 
-The [`Concurrent`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/action/struct.Concurrent.html) action executes multiple other actions concurrently.
+The [`Unordered`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/action/struct.Unordered.html) action executes multiple other actions concurrently without an explicit order.
 
 ```rust title="Example"
 // Sends the key code "A" and switches to layer 1
-Concurrent::new((Key::A, Layer::new(LayerId(1))))
+Unordered::new((Key::A, Layer::new(LayerId(1))))
 ```
