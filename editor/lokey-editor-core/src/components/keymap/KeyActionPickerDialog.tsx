@@ -1,6 +1,6 @@
 import { Dialog } from "@ark-ui/solid";
 import { Portal } from "solid-js/web";
-import { createSignal } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import type { Component } from "solid-js";
 import type { KeyAction } from "../../key-action";
 import KeyActionPicker from "./KeyActionPicker";
@@ -17,6 +17,23 @@ export const KeyActionPickerDialog: Component<KeyActionPickerDialogProps> = (
   props,
 ) => {
   const [scrolled, setScrolled] = createSignal(false);
+  const [scrollEl, setScrollEl] = createSignal<HTMLDivElement>();
+
+  createEffect(() => {
+    if (!props.open) {
+      return;
+    }
+
+    setScrolled(false);
+    const timeout = setTimeout(() => {
+      const scrollElement = scrollEl();
+      if (scrollElement) {
+        setScrolled(scrollElement.scrollTop > 0);
+      }
+    }, 0);
+
+    onCleanup(() => clearTimeout(timeout));
+  });
 
   return (
     <Dialog.Root
@@ -62,6 +79,7 @@ export const KeyActionPickerDialog: Component<KeyActionPickerDialogProps> = (
               </button>
             </div>
             <div
+              ref={(element) => setScrollEl(element)}
               class="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-4"
               onScroll={(event) =>
                 setScrolled(event.currentTarget.scrollTop > 0)
