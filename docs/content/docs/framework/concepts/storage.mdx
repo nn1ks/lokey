@@ -4,7 +4,7 @@ title: Storage
 
 Persistent storage in Lokey is handled by the [`Storage`](https://docs.rs/lokey/latest/lokey/storage/trait.Storage.html) trait, which provides an async API for storing, fetching, and removing typed entries in non-volatile memory (typically flash). A storage can handle typed entries that implement the [`Entry`](https://docs.rs/lokey/latest/lokey/storage/trait.Entry.html) trait.
 
-The concrete storage backend is created by the MCU, via the [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) trait. See the [MCUs](./mcus.md) page for details.
+The concrete storage backend is created by the MCU, via the [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) trait. See the [MCUs](./mcus) page for details.
 
 See the [`storage`](https://docs.rs/lokey/latest/lokey/storage/) module for the complete API reference.
 

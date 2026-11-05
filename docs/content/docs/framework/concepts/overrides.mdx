@@ -2,13 +2,13 @@
 title: Overrides
 ---
 
-An **override** in Lokey intercepts outgoing messages before they are sent to the host via the [external transport](./external-transports.md), giving firmware code the opportunity to inspect, modify, replace, or suppress individual messages.
+An **override** in Lokey intercepts outgoing messages before they are sent to the host via the [external transport](./external-transports), giving firmware code the opportunity to inspect, modify, replace, or suppress individual messages.
 
 At the type level, an override is any type that implements the [`Override`](https://docs.rs/lokey/latest/lokey/external/trait.Override.html) trait.
 
 ## How overrides work
 
-When a message passes through the [external channel](./external-channel.md), the configured override interjects before the message reaches the transport. The override receives the original message and a [`MessageSender`](https://docs.rs/lokey/latest/lokey/external/struct.MessageSender.html), which it uses to emit zero or more messages into the transport pipeline.
+When a message passes through the [external channel](./external-channel), the configured override interjects before the message reaches the transport. The override receives the original message and a [`MessageSender`](https://docs.rs/lokey/latest/lokey/external/struct.MessageSender.html), which it uses to emit zero or more messages into the transport pipeline.
 
 <Mermaid
   minWidth="700px"
