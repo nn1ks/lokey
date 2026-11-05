@@ -10,6 +10,7 @@ A `Context<D, T, S>` carries the following fields:
 
 - **`address`** – The unique [`Address`](https://docs.rs/lokey/latest/lokey/struct.Address.html) of this device.
 - **`mcu`** – A reference to the initialized [MCU](./mcus.md) instance.
+- **`storage`** – A reference to the [storage](./storage.md) instance.
 - **`internal_channel`** – The [internal channel](./internal-channel.md) for sending messages between device parts.
 - **`external_channel`** – The [external channel](./external-channel.md) for sending messages to and from the host.
 - **`state`** – The [application state](./state.md) shared across all components.
