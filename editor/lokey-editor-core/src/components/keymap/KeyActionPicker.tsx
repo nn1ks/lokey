@@ -13,11 +13,7 @@ import StyledTooltipContent from "../StyledTooltipContent";
 import { ActionRenderer, ActionTooltipRenderer } from "./ActionRenderer";
 import styles from "./KeyActionPicker.module.css";
 import { ActionPickerRenderer } from "./ActionPickerRenderer";
-import {
-  keyCodeCategoryLabels,
-  keyCodeCategoryOrder,
-  keyCodeGroups,
-} from "./key-code-groups";
+import { keyCodeGroups, keyCodeCategoryOrder } from "./key-code-groups";
 import type { KeyCodeCategory } from "./key-code-groups";
 import { Unordered } from "../../key-action/actions/unordered";
 import { useActionRegistry } from "../../contexts/ActionRegistryContext";
@@ -42,21 +38,29 @@ function isSelected(
 
 function tabForAction(action: KeyAction | undefined): string {
   if (!action) {
-    return "letters";
+    return "Letters";
   }
   if (action instanceof KeyCode) {
     for (const category of keyCodeCategoryOrder) {
-      if (
-        keyCodeGroups[category].some(
-          (keyCode) => keyCode.value === action.value,
-        )
-      ) {
-        return category;
+      if (keyCodeGroups[category].kind === "flat") {
+        if (
+          keyCodeGroups[category].content.some(
+            (keyCode) => keyCode.value === action.value,
+          )
+        ) {
+          return category;
+        }
+      } else if (keyCodeGroups[category].kind === "group") {
+        for (const keyCodes of Object.values(keyCodeGroups[category].content)) {
+          if (keyCodes.some((keyCode) => keyCode.value === action.value)) {
+            return category;
+          }
+        }
       }
     }
-    return "letters";
+    return "Letters";
   }
-  return "behaviour";
+  return "Behaviour";
 }
 
 type PickerEntry = {
@@ -64,22 +68,38 @@ type PickerEntry = {
   label: string;
 };
 
-const tabs = [
-  ...keyCodeCategoryOrder.map((category) => ({
-    value: category,
-    label: keyCodeCategoryLabels[category],
-  })),
-  { value: "behaviour", label: "Behaviour" },
-];
+type FlatPickerEntries = readonly PickerEntry[];
 
-const keyCodeEntries = new Map<KeyCodeCategory, readonly PickerEntry[]>(
-  keyCodeCategoryOrder.map((category) => [
-    category,
-    keyCodeGroups[category].map((keyCode) => ({
-      action: keyCode,
-      label: keyCode.displayValue(),
-    })),
-  ]),
+type GroupPickerEntries = Record<string, readonly PickerEntry[]>;
+
+type PickerEntries =
+  | { kind: "flat"; entries: FlatPickerEntries }
+  | { kind: "group"; entries: GroupPickerEntries };
+
+const tabs = [...keyCodeCategoryOrder, "Behaviour"];
+
+const toPickerEntries = (keyCodes: readonly KeyCode[]): FlatPickerEntries =>
+  keyCodes.map((keyCode) => ({
+    action: keyCode,
+    label: keyCode.displayValue(),
+  }));
+
+const keyCodeEntries = new Map<KeyCodeCategory, PickerEntries>(
+  keyCodeCategoryOrder.map((category): [KeyCodeCategory, PickerEntries] => {
+    const content = keyCodeGroups[category];
+    if (content.kind === "flat") {
+      return [
+        category,
+        { kind: "flat", entries: toPickerEntries(content.content) },
+      ];
+    }
+
+    const entries: GroupPickerEntries = {};
+    for (const [group, keyCodes] of Object.entries(content.content)) {
+      entries[group] = toPickerEntries(keyCodes);
+    }
+    return [category, { kind: "group", entries }];
+  }),
 );
 
 const ActionGrid: Component<{
@@ -124,6 +144,59 @@ const ActionGrid: Component<{
     </For>
   </div>
 );
+
+const GroupedActionGrid: Component<{
+  groups: GroupPickerEntries;
+  onSelect: (action: KeyAction) => void;
+  selectedAction?: KeyAction;
+}> = (props) => (
+  <div class="flex flex-col gap-3">
+    <For each={Object.entries(props.groups)}>
+      {([label, entries]) => (
+        <div class="flex flex-col gap-2 pt-1">
+          <div class="text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400">
+            {label}
+          </div>
+          <ActionGrid
+            entries={entries}
+            onSelect={props.onSelect}
+            selectedAction={props.selectedAction}
+          />
+        </div>
+      )}
+    </For>
+  </div>
+);
+
+const CategoryGrid: Component<{
+  entries: PickerEntries;
+  onSelect: (action: KeyAction) => void;
+  selectedAction?: KeyAction;
+}> = (props) => {
+  const entries = () => props.entries;
+  return (
+    <>
+      {entries().kind === "flat" ? (
+        <ActionGrid
+          entries={
+            (entries() as { kind: "flat"; entries: FlatPickerEntries }).entries
+          }
+          onSelect={props.onSelect}
+          selectedAction={props.selectedAction}
+        />
+      ) : (
+        <GroupedActionGrid
+          groups={
+            (entries() as { kind: "group"; entries: GroupPickerEntries })
+              .entries
+          }
+          onSelect={props.onSelect}
+          selectedAction={props.selectedAction}
+        />
+      )}
+    </>
+  );
+};
 
 const PickerActionList: Component<{
   entries: readonly PickerEntry[];
@@ -232,7 +305,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
         <For each={tabs}>
           {(tab) => (
             <Tabs.Trigger
-              value={tab.value}
+              value={tab}
               class="
                 cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium
                 text-neutral-600 transition-colors duration-50
@@ -244,13 +317,13 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
                 dark:data-selected:text-neutral-100
               "
             >
-              {tab.label}
+              {tab}
             </Tabs.Trigger>
           )}
         </For>
       </Tabs.List>
       <div class="h-px w-full bg-neutral-200 dark:bg-neutral-800"></div>
-      <Tabs.Content value="behaviour" class="data-[state=closed]:hidden">
+      <Tabs.Content value="Behaviour" class="data-[state=closed]:hidden">
         <div class="flex flex-col gap-2">
           <ActionGrid
             entries={leafActionEntries()}
@@ -267,7 +340,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
       <For each={keyCodeCategoryOrder}>
         {(category) => (
           <Tabs.Content value={category} class="data-[state=closed]:hidden">
-            <ActionGrid
+            <CategoryGrid
               entries={keyCodeEntries.get(category)!}
               onSelect={(action) => props.onSelect(action, true)}
               selectedAction={props.selectedAction}
