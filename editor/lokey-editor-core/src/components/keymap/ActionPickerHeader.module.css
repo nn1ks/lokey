@@ -1,0 +1,5 @@
+.accordionItemTrigger
+  [data-scope="accordion"][data-part="item-indicator"][data-state="open"]
+  > * {
+  rotate: 90deg;
+}

@@ -1,17 +1,18 @@
-import { NumberInput } from "@ark-ui/solid/number-input";
 import * as capnp from "capnp-es";
-import { Ellipsis } from "lucide-solid";
+import { ChevronRight, Ellipsis } from "lucide-solid";
 import { createSignal } from "solid-js";
 import type { Component } from "solid-js";
 import { HoldTapAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
+import { ActionPickerDurationRow } from "../../components/keymap/ActionPickerDurationRow";
 import type { KeyAction } from "../action";
 import { buildAction, buildActionEntry } from "../codec/entries";
 import { defineAction } from "../definition";
 import type { PickerContext } from "../definition";
 import { Labelled, Split } from "../render";
+import { Accordion } from "@ark-ui/solid/accordion";
 
 export class HoldTap<
   H extends KeyAction = KeyAction,
@@ -42,80 +43,55 @@ const HoldTapPicker: Component<{
   const [currentAction, setCurrentAction] = createSignal(props.action);
 
   return (
-    <div class="flex flex-col gap-2">
+    <>
       <ActionPickerHeader
         label="Hold Tap"
+        withAccordionTrigger={true}
         onSelect={() => props.ctx.onSelect(currentAction(), true)}
       />
-      <div class="flex items-center justify-between rounded-sm px-3 h-9 text-left text-sm bg-neutral-50 dark:bg-neutral-900">
-        <span>Tapping Term</span>
-        <NumberInput.Root
-          value={String(currentAction().tappingTerm)}
-          min={0}
-          max={10000}
-          step={50}
-          onValueCommit={() => props.ctx.onSelect(currentAction(), false)}
-          onValueChange={(details) => {
-            if (!Number.isNaN(details.valueAsNumber)) {
+      <Accordion.ItemContent class="data-[state=closed]:hidden">
+        <div class="flex flex-col gap-2 p-2 pt-0">
+          <ActionPickerDurationRow
+            label="Tapping Term"
+            value={currentAction().tappingTerm}
+            min={0}
+            max={10000}
+            step={50}
+            unit="ms"
+            onValueCommit={() => props.ctx.onSelect(currentAction(), false)}
+            onValueChange={(value) => {
+              setCurrentAction(withHoldTapTappingTerm(currentAction(), value));
+            }}
+          />
+          <ActionPickerChildRow
+            label="Hold"
+            action={currentAction().holdAction}
+            onSelect={(action) => {
               setCurrentAction(
-                withHoldTapTappingTerm(currentAction(), details.valueAsNumber),
+                withHoldTapChildren(currentAction(), [
+                  action,
+                  currentAction().tapAction,
+                ]),
               );
-            }
-          }}
-          class="flex items-center gap-1"
-        >
-          <NumberInput.Control class="flex items-center h-6">
-            <NumberInput.DecrementTrigger
-              class="flex w-6 h-full cursor-pointer items-center justify-center rounded-l-full border-r
-                bg-neutral-200 text-neutral-700 hover:bg-neutral-300 border-neutral-300
-                dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 dark:border-neutral-700"
-              onClick={() => props.ctx.onSelect(currentAction(), false)}
-            >
-              −
-            </NumberInput.DecrementTrigger>
-            <NumberInput.Input
-              class="w-14 h-full px-2 py-0.5 text-right text-sm
-              bg-neutral-200 dark:bg-neutral-800"
-            />
-            <NumberInput.IncrementTrigger
-              class="flex w-6 h-full cursor-pointer items-center justify-center rounded-r-full border-l
-                bg-neutral-200 text-neutral-700 hover:bg-neutral-300 border-neutral-300
-                dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 dark:border-neutral-700"
-              onClick={() => props.ctx.onSelect(currentAction(), false)}
-            >
-              +
-            </NumberInput.IncrementTrigger>
-          </NumberInput.Control>
-          <span class="text-neutral-500 dark:text-neutral-400">ms</span>
-        </NumberInput.Root>
-      </div>
-      <ActionPickerChildRow
-        label="Hold"
-        action={currentAction().holdAction}
-        onSelect={(action) => {
-          setCurrentAction(
-            withHoldTapChildren(currentAction(), [
-              action,
-              currentAction().tapAction,
-            ]),
-          );
-          props.ctx.onSelect(currentAction(), false);
-        }}
-      />
-      <ActionPickerChildRow
-        label="Tap"
-        action={currentAction().tapAction}
-        onSelect={(action) => {
-          setCurrentAction(
-            withHoldTapChildren(currentAction(), [
-              currentAction().holdAction,
-              action,
-            ]),
-          );
-          props.ctx.onSelect(currentAction(), false);
-        }}
-      />
-    </div>
+              props.ctx.onSelect(currentAction(), false);
+            }}
+          />
+          <ActionPickerChildRow
+            label="Tap"
+            action={currentAction().tapAction}
+            onSelect={(action) => {
+              setCurrentAction(
+                withHoldTapChildren(currentAction(), [
+                  currentAction().holdAction,
+                  action,
+                ]),
+              );
+              props.ctx.onSelect(currentAction(), false);
+            }}
+          />
+        </div>
+      </Accordion.ItemContent>
+    </>
   );
 };
 

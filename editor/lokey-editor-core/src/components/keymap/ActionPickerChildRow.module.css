@@ -1,0 +1,11 @@
+.accordion
+  [data-scope="accordion"][data-part="item-trigger"][data-state="open"] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.accordion
+  [data-scope="accordion"][data-part="item-indicator"][data-state="open"]
+  > svg {
+  rotate: 90deg;
+}

@@ -38,12 +38,14 @@ const LayerPicker: Component<{
   );
 
   return (
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col">
       <ActionPickerHeader
         label="Layer"
+        withAccordionTrigger={false}
         onSelect={() => props.ctx.onSelect(props.action, true)}
       />
       <Select.Root
+        class="p-2 pt-0"
         collection={collection()}
         value={[String(props.action.index)]}
         onSelect={(details) => {

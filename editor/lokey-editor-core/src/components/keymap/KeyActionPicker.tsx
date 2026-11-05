@@ -1,4 +1,4 @@
-import { Tabs, Tooltip } from "@ark-ui/solid";
+import { Accordion, Tabs, Tooltip } from "@ark-ui/solid";
 import { For, createEffect, createMemo, createSignal } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { Component } from "solid-js";
@@ -11,6 +11,7 @@ import { Transparent } from "../../key-action/actions/transparent";
 import type { KeyAction } from "../../key-action/action";
 import StyledTooltipContent from "../StyledTooltipContent";
 import { ActionRenderer, ActionTooltipRenderer } from "./ActionRenderer";
+import styles from "./KeyActionPicker.module.css";
 import { ActionPickerRenderer } from "./ActionPickerRenderer";
 import {
   keyCodeCategoryLabels,
@@ -19,6 +20,7 @@ import {
 } from "./key-code-groups";
 import type { KeyCodeCategory } from "./key-code-groups";
 import { Unordered } from "../../key-action/actions/unordered";
+import { useActionRegistry } from "../../contexts/ActionRegistryContext";
 
 export type KeyActionPickerProps = {
   onSelect: (action: KeyAction, close: boolean) => void;
@@ -127,26 +129,73 @@ const PickerActionList: Component<{
   entries: readonly PickerEntry[];
   onSelect: (action: KeyAction, close: boolean) => void;
   selectedAction?: KeyAction;
-}> = (props) => (
-  <div class="flex flex-col gap-4">
-    <For each={props.entries}>
-      {(entry) => {
-        const selected = () => isSelected(props.selectedAction, entry.action);
-        const action = () =>
-          selected() ? props.selectedAction! : entry.action;
-        return (
-          <div
-            class={`rounded-lg p-2 bg-neutral-200 dark:bg-neutral-800 ${
-              selected() ? "shadow-[0_0_0_2px_var(--color-accent)]" : ""
-            }`}
-          >
-            <ActionPickerRenderer action={action()} onSelect={props.onSelect} />
-          </div>
-        );
-      }}
-    </For>
-  </div>
-);
+}> = (props) => {
+  const registry = useActionRegistry();
+
+  const selectedAccordion = (): string[] => {
+    const selected = props.selectedAction;
+    if (!selected) {
+      return [];
+    }
+
+    const definition = registry.byId(selected.actionId);
+    if (!definition || definition.children(selected).length === 0) {
+      return [];
+    }
+
+    const entry = props.entries.find((entry) =>
+      isSelected(selected, entry.action),
+    );
+    return entry ? [entry.label] : [];
+  };
+
+  const [value, setValue] = createSignal<string[]>(selectedAccordion());
+
+  createEffect(() => {
+    const next = selectedAccordion();
+    if (next.length === 0) {
+      setValue([]);
+      return;
+    }
+
+    setValue((current) =>
+      next.every((label) => current.includes(label))
+        ? current
+        : [...new Set([...current, ...next])],
+    );
+  });
+
+  return (
+    <Accordion.Root
+      class={`${styles.accordion} flex flex-col gap-2`}
+      collapsible
+      multiple
+      value={value()}
+      onValueChange={(details) => setValue(details.value)}
+    >
+      <For each={props.entries}>
+        {(entry) => {
+          const selected = () => isSelected(props.selectedAction, entry.action);
+          const action = () =>
+            selected() ? props.selectedAction! : entry.action;
+          return (
+            <Accordion.Item
+              class={`rounded-lg bg-neutral-200 dark:bg-neutral-800 ${
+                selected() ? "shadow-[0_0_0_2px_var(--color-accent)]" : ""
+              }`}
+              value={entry.label}
+            >
+              <ActionPickerRenderer
+                action={action()}
+                onSelect={props.onSelect}
+              />
+            </Accordion.Item>
+          );
+        }}
+      </For>
+    </Accordion.Root>
+  );
+};
 
 export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
   const [activeTab, setActiveTab] = createSignal(
@@ -202,7 +251,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
       </Tabs.List>
       <div class="h-px w-full bg-neutral-200 dark:bg-neutral-800"></div>
       <Tabs.Content value="behaviour" class="data-[state=closed]:hidden">
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
           <ActionGrid
             entries={leafActionEntries()}
             onSelect={(action) => props.onSelect(action, true)}

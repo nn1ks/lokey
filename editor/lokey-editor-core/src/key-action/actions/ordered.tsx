@@ -12,6 +12,7 @@ import { defineAction } from "../definition";
 import type { PickerContext } from "../definition";
 import { Labelled, Split } from "../render";
 import { KeyCode, keyCodesForLayout, reverseKeyCodes } from "./key-code";
+import { Accordion } from "@ark-ui/solid";
 
 export class Ordered<
   A1 extends KeyAction = KeyAction,
@@ -35,32 +36,43 @@ const OrderedPicker: Component<{
   const [currentAction, setCurrentAction] = createSignal(props.action);
 
   return (
-    <div class="flex flex-col gap-2">
+    <>
       <ActionPickerHeader
         label="Ordered"
+        withAccordionTrigger={true}
         onSelect={() => props.ctx.onSelect(currentAction(), true)}
       />
-      <ActionPickerChildRow
-        label="1"
-        action={currentAction().action1}
-        onSelect={(action) => {
-          const children = [currentAction().action1, currentAction().action2];
-          children[0] = action;
-          setCurrentAction(withOrderedChildren(currentAction(), children));
-          props.ctx.onSelect(currentAction(), false);
-        }}
-      />
-      <ActionPickerChildRow
-        label="2"
-        action={currentAction().action2}
-        onSelect={(action) => {
-          const children = [currentAction().action1, currentAction().action2];
-          children[1] = action;
-          setCurrentAction(withOrderedChildren(currentAction(), children));
-          props.ctx.onSelect(currentAction(), false);
-        }}
-      />
-    </div>
+      <Accordion.ItemContent class="data-[state=closed]:hidden">
+        <div class="flex flex-col gap-2 p-2 pt-0">
+          <ActionPickerChildRow
+            label="1"
+            action={currentAction().action1}
+            onSelect={(action) => {
+              const children = [
+                currentAction().action1,
+                currentAction().action2,
+              ];
+              children[0] = action;
+              setCurrentAction(withOrderedChildren(currentAction(), children));
+              props.ctx.onSelect(currentAction(), false);
+            }}
+          />
+          <ActionPickerChildRow
+            label="2"
+            action={currentAction().action2}
+            onSelect={(action) => {
+              const children = [
+                currentAction().action1,
+                currentAction().action2,
+              ];
+              children[1] = action;
+              setCurrentAction(withOrderedChildren(currentAction(), children));
+              props.ctx.onSelect(currentAction(), false);
+            }}
+          />
+        </div>
+      </Accordion.ItemContent>
+    </>
   );
 };
 
