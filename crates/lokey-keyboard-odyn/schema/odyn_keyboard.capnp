@@ -99,8 +99,7 @@ struct UnorderedAction {
 struct StickyAction {
   actionEntryId @0 :UInt32;
   timeout @1 :UInt32;
-  lazy @2 :Bool;
-  ignoreModifiers @3 :Bool;
+  ignoreModifiers @2 :Bool;
 }
 
 struct ToggleAction {
