@@ -11,3 +11,5 @@ const perLayer :UInt32 = 5;
 const holdTap :UInt32 = 6;
 const ordered :UInt32 = 7;
 const unordered :UInt32 = 8;
+const sticky :UInt32 = 9;
+const toggle :UInt32 = 10;

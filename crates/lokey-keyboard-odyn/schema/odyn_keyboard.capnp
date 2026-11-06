@@ -95,3 +95,14 @@ struct UnorderedAction {
   action1EntryId @0 :UInt32;
   action2EntryId @1 :UInt32;
 }
+
+struct StickyAction {
+  actionEntryId @0 :UInt32;
+  timeout @1 :UInt32;
+  lazy @2 :Bool;
+  ignoreModifiers @3 :Bool;
+}
+
+struct ToggleAction {
+  actionEntryId @0 :UInt32;
+}
