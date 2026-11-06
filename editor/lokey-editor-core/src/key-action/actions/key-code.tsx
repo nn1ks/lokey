@@ -38,82 +38,14 @@ import {
   SmallTextSubtitleCombination,
   TextSubtitleCombination,
 } from "../render";
+import { None } from "..";
 
 export class KeyCode implements KeyAction {
   readonly actionId = ActionId.keyCode;
+  readonly value: string;
 
-  private constructor(public readonly value: string) {}
-
-  displayValue(): string {
-    const displayValues: Record<string, string> = {
-      LControl: "Left Control",
-      RControl: "Right Control",
-      LShift: "Left Shift",
-      RShift: "Right Shift",
-      LAlt: "Left Alt",
-      RAlt: "Right Alt",
-      LGui: "Left Gui",
-      RGui: "Right Gui",
-      N1: "1",
-      N2: "2",
-      N3: "3",
-      N4: "4",
-      N5: "5",
-      N6: "6",
-      N7: "7",
-      N8: "8",
-      N9: "9",
-      N0: "0",
-      Minus: "-",
-      Equal: "=",
-      LeftBracket: "[",
-      RightBracket: "]",
-      Backslash: "\\",
-      Hash: "#",
-      Semicolon: ";",
-      Apostrophe: "'",
-      Grave: "`",
-      Comma: ",",
-      Dot: ".",
-      Slash: "/",
-    };
-
-    return displayValues[this.value] ?? this.value;
-  }
-
-  tooltipValue(): string | null {
-    switch (this.value) {
-      case "Minus":
-        return "Minus";
-      case "Equal":
-        return "Equal";
-      case "LeftBracket":
-        return "Left Bracket";
-      case "RightBracket":
-        return "Right Bracket";
-      case "Backslash":
-        return "Backslash";
-      case "Hash":
-        return "Hash";
-      case "Semicolon":
-        return "Semicolon";
-      case "Apostrophe":
-        return "Apostrophe";
-      case "Grave":
-        return "Grave";
-      case "Comma":
-        return "Comma";
-      case "Dot":
-        return "Dot";
-      case "Slash":
-        return "Slash";
-      default:
-        return null;
-    }
-  }
-
-  toString(): string {
-    return this.displayValue();
+  private constructor(value: string) {
+    this.value = value;
   }
 
   static readonly LControl = new KeyCode("LControl");
@@ -150,6 +82,10 @@ export class KeyCode implements KeyAction {
   static readonly X = new KeyCode("X");
   static readonly Y = new KeyCode("Y");
   static readonly Z = new KeyCode("Z");
+  static readonly AE = new KeyCode("AE");
+  static readonly OE = new KeyCode("OE");
+  static readonly UE = new KeyCode("UE");
+  static readonly SharpS = new KeyCode("SharpS");
   static readonly N1 = new KeyCode("N1");
   static readonly N2 = new KeyCode("N2");
   static readonly N3 = new KeyCode("N3");
@@ -167,16 +103,40 @@ export class KeyCode implements KeyAction {
   static readonly Space = new KeyCode("Space");
   static readonly Minus = new KeyCode("Minus");
   static readonly Equal = new KeyCode("Equal");
+  static readonly LeftParen = new KeyCode("LeftParen");
+  static readonly RightParen = new KeyCode("RightParen");
   static readonly LeftBracket = new KeyCode("LeftBracket");
   static readonly RightBracket = new KeyCode("RightBracket");
+  static readonly LeftBrace = new KeyCode("LeftBrace");
+  static readonly RightBrace = new KeyCode("RightBrace");
   static readonly Backslash = new KeyCode("Backslash");
   static readonly Hash = new KeyCode("Hash");
   static readonly Semicolon = new KeyCode("Semicolon");
   static readonly Apostrophe = new KeyCode("Apostrophe");
   static readonly Grave = new KeyCode("Grave");
+  static readonly Acute = new KeyCode("Acute");
   static readonly Comma = new KeyCode("Comma");
   static readonly Dot = new KeyCode("Dot");
   static readonly Slash = new KeyCode("Slash");
+  static readonly Tilde = new KeyCode("Tilde");
+  static readonly ExclamationMark = new KeyCode("ExclamationMark");
+  static readonly At = new KeyCode("At");
+  static readonly Dollar = new KeyCode("Dollar");
+  static readonly Percent = new KeyCode("Percent");
+  static readonly Caret = new KeyCode("Caret");
+  static readonly Circ = new KeyCode("Circ");
+  static readonly Ampersand = new KeyCode("Ampersand");
+  static readonly Asterisk = new KeyCode("Asterisk");
+  static readonly Underscore = new KeyCode("Underscore");
+  static readonly Plus = new KeyCode("Plus");
+  static readonly Pipe = new KeyCode("Pipe");
+  static readonly Colon = new KeyCode("Colon");
+  static readonly DoubleQuote = new KeyCode("DoubleQuote");
+  static readonly GreaterThan = new KeyCode("GreaterThan");
+  static readonly LessThan = new KeyCode("LessThan");
+  static readonly QuestionMark = new KeyCode("QuestionMark");
+  static readonly SectionSign = new KeyCode("SectionSign");
+  static readonly Euro = new KeyCode("Euro");
   static readonly CapsLock = new KeyCode("CapsLock");
   static readonly PrintScreen = new KeyCode("PrintScreen");
   static readonly ScrollLock = new KeyCode("ScrollLock");
@@ -339,11 +299,14 @@ function buildReverseKeyCodes(
 
   for (const [keyCode, encoding] of encodings) {
     switch (encoding.kind) {
-      case "simple":
-        simple.set(encoding.keyCode, keyCode);
+      case "single":
+        simple.set(encoding.rawKeyCode.code, keyCode);
         break;
-      case "sequence":
-        sequence.set(`${encoding.modifier}:${encoding.keyCode}`, keyCode);
+      case "combined":
+        sequence.set(
+          `${encoding.rawKeyCode1.code}:${encoding.rawKeyCode2.code}`,
+          keyCode,
+        );
         break;
     }
   }
@@ -377,16 +340,28 @@ export const keyCodeActionDefinition = defineAction<KeyCode>({
   encode: (action, ctx) => {
     const encoding = keyCodesForLayout(ctx.layout).get(action);
     if (!encoding) {
-      throw new Error(`Unexpected key code "${action.value}".`);
+      console.warn(
+        `Invalid key code "${action.value}" for layout "${ctx.layout}".`,
+      );
+      return {
+        rootActionEntry: buildActionEntry(
+          ctx.allocateEntryId(),
+          new None().encode(),
+        ),
+        childActionEntries: [],
+      };
     }
 
     switch (encoding.kind) {
-      case "simple":
-        return encodeKeyCodeSimple(encoding.keyCode, ctx.allocateEntryId);
-      case "sequence":
-        return encodeKeyCodeSequence(
-          encoding.modifier,
-          encoding.keyCode,
+      case "single":
+        return encodeSingleKeyCode(
+          encoding.rawKeyCode.code,
+          ctx.allocateEntryId,
+        );
+      case "combined":
+        return encodeCombinedKeyCode(
+          encoding.rawKeyCode1.code,
+          encoding.rawKeyCode2.code,
           ctx.allocateEntryId,
         );
     }
@@ -466,6 +441,34 @@ export const keyCodeActionDefinition = defineAction<KeyCode>({
         ) : (
           <Command />
         );
+      case KeyCode.AE:
+        return <>Ä</>;
+      case KeyCode.OE:
+        return <>Ö</>;
+      case KeyCode.UE:
+        return <>Ü</>;
+      case KeyCode.SharpS:
+        return <>ß</>;
+      case KeyCode.N1:
+        return <>1</>;
+      case KeyCode.N2:
+        return <>2</>;
+      case KeyCode.N3:
+        return <>3</>;
+      case KeyCode.N4:
+        return <>4</>;
+      case KeyCode.N5:
+        return <>5</>;
+      case KeyCode.N6:
+        return <>6</>;
+      case KeyCode.N7:
+        return <>7</>;
+      case KeyCode.N8:
+        return <>8</>;
+      case KeyCode.N9:
+        return <>9</>;
+      case KeyCode.N0:
+        return <>0</>;
       case KeyCode.Enter:
         return <CornerDownLeft />;
       case KeyCode.Escape:
@@ -478,6 +481,78 @@ export const keyCodeActionDefinition = defineAction<KeyCode>({
         return <SpaceIcon />;
       case KeyCode.CapsLock:
         return <ArrowBigUpDash />;
+      case KeyCode.Minus:
+        return <>-</>;
+      case KeyCode.Equal:
+        return <>=</>;
+      case KeyCode.LeftParen:
+        return <>(</>;
+      case KeyCode.RightParen:
+        return <>)</>;
+      case KeyCode.LeftBracket:
+        return <>[</>;
+      case KeyCode.RightBracket:
+        return <>]</>;
+      case KeyCode.LeftBrace:
+        return <>{"{"}</>;
+      case KeyCode.RightBrace:
+        return <>{"}"}</>;
+      case KeyCode.Backslash:
+        return <>{"\\"}</>;
+      case KeyCode.Hash:
+        return <>#</>;
+      case KeyCode.Semicolon:
+        return <>;</>;
+      case KeyCode.Apostrophe:
+        return <>'</>;
+      case KeyCode.Grave:
+        return <>`</>;
+      case KeyCode.Comma:
+        return <>,</>;
+      case KeyCode.Dot:
+        return <>.</>;
+      case KeyCode.Slash:
+        return <>/</>;
+      case KeyCode.Tilde:
+        return <>~</>;
+      case KeyCode.ExclamationMark:
+        return <>!</>;
+      case KeyCode.At:
+        return <>@</>;
+      case KeyCode.Dollar:
+        return <>$</>;
+      case KeyCode.Euro:
+        return <>€</>;
+      case KeyCode.Percent:
+        return <>%</>;
+      case KeyCode.Caret:
+        return <>^</>;
+      case KeyCode.Ampersand:
+        return <>{"&"}</>;
+      case KeyCode.Asterisk:
+        return <>*</>;
+      case KeyCode.Underscore:
+        return <>_</>;
+      case KeyCode.Plus:
+        return <>+</>;
+      case KeyCode.Pipe:
+        return <>|</>;
+      case KeyCode.Colon:
+        return <>:</>;
+      case KeyCode.DoubleQuote:
+        return <>{'"'}</>;
+      case KeyCode.GreaterThan:
+        return <>{">"}</>;
+      case KeyCode.LessThan:
+        return <>{"<"}</>;
+      case KeyCode.QuestionMark:
+        return <>?</>;
+      case KeyCode.SectionSign:
+        return <>§</>;
+      case KeyCode.Circ:
+        return <>°</>;
+      case KeyCode.Acute:
+        return <>`</>;
       case KeyCode.PrintScreen:
         return <Small>Print Screen</Small>;
       case KeyCode.ScrollLock:
@@ -775,17 +850,17 @@ export const keyCodeActionDefinition = defineAction<KeyCode>({
       case KeyCode.KpPlusMinus:
         return <TextSubtitleCombination text="+-" subtitle="Keypad" />;
       default:
-        return <>{action.displayValue()}</>;
+        return <>{action.value}</>;
     }
   },
   renderTooltip: (action) => {
-    return <>{action.tooltipValue() ?? action.displayValue()}</>;
+    return <>{action.value}</>;
   },
   remap: (action) => action,
   children: () => [],
 });
 
-function encodeKeyCodeSimple(
+function encodeSingleKeyCode(
   value: number,
   allocateEntryId: () => number,
 ): ActionEntries {
@@ -801,7 +876,7 @@ function encodeKeyCodeSimple(
   };
 }
 
-function encodeKeyCodeSequence(
+function encodeCombinedKeyCode(
   keyCode1: number,
   keyCode2: number,
   allocateEntryId: () => number,

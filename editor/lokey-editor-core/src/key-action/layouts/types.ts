@@ -1,7 +1,20 @@
-/**
- * How a key code is encoded for a layout: either a single HID usage, or a
- * sequence of a modifier followed by a key.
- */
+export type RawKeyCode = { name: string; code: number };
+
+export function rawKeyCode(name: string, code: number): RawKeyCode {
+  return { name, code };
+}
+
 export type KeyCodeEncoding =
-  | { kind: "simple"; keyCode: number }
-  | { kind: "sequence"; modifier: number; keyCode: number };
+  | { kind: "single"; rawKeyCode: RawKeyCode }
+  | { kind: "combined"; rawKeyCode1: RawKeyCode; rawKeyCode2: RawKeyCode };
+
+export function single(rawKeyCode: RawKeyCode): KeyCodeEncoding {
+  return { kind: "single", rawKeyCode };
+}
+
+export function combined(
+  rawKeyCode1: RawKeyCode,
+  rawKeyCode2: RawKeyCode,
+): KeyCodeEncoding {
+  return { kind: "combined", rawKeyCode1, rawKeyCode2 };
+}

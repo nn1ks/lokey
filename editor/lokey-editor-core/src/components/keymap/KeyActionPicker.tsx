@@ -19,6 +19,8 @@ import { keyCodeGroups, keyCodeCategoryOrder } from "./key-code-groups";
 import type { KeyCodeCategory } from "./key-code-groups";
 import { Unordered } from "../../key-action/actions/unordered";
 import { useActionRegistry } from "../../contexts/ActionRegistryContext";
+import { useKeyboardActions } from "../../contexts";
+import { Layout } from "../../layouts";
 
 export type KeyActionPickerProps = {
   onSelect: (action: KeyAction, close: boolean) => void;
@@ -38,22 +40,25 @@ function isSelected(
   return true;
 }
 
-function tabForAction(action: KeyAction | undefined): string {
+function tabForAction(action: KeyAction | undefined, layout: Layout): string {
+  const actualKeyCodeGroups = keyCodeGroups(layout);
   if (!action) {
     return "Letters";
   }
   if (action instanceof KeyCode) {
     for (const category of keyCodeCategoryOrder) {
-      if (keyCodeGroups[category].kind === "flat") {
+      if (actualKeyCodeGroups[category].kind === "flat") {
         if (
-          keyCodeGroups[category].content.some(
+          actualKeyCodeGroups[category].content.some(
             (keyCode) => keyCode.value === action.value,
           )
         ) {
           return category;
         }
-      } else if (keyCodeGroups[category].kind === "group") {
-        for (const keyCodes of Object.values(keyCodeGroups[category].content)) {
+      } else if (actualKeyCodeGroups[category].kind === "group") {
+        for (const keyCodes of Object.values(
+          actualKeyCodeGroups[category].content,
+        )) {
           if (keyCodes.some((keyCode) => keyCode.value === action.value)) {
             return category;
           }
@@ -65,57 +70,45 @@ function tabForAction(action: KeyAction | undefined): string {
   return "Behaviour";
 }
 
-type PickerEntry = {
-  action: KeyAction;
-  label: string;
-};
+type FlatPickerActions = readonly KeyAction[];
 
-type FlatPickerEntries = readonly PickerEntry[];
+type GroupPickerActions = Record<string, readonly KeyAction[]>;
 
-type GroupPickerEntries = Record<string, readonly PickerEntry[]>;
-
-type PickerEntries =
-  | { kind: "flat"; entries: FlatPickerEntries }
-  | { kind: "group"; entries: GroupPickerEntries };
+type PickerActions =
+  | { kind: "flat"; actions: FlatPickerActions }
+  | { kind: "group"; actions: GroupPickerActions };
 
 const tabs = [...keyCodeCategoryOrder, "Behaviour"];
 
-const toPickerEntries = (keyCodes: readonly KeyCode[]): FlatPickerEntries =>
-  keyCodes.map((keyCode) => ({
-    action: keyCode,
-    label: keyCode.displayValue(),
-  }));
+function keyCodeActions(layout: Layout): Map<KeyCodeCategory, PickerActions> {
+  const actualKeyCodeGroups = keyCodeGroups(layout);
+  return new Map<KeyCodeCategory, PickerActions>(
+    keyCodeCategoryOrder.map((category): [KeyCodeCategory, PickerActions] => {
+      const content = actualKeyCodeGroups[category];
+      if (content.kind === "flat") {
+        return [category, { kind: "flat", actions: content.content }];
+      }
 
-const keyCodeEntries = new Map<KeyCodeCategory, PickerEntries>(
-  keyCodeCategoryOrder.map((category): [KeyCodeCategory, PickerEntries] => {
-    const content = keyCodeGroups[category];
-    if (content.kind === "flat") {
-      return [
-        category,
-        { kind: "flat", entries: toPickerEntries(content.content) },
-      ];
-    }
-
-    const entries: GroupPickerEntries = {};
-    for (const [group, keyCodes] of Object.entries(content.content)) {
-      entries[group] = toPickerEntries(keyCodes);
-    }
-    return [category, { kind: "group", entries }];
-  }),
-);
+      const actions: GroupPickerActions = {};
+      for (const [group, keyCodes] of Object.entries(content.content)) {
+        actions[group] = keyCodes;
+      }
+      return [category, { kind: "group", actions: actions }];
+    }),
+  );
+}
 
 const ActionGrid: Component<{
-  entries: readonly PickerEntry[];
+  actions: readonly KeyAction[];
   onSelect: (action: KeyAction) => void;
   selectedAction?: KeyAction;
 }> = (props) => (
   <div class="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
-    <For each={props.entries}>
-      {(entry) => (
+    <For each={props.actions}>
+      {(action) => (
         <Tooltip.Root positioning={{ placement: "bottom", flip: false }}>
           <Tooltip.Trigger
             type="button"
-            aria-label={entry.label}
             class={`
               relative flex h-16 w-full cursor-pointer items-center justify-center
               rounded-lg overflow
@@ -125,19 +118,19 @@ const ActionGrid: Component<{
               transition-colors duration-50
               [&_svg]:size-5
               ${
-                isSelected(props.selectedAction, entry.action)
+                isSelected(props.selectedAction, action)
                   ? "shadow-[0_0_0_2px_var(--color-accent)]"
                   : ""
               }
             `}
-            onClick={() => props.onSelect(entry.action)}
+            onClick={() => props.onSelect(action)}
           >
-            <ActionRenderer action={entry.action} level={0} />
+            <ActionRenderer action={action} level={0} />
           </Tooltip.Trigger>
           <Portal>
             <Tooltip.Positioner>
               <StyledTooltipContent>
-                <ActionTooltipRenderer action={entry.action} />
+                <ActionTooltipRenderer action={action} />
               </StyledTooltipContent>
             </Tooltip.Positioner>
           </Portal>
@@ -148,19 +141,19 @@ const ActionGrid: Component<{
 );
 
 const GroupedActionGrid: Component<{
-  groups: GroupPickerEntries;
+  groups: GroupPickerActions;
   onSelect: (action: KeyAction) => void;
   selectedAction?: KeyAction;
 }> = (props) => (
   <div class="flex flex-col gap-3">
     <For each={Object.entries(props.groups)}>
-      {([label, entries]) => (
+      {([label, actions]) => (
         <div class="flex flex-col gap-2 pt-1">
           <div class="text-xs font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400">
             {label}
           </div>
           <ActionGrid
-            entries={entries}
+            actions={actions}
             onSelect={props.onSelect}
             selectedAction={props.selectedAction}
           />
@@ -171,17 +164,17 @@ const GroupedActionGrid: Component<{
 );
 
 const CategoryGrid: Component<{
-  entries: PickerEntries;
+  actions: PickerActions;
   onSelect: (action: KeyAction) => void;
   selectedAction?: KeyAction;
 }> = (props) => {
-  const entries = () => props.entries;
+  const actions = () => props.actions;
   return (
     <>
-      {entries().kind === "flat" ? (
+      {actions().kind === "flat" ? (
         <ActionGrid
-          entries={
-            (entries() as { kind: "flat"; entries: FlatPickerEntries }).entries
+          actions={
+            (actions() as { kind: "flat"; actions: FlatPickerActions }).actions
           }
           onSelect={props.onSelect}
           selectedAction={props.selectedAction}
@@ -189,8 +182,8 @@ const CategoryGrid: Component<{
       ) : (
         <GroupedActionGrid
           groups={
-            (entries() as { kind: "group"; entries: GroupPickerEntries })
-              .entries
+            (actions() as { kind: "group"; actions: GroupPickerActions })
+              .actions
           }
           onSelect={props.onSelect}
           selectedAction={props.selectedAction}
@@ -201,7 +194,7 @@ const CategoryGrid: Component<{
 };
 
 const PickerActionList: Component<{
-  entries: readonly PickerEntry[];
+  actions: readonly KeyAction[];
   onSelect: (action: KeyAction, close: boolean) => void;
   selectedAction?: KeyAction;
 }> = (props) => {
@@ -218,10 +211,8 @@ const PickerActionList: Component<{
       return [];
     }
 
-    const entry = props.entries.find((entry) =>
-      isSelected(selected, entry.action),
-    );
-    return entry ? [entry.label] : [];
+    const action = props.actions.find((action) => isSelected(selected, action));
+    return action ? [definition.actionId.toString()] : [];
   };
 
   const [value, setValue] = createSignal<string[]>(selectedAccordion());
@@ -248,20 +239,20 @@ const PickerActionList: Component<{
       value={value()}
       onValueChange={(details) => setValue(details.value)}
     >
-      <For each={props.entries}>
-        {(entry) => {
-          const selected = () => isSelected(props.selectedAction, entry.action);
-          const action = () =>
-            selected() ? props.selectedAction! : entry.action;
+      <For each={props.actions}>
+        {(action) => {
+          const selected = () => isSelected(props.selectedAction, action);
+          const selectedOrDefaultAction = () =>
+            selected() ? props.selectedAction! : action;
           return (
             <Accordion.Item
               class={`rounded-lg bg-neutral-200 dark:bg-neutral-800 ${
                 selected() ? "shadow-[0_0_0_2px_var(--color-accent)]" : ""
               }`}
-              value={entry.label}
+              value={action.actionId.toString()}
             >
               <ActionPickerRenderer
-                action={action()}
+                action={selectedOrDefaultAction()}
                 onSelect={props.onSelect}
               />
             </Accordion.Item>
@@ -273,28 +264,30 @@ const PickerActionList: Component<{
 };
 
 export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
+  const { layout } = useKeyboardActions();
+
   const [activeTab, setActiveTab] = createSignal(
-    tabForAction(props.selectedAction),
+    tabForAction(props.selectedAction, layout()),
   );
 
   createEffect(() => {
     if (props.selectedAction) {
-      setActiveTab(tabForAction(props.selectedAction));
+      setActiveTab(tabForAction(props.selectedAction, layout()));
     }
   });
 
-  const pickerActionEntries = createMemo<readonly PickerEntry[]>(() => [
-    { action: new Layer(0), label: "Layer" },
-    { action: new HoldTap(new None(), new None()), label: "Hold Tap" },
-    { action: new Ordered(new None(), new None()), label: "Ordered" },
-    { action: new Unordered(new None(), new None()), label: "Unordered" },
-    { action: new Sticky(new None()), label: "Sticky" },
-    { action: new Toggle(new None()), label: "Toggle" },
+  const listedBehaviourActions = createMemo<readonly KeyAction[]>(() => [
+    new Layer(0),
+    new HoldTap(new None(), new None()),
+    new Ordered(new None(), new None()),
+    new Unordered(new None(), new None()),
+    new Sticky(new None()),
+    new Toggle(new None()),
   ]);
 
-  const leafActionEntries = createMemo<readonly PickerEntry[]>(() => [
-    { action: new None(), label: "None" },
-    { action: new Transparent(), label: "Transparent" },
+  const simpleBehaviourActions = createMemo<readonly KeyAction[]>(() => [
+    new None(),
+    new Transparent(),
   ]);
 
   return (
@@ -330,12 +323,12 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
       <Tabs.Content value="Behaviour" class="data-[state=closed]:hidden">
         <div class="flex flex-col gap-2">
           <ActionGrid
-            entries={leafActionEntries()}
+            actions={simpleBehaviourActions()}
             onSelect={(action) => props.onSelect(action, true)}
             selectedAction={props.selectedAction}
           />
           <PickerActionList
-            entries={pickerActionEntries()}
+            actions={listedBehaviourActions()}
             onSelect={props.onSelect}
             selectedAction={props.selectedAction}
           />
@@ -345,7 +338,7 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
         {(category) => (
           <Tabs.Content value={category} class="data-[state=closed]:hidden">
             <CategoryGrid
-              entries={keyCodeEntries.get(category)!}
+              actions={keyCodeActions(layout()).get(category)!}
               onSelect={(action) => props.onSelect(action, true)}
               selectedAction={props.selectedAction}
             />

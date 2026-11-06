@@ -105,9 +105,9 @@ export const orderedActionDefinition = defineAction<Ordered>({
     if (action1 instanceof KeyCode && action2 instanceof KeyCode) {
       const encoding1 = keyCodesForLayout(ctx.layout).get(action1);
       const encoding2 = keyCodesForLayout(ctx.layout).get(action2);
-      if (encoding1?.kind === "simple" && encoding2?.kind === "simple") {
+      if (encoding1?.kind === "single" && encoding2?.kind === "single") {
         const keyCode = reverseKeyCodes(ctx.layout).sequence.get(
-          `${encoding1.keyCode}:${encoding2.keyCode}`,
+          `${encoding1.rawKeyCode.code}:${encoding2.rawKeyCode.code}`,
         );
         if (keyCode) return keyCode;
       }
