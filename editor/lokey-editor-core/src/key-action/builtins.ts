@@ -3,6 +3,8 @@ import { keyCodeActionDefinition } from "./actions/key-code";
 import { layerActionDefinition } from "./actions/layer";
 import { noneActionDefinition } from "./actions/none";
 import { orderedActionDefinition } from "./actions/ordered";
+import { stickyActionDefinition } from "./actions/sticky";
+import { toggleActionDefinition } from "./actions/toggle";
 import { unorderedActionDefinition } from "./actions/unordered";
 import { transparentActionDefinition } from "./actions/transparent";
 import type { ActionRegistry } from "./registry";
@@ -17,6 +19,8 @@ export function createDefaultRegistry(): ActionRegistry {
   registry.register(holdTapActionDefinition);
   registry.register(orderedActionDefinition);
   registry.register(unorderedActionDefinition);
+  registry.register(stickyActionDefinition);
+  registry.register(toggleActionDefinition);
   registry.register(keyCodeActionDefinition);
   return registry;
 }

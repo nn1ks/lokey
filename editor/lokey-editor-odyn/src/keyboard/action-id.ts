@@ -10,3 +10,5 @@ export const perLayer = 5;
 export const holdTap = 6;
 export const ordered = 7;
 export const unordered = 8;
+export const sticky = 9;
+export const toggle = 10;

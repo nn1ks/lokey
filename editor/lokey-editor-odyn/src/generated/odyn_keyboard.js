@@ -437,5 +437,45 @@ export class UnorderedAction extends $.Struct {
   }
   toString() { return "UnorderedAction_" + super.toString(); }
 }
+export class StickyAction extends $.Struct {
+  static _capnp = {
+    displayName: "StickyAction",
+    id: "fb60881b30e2c2ef",
+    size: new $.ObjectSize(16, 0),
+  };
+  get actionEntryId() {
+    return $.utils.getUint32(0, this);
+  }
+  set actionEntryId(value) {
+    $.utils.setUint32(0, value, this);
+  }
+  get timeout() {
+    return $.utils.getUint32(4, this);
+  }
+  set timeout(value) {
+    $.utils.setUint32(4, value, this);
+  }
+  get ignoreModifiers() {
+    return $.utils.getBit(64, this);
+  }
+  set ignoreModifiers(value) {
+    $.utils.setBit(64, value, this);
+  }
+  toString() { return "StickyAction_" + super.toString(); }
+}
+export class ToggleAction extends $.Struct {
+  static _capnp = {
+    displayName: "ToggleAction",
+    id: "f2ca99c0c056b6cc",
+    size: new $.ObjectSize(8, 0),
+  };
+  get actionEntryId() {
+    return $.utils.getUint32(0, this);
+  }
+  set actionEntryId(value) {
+    $.utils.setUint32(0, value, this);
+  }
+  toString() { return "ToggleAction_" + super.toString(); }
+}
 GetActiveActionEntriesResponse._Entries = $.CompositeList(KeyboardActionEntry);
 AddActionEntriesRequest._Entries = $.CompositeList(KeyboardActionEntry);

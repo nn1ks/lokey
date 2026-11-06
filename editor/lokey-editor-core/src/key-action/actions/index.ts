@@ -3,4 +3,7 @@ export { Transparent, transparentActionDefinition } from "./transparent";
 export { Layer, layerActionDefinition } from "./layer";
 export { HoldTap, holdTapActionDefinition } from "./hold-tap";
 export { Ordered, orderedActionDefinition } from "./ordered";
+export { Unordered, unorderedActionDefinition } from "./unordered";
+export { Sticky, stickyActionDefinition } from "./sticky";
+export { Toggle, toggleActionDefinition } from "./toggle";
 export { KeyCode, keyCodeActionDefinition } from "./key-code";

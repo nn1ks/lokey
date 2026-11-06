@@ -257,3 +257,27 @@ export declare class UnorderedAction extends $.Struct {
   set action2EntryId(value: number);
   toString(): string;
 }
+export declare class StickyAction extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  get actionEntryId(): number;
+  set actionEntryId(value: number);
+  get timeout(): number;
+  set timeout(value: number);
+  get ignoreModifiers(): boolean;
+  set ignoreModifiers(value: boolean);
+  toString(): string;
+}
+export declare class ToggleAction extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  get actionEntryId(): number;
+  set actionEntryId(value: number);
+  toString(): string;
+}

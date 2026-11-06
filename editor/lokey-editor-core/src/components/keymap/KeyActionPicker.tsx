@@ -7,6 +7,8 @@ import { KeyCode } from "../../key-action/actions/key-code";
 import { Layer } from "../../key-action/actions/layer";
 import { None } from "../../key-action/actions/none";
 import { Ordered } from "../../key-action/actions/ordered";
+import { Sticky } from "../../key-action/actions/sticky";
+import { Toggle } from "../../key-action/actions/toggle";
 import { Transparent } from "../../key-action/actions/transparent";
 import type { KeyAction } from "../../key-action/action";
 import StyledTooltipContent from "../StyledTooltipContent";
@@ -286,6 +288,8 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
     { action: new HoldTap(new None(), new None()), label: "Hold Tap" },
     { action: new Ordered(new None(), new None()), label: "Ordered" },
     { action: new Unordered(new None(), new None()), label: "Unordered" },
+    { action: new Sticky(new None()), label: "Sticky" },
+    { action: new Toggle(new None()), label: "Toggle" },
   ]);
 
   const leafActionEntries = createMemo<readonly PickerEntry[]>(() => [
