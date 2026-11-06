@@ -120,7 +120,7 @@ export function keyCodeGroups(
         KeyCode.LessThan,
         KeyCode.QuestionMark,
         ...(layout === "german"
-          ? [KeyCode.Circ, KeyCode.SectionSign, KeyCode.Acute, KeyCode.Euro]
+          ? [KeyCode.Degree, KeyCode.SectionSign, KeyCode.Acute, KeyCode.Euro]
           : []),
       ],
     },
@@ -283,7 +283,7 @@ export function keyCodeGroups(
           KeyCode.Mute,
           KeyCode.VolumeDown,
           KeyCode.VolumeUp,
-          KeyCode.NonUsBackslash,
+          ...(layout === "english-us" ? [KeyCode.NonUsBackslash] : []),
           KeyCode.International1,
           KeyCode.International2,
           KeyCode.International3,

@@ -473,29 +473,3 @@ export function englishUsKeyCodes(
     [keyCodeClass.Lang9, single(Lang9)],
   ]);
 }
-
-/*
-
-    // Shift+9
-    [
-      keyCodeClass.LeftParen,
-      { kind: "sequence", modifier: 0xe1, keyCode: 0x26 },
-    ],
-    // Shift+0
-    [
-      keyCodeClass.RightParen,
-      { kind: "sequence", modifier: 0xe1, keyCode: 0x27 },
-    ],
-    [keyCodeClass.LeftBracket, { kind: "simple", keyCode: 0x2f }],
-    [keyCodeClass.RightBracket, { kind: "simple", keyCode: 0x30 }],
-    // Shift+[
-    [
-      keyCodeClass.LeftBrace,
-      { kind: "sequence", modifier: 0xe1, keyCode: 0x2f },
-    ],
-    // Shift+]
-    [
-      keyCodeClass.RightBrace,
-      { kind: "sequence", modifier: 0xe1, keyCode: 0x30 },
-    ],
-*/

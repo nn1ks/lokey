@@ -124,7 +124,7 @@ export class KeyCode implements KeyAction {
   static readonly Dollar = new KeyCode("Dollar");
   static readonly Percent = new KeyCode("Percent");
   static readonly Caret = new KeyCode("Caret");
-  static readonly Circ = new KeyCode("Circ");
+  static readonly Degree = new KeyCode("Degree");
   static readonly Ampersand = new KeyCode("Ampersand");
   static readonly Asterisk = new KeyCode("Asterisk");
   static readonly Underscore = new KeyCode("Underscore");
@@ -549,7 +549,7 @@ export const keyCodeActionDefinition = defineAction<KeyCode>({
         return <>?</>;
       case KeyCode.SectionSign:
         return <>§</>;
-      case KeyCode.Circ:
+      case KeyCode.Degree:
         return <>°</>;
       case KeyCode.Acute:
         return <>`</>;

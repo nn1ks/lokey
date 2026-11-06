@@ -57,13 +57,13 @@ const N0 = rawKeyCode("N0", 0x27);
 
 // Symbols
 const Caret = rawKeyCode("Caret", 0x35);
-const Grave = rawKeyCode("Grave", 0x2e);
-const Plus = rawKeyCode("Plus", 0x57);
-const Hash = rawKeyCode("Hash", 0x31);
-const LessThan = rawKeyCode("LessThan", 0x03);
-const Comma = rawKeyCode("Comma", 0x85);
-const Dot = rawKeyCode("Comma", 0x63);
-const Minus = rawKeyCode("Minus", 0x56);
+const Acute = rawKeyCode("Grave", 0x2e);
+const Plus = rawKeyCode("Plus", 0x30);
+const Hash = rawKeyCode("Hash", 0x32);
+const LessThan = rawKeyCode("LessThan", 0x64);
+const Comma = rawKeyCode("Comma", 0x36);
+const Dot = rawKeyCode("Comma", 0x37);
+const Minus = rawKeyCode("Minus", 0x38);
 
 // Whitespace and control keys
 const Enter = rawKeyCode("Enter", 0x28);
@@ -183,7 +183,6 @@ const KpDecimal = rawKeyCode("KpDecimal", 0xdc);
 const KpHexadecimal = rawKeyCode("KpHexadecimal", 0xdd);
 
 // Miscellaneous
-const NonUsBackslash = rawKeyCode("NonUsBackslash", 0x64);
 const Application = rawKeyCode("Application", 0x65);
 const Power = rawKeyCode("Power", 0x66);
 const Execute = rawKeyCode("Execute", 0x74);
@@ -284,7 +283,7 @@ export function germanKeyCodes(
 
     // Symbols
     [keyCodeClass.Caret, single(Caret)],
-    [keyCodeClass.Grave, single(Grave)],
+    [keyCodeClass.Acute, single(Acute)],
     [keyCodeClass.Plus, single(Plus)],
     [keyCodeClass.Hash, single(Hash)],
     [keyCodeClass.LessThan, single(LessThan)],
@@ -297,7 +296,7 @@ export function germanKeyCodes(
     [keyCodeClass.RightBracket, combined(RAlt, N9)],
     [keyCodeClass.LeftBrace, combined(RAlt, N7)],
     [keyCodeClass.RightBrace, combined(RAlt, N0)],
-    [keyCodeClass.Circ, combined(LShift, Caret)],
+    [keyCodeClass.Degree, combined(LShift, Caret)],
     [keyCodeClass.ExclamationMark, combined(LShift, N1)],
     [keyCodeClass.DoubleQuote, combined(LShift, N2)],
     [keyCodeClass.SectionSign, combined(LShift, N3)],
@@ -308,7 +307,7 @@ export function germanKeyCodes(
     [keyCodeClass.Equal, combined(LShift, N0)],
     [keyCodeClass.QuestionMark, combined(LShift, SharpS)],
     [keyCodeClass.Backslash, combined(RAlt, SharpS)],
-    [keyCodeClass.Acute, combined(LShift, Grave)],
+    [keyCodeClass.Grave, combined(LShift, Acute)],
     [keyCodeClass.At, combined(RAlt, Q)],
     [keyCodeClass.Euro, combined(RAlt, E)],
     [keyCodeClass.Asterisk, combined(LShift, Plus)],
@@ -438,7 +437,6 @@ export function germanKeyCodes(
     [keyCodeClass.KpHexadecimal, single(KpHexadecimal)],
 
     // Miscellaneous
-    [keyCodeClass.NonUsBackslash, single(NonUsBackslash)],
     [keyCodeClass.Application, single(Application)],
     [keyCodeClass.Power, single(Power)],
     [keyCodeClass.Execute, single(Execute)],
