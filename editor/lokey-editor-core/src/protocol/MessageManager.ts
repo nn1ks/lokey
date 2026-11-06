@@ -21,11 +21,15 @@ import {
   AddActionEntriesRequest,
   GetActiveActionEntriesRequest,
   GetActiveActionEntriesResponse,
+  GetHostLayoutRequest,
+  GetHostLayoutResponse,
   GetLayoutRequest,
   GetLayoutResponse,
   GetNumberOfKeysRequest,
   GetNumberOfKeysResponse,
+  HostLayout,
   KeyboardActionEntry,
+  SetHostLayoutRequest,
   UpdateLayoutRequest,
 } from "lokey-editor-odyn/keyboard";
 
@@ -204,6 +208,28 @@ export class MessageManager {
       (_request) => {},
       keyboardMessageId.getNumberOfKeysResponse,
       GetNumberOfKeysResponse,
+    );
+  }
+
+  async getHostLayout(): Promise<GetHostLayoutResponse> {
+    return await this.requestSingle(
+      keyboardMessageId.getHostLayoutRequest,
+      GetHostLayoutRequest,
+      (_request) => {},
+      keyboardMessageId.getHostLayoutResponse,
+      GetHostLayoutResponse,
+    );
+  }
+
+  async setHostLayout(hostLayout: HostLayout): Promise<void> {
+    await this.requestSingle(
+      keyboardMessageId.setHostLayoutRequest,
+      SetHostLayoutRequest,
+      (request) => {
+        request.hostLayout = hostLayout;
+      },
+      coreMessageId.successResponse,
+      SuccessResponse,
     );
   }
 

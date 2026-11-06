@@ -1,4 +1,4 @@
-import { KeyboardActionEntry } from "lokey-editor-odyn/keyboard";
+import { HostLayout, KeyboardActionEntry } from "lokey-editor-odyn/keyboard";
 
 export type ActionId = number;
 export type ActionEntryId = number;
@@ -10,4 +10,5 @@ export type State = {
   ledArrayHooks: bigint;
   keyboardActionEntries: Map<ActionEntryId, KeyboardActionEntry>;
   keyboardLayout: Array<ActionEntryId>;
+  hostLayout: HostLayout;
 };

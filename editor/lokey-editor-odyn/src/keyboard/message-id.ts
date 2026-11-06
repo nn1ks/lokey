@@ -11,3 +11,6 @@ export const getActiveActionEntriesRequest = 0x106;
 export const getActiveActionEntriesResponse = 0x107;
 export const addActionEntriesRequest = 0x108;
 export const updateLayoutRequest = 0x109;
+export const getHostLayoutRequest = 0x10a;
+export const getHostLayoutResponse = 0x10b;
+export const setHostLayoutRequest = 0x10c;

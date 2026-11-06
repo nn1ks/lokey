@@ -1,5 +1,5 @@
 import { Accordion, Tabs, Tooltip } from "@ark-ui/solid";
-import { For, createEffect, createMemo, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { Component } from "solid-js";
 import { HoldTap } from "../../key-action/actions/hold-tap";
@@ -40,7 +40,13 @@ function isSelected(
   return true;
 }
 
-function tabForAction(action: KeyAction | undefined, layout: Layout): string {
+function tabForAction(
+  action: KeyAction | undefined,
+  layout: Layout | undefined,
+): string {
+  if (layout === undefined) {
+    return "Letters";
+  }
   const actualKeyCodeGroups = keyCodeGroups(layout);
   if (!action) {
     return "Letters";
@@ -264,15 +270,15 @@ const PickerActionList: Component<{
 };
 
 export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
-  const { layout } = useKeyboardActions();
+  const { hostLayout } = useKeyboardActions();
 
   const [activeTab, setActiveTab] = createSignal(
-    tabForAction(props.selectedAction, layout()),
+    tabForAction(props.selectedAction, hostLayout()),
   );
 
   createEffect(() => {
     if (props.selectedAction) {
-      setActiveTab(tabForAction(props.selectedAction, layout()));
+      setActiveTab(tabForAction(props.selectedAction, hostLayout()));
     }
   });
 
@@ -337,11 +343,15 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
       <For each={keyCodeCategoryOrder}>
         {(category) => (
           <Tabs.Content value={category} class="data-[state=closed]:hidden">
-            <CategoryGrid
-              actions={keyCodeActions(layout()).get(category)!}
-              onSelect={(action) => props.onSelect(action, true)}
-              selectedAction={props.selectedAction}
-            />
+            <Show when={hostLayout()}>
+              {(hostLayout) => (
+                <CategoryGrid
+                  actions={keyCodeActions(hostLayout()).get(category)!}
+                  onSelect={(action) => props.onSelect(action, true)}
+                  selectedAction={props.selectedAction}
+                />
+              )}
+            </Show>
           </Tabs.Content>
         )}
       </For>

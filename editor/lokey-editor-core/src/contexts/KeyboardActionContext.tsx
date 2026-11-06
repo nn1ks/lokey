@@ -11,6 +11,7 @@ import type { Accessor, Component, ParentProps } from "solid-js";
 import {
   GetActiveActionEntriesResponse,
   GetLayoutResponse,
+  HostLayout,
   KeyboardActionEntry,
 } from "lokey-editor-odyn/keyboard";
 import { None } from "../key-action/actions/none";
@@ -31,42 +32,40 @@ export class KeyboardActionContextValue {
   readonly actions: Accessor<KeyAction[][]>;
   readonly #keys: Accessor<RootKeyAction[] | undefined>;
   readonly #setKeys: (keys: RootKeyAction[]) => void;
+  readonly hostLayout: Accessor<Layout | undefined>;
+  readonly #setHostLayout: (hostLayout: Layout) => void;
   readonly #messageManager: MessageManager;
   readonly #registry: ActionRegistry;
-  /** The host layout used to translate key codes. */
-  readonly layout: Accessor<Layout>;
-  readonly #setLayout: (layout: Layout) => void;
 
   constructor(options: {
     layerCount: Accessor<number>;
     actions: Accessor<KeyAction[][]>;
     keys: Accessor<RootKeyAction[] | undefined>;
     setKeys: (keys: RootKeyAction[]) => void;
+    hostLayout: Accessor<Layout | undefined>;
+    setHostLayout: (hostLayout: Layout) => void;
     messageManager: MessageManager;
     registry: ActionRegistry;
-    layout: Accessor<Layout>;
-    setLayout: (layout: Layout) => void;
   }) {
     this.layerCount = options.layerCount;
     this.actions = options.actions;
     this.#keys = options.keys;
     this.#setKeys = options.setKeys;
+    this.hostLayout = options.hostLayout;
+    this.#setHostLayout = options.setHostLayout;
     this.#messageManager = options.messageManager;
     this.#registry = options.registry;
-    this.layout = options.layout;
-    this.#setLayout = options.setLayout;
   }
 
-  /**
-   * Changes the host layout. The keymap is re-encoded with the new layout so
-   * the same characters keep being produced, then the layout is applied.
-   */
-  async setLayout(layout: Layout): Promise<void> {
+  async setHostLayout(hostLayout: Layout): Promise<void> {
+    this.#setHostLayout(hostLayout);
+    await this.#messageManager.setHostLayout(
+      convertToRawHostLayout(hostLayout),
+    );
     const current = this.#keys();
     if (current) {
-      await this.#persist(current, layout);
+      await this.#persist(current);
     }
-    this.#setLayout(layout);
   }
 
   async setAction(
@@ -217,10 +216,13 @@ export class KeyboardActionContextValue {
     return keys;
   }
 
-  async #persist(
-    keys: RootKeyAction[],
-    layout: Layout = this.layout(),
-  ): Promise<void> {
+  async #persist(keys: RootKeyAction[]): Promise<void> {
+    const layout = this.hostLayout();
+    if (layout === undefined) {
+      console.error("Host layout is undefined.");
+      return;
+    }
+
     const entries: KeyboardActionEntry[] = [];
     let nextEntryId = 0;
 
@@ -241,7 +243,6 @@ export class KeyboardActionContextValue {
 const KeyboardActionContext = createContext<KeyboardActionContextValue>();
 
 export type KeyboardActionContextProviderProps = ParentProps<{
-  layout?: Layout;
   registry: ActionRegistry;
 }>;
 
@@ -251,9 +252,13 @@ export const KeyboardActionContextProvider: Component<
   const { connection } = useConnection();
   const messageManager = useMessageManager();
   const registry = props.registry;
-  const [layout, setLayout] = createSignal<Layout>(
-    props.layout ?? "english-us",
+
+  const [rawHostLayout] = createResource(
+    () => (connection().status === "connected" ? messageManager : undefined),
+    (manager) => manager.getHostLayout(),
   );
+
+  const [hostLayout, setHostLayout] = createSignal<Layout>();
 
   const [rawLayout] = createResource(
     () => (connection().status === "connected" ? messageManager : undefined),
@@ -263,6 +268,14 @@ export const KeyboardActionContextProvider: Component<
     () => (connection().status === "connected" ? messageManager : undefined),
     (manager) => manager.getActiveActionEntries(),
   );
+
+  createEffect(() => {
+    const error = rawHostLayout.error;
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error("Unable to retrieve the host layout.", error);
+    }
+  });
 
   createEffect(() => {
     const error = rawLayout.error;
@@ -283,6 +296,27 @@ export const KeyboardActionContextProvider: Component<
   const [keys, setKeys] = createSignal<RootKeyAction[]>();
 
   createEffect(() => {
+    if (
+      rawHostLayout.state !== "ready" &&
+      rawHostLayout.state !== "refreshing"
+    ) {
+      return;
+    }
+    let hostLayout = convertFromRawHostLayout(rawHostLayout().hostLayout);
+    if (hostLayout === undefined) {
+      console.warn(`Unknown host layout "${hostLayout}".`);
+      hostLayout = "english-us";
+    }
+    setHostLayout(hostLayout);
+  });
+
+  createEffect(() => {
+    if (
+      rawHostLayout.state !== "ready" &&
+      rawHostLayout.state !== "refreshing"
+    ) {
+      return;
+    }
     if (rawLayout.state !== "ready" && rawLayout.state !== "refreshing") {
       return;
     }
@@ -294,7 +328,7 @@ export const KeyboardActionContextProvider: Component<
       resolveKeys(
         rawLayout(),
         rawEntries(),
-        untrack(layout),
+        rawHostLayout().hostLayout,
         registry,
         noneAction,
       ),
@@ -338,11 +372,11 @@ export const KeyboardActionContextProvider: Component<
     layerCount,
     actions,
     keys,
-    setKeys: (next) => setKeys(next),
+    setKeys,
+    hostLayout,
+    setHostLayout,
     messageManager,
     registry,
-    layout,
-    setLayout,
   });
 
   return (
@@ -366,10 +400,32 @@ export const useKeyboardActions = () => {
   return context;
 };
 
+function convertFromRawHostLayout(
+  rawHostLayout: HostLayout,
+): Layout | undefined {
+  switch (rawHostLayout) {
+    case HostLayout.ENGLISH_US:
+      return "english-us";
+    case HostLayout.GERMAN:
+      return "german";
+    default:
+      return undefined;
+  }
+}
+
+function convertToRawHostLayout(hostLayout: Layout): HostLayout {
+  switch (hostLayout) {
+    case "english-us":
+      return HostLayout.ENGLISH_US;
+    case "german":
+      return HostLayout.GERMAN;
+  }
+}
+
 function resolveKeys(
   layout: GetLayoutResponse,
   entriesResponse: GetActiveActionEntriesResponse,
-  keyCodeLayout: Layout,
+  hostLayout: HostLayout,
   registry: ActionRegistry,
   noneAction: KeyAction,
 ): RootKeyAction[] {
@@ -378,6 +434,12 @@ function resolveKeys(
   for (let i = 0; i < entryList.length; i++) {
     const entry = entryList.get(i);
     entries.set(entry.entryId, entry);
+  }
+
+  let actualHostLayout = convertFromRawHostLayout(hostLayout);
+  if (actualHostLayout === undefined) {
+    console.warn(`Unknown host layout "${hostLayout}".`);
+    actualHostLayout = "english-us";
   }
 
   const resolveEntry = (entryId: number) => entries.get(entryId);
@@ -392,7 +454,7 @@ function resolveKeys(
             entry,
             resolveEntry,
             registry,
-            keyCodeLayout,
+            actualHostLayout,
             noneAction,
           )
         : { kind: "single", action: noneAction },

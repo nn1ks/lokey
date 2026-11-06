@@ -1,5 +1,5 @@
 import { Select, createListCollection } from "@ark-ui/solid/select";
-import { For, Show, splitProps } from "solid-js";
+import { createMemo, For, Show, splitProps } from "solid-js";
 import type { Component, JSX } from "solid-js";
 import { ChevronsUpDownIcon } from "lucide-solid";
 import type { ButtonProps } from "../Button";
@@ -63,17 +63,22 @@ export const Options: Component<OptionsProps> = (props) => {
   const keyboardActions = useKeyboardActions();
   const toast = useToast();
 
+  const hostLayoutArray = createMemo(() => {
+    const hostLayout = keyboardActions.hostLayout();
+    return hostLayout === undefined ? [] : [hostLayout];
+  });
+
   return (
     <div class="mt-6 flex flex-col gap-6 sm:flex-row">
       <OptionsSection title="Host Layout">
         <Select.Root
           class="relative w-40 min-w-40 max-w-40"
           collection={hostLayoutCollection}
-          value={[keyboardActions.layout()]}
+          value={hostLayoutArray()}
           onValueChange={(details) => {
             const value = details.value[0];
             if (value !== undefined && isLayout(value)) {
-              void keyboardActions.setLayout(value).catch((error) => {
+              void keyboardActions.setHostLayout(value).catch((error) => {
                 // eslint-disable-next-line no-console
                 console.error("Unable to change the host layout.", error);
               });

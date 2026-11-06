@@ -32,6 +32,11 @@ export declare class KeyboardActionEntry extends $.Struct {
   set action(value: KeyboardAction);
   toString(): string;
 }
+export declare const HostLayout: {
+  readonly ENGLISH_US: 0;
+  readonly GERMAN: 1;
+};
+export type HostLayout = (typeof HostLayout)[keyof typeof HostLayout];
 export declare class GetNumberOfKeysRequest extends $.Struct {
   static readonly _capnp: {
     displayName: string;
@@ -48,6 +53,34 @@ export declare class GetNumberOfKeysResponse extends $.Struct {
   };
   get numKeys(): number;
   set numKeys(value: number);
+  toString(): string;
+}
+export declare class GetHostLayoutRequest extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  toString(): string;
+}
+export declare class GetHostLayoutResponse extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  get hostLayout(): HostLayout;
+  set hostLayout(value: HostLayout);
+  toString(): string;
+}
+export declare class SetHostLayoutRequest extends $.Struct {
+  static readonly _capnp: {
+    displayName: string;
+    id: string;
+    size: $.ObjectSize;
+  };
+  get hostLayout(): HostLayout;
+  set hostLayout(value: HostLayout);
   toString(): string;
 }
 export declare class GetAvailableActionsRequest extends $.Struct {

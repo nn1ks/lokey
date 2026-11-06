@@ -9,9 +9,12 @@ import {
   AddActionEntriesRequest,
   GetActiveActionEntriesResponse,
   GetAvailableActionsResponse,
+  GetHostLayoutResponse,
   GetLayoutResponse,
   GetNumberOfKeysResponse,
+  HostLayout,
   KeyboardActionEntry,
+  SetHostLayoutRequest,
   UpdateLayoutRequest,
 } from "lokey-editor-odyn/keyboard";
 import {
@@ -47,6 +50,18 @@ export class DemoMessageHandler {
         );
         break;
       }
+      case keyboardMessageId.getHostLayoutRequest:
+        this.#handleGetHostLayoutRequest(
+          message.sequenceNumber,
+          message.payload,
+        );
+        break;
+      case keyboardMessageId.setHostLayoutRequest:
+        this.#handleSetHostLayoutRequest(
+          message.sequenceNumber,
+          message.payload,
+        );
+        break;
       case keyboardMessageId.getAvailableActionsRequest: {
         this.#handleGetAvailableActionsRequest(
           message.sequenceNumber,
@@ -176,6 +191,35 @@ export class DemoMessageHandler {
       (response) => {
         response.numKeys = numKeys;
       },
+    );
+
+    this.#publish(responseMessage);
+  }
+
+  #handleGetHostLayoutRequest(sequenceNumber: number, _payload: capnp.Data) {
+    const responseMessage = this.#buildMessage(
+      sequenceNumber,
+      keyboardMessageId.getHostLayoutResponse,
+      GetHostLayoutResponse,
+      (response) => {
+        response.hostLayout = this.state.hostLayout;
+      },
+    );
+
+    this.#publish(responseMessage);
+  }
+
+  #handleSetHostLayoutRequest(sequenceNumber: number, payload: capnp.Data) {
+    const requestPayload = new Uint8Array(payload.toArrayBuffer());
+    const requestMessage = new capnp.Message(requestPayload, false);
+    const request = requestMessage.getRoot(SetHostLayoutRequest);
+    this.state.hostLayout = request.hostLayout;
+
+    const responseMessage = this.#buildMessage(
+      sequenceNumber,
+      coreMessageId.successResponse,
+      SuccessResponse,
+      (_response) => {},
     );
 
     this.#publish(responseMessage);

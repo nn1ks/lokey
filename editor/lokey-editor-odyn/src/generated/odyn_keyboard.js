@@ -65,6 +65,10 @@ export class KeyboardActionEntry extends $.Struct {
   }
   toString() { return "KeyboardActionEntry_" + super.toString(); }
 }
+export const HostLayout = {
+  ENGLISH_US: 0,
+  GERMAN: 1
+};
 export class GetNumberOfKeysRequest extends $.Struct {
   static _capnp = {
     displayName: "GetNumberOfKeysRequest",
@@ -86,6 +90,42 @@ export class GetNumberOfKeysResponse extends $.Struct {
     $.utils.setUint32(0, value, this);
   }
   toString() { return "GetNumberOfKeysResponse_" + super.toString(); }
+}
+export class GetHostLayoutRequest extends $.Struct {
+  static _capnp = {
+    displayName: "GetHostLayoutRequest",
+    id: "9c19aa08a3754084",
+    size: new $.ObjectSize(0, 0),
+  };
+  toString() { return "GetHostLayoutRequest_" + super.toString(); }
+}
+export class GetHostLayoutResponse extends $.Struct {
+  static _capnp = {
+    displayName: "GetHostLayoutResponse",
+    id: "c3f66531325a1fa3",
+    size: new $.ObjectSize(8, 0),
+  };
+  get hostLayout() {
+    return $.utils.getUint16(0, this);
+  }
+  set hostLayout(value) {
+    $.utils.setUint16(0, value, this);
+  }
+  toString() { return "GetHostLayoutResponse_" + super.toString(); }
+}
+export class SetHostLayoutRequest extends $.Struct {
+  static _capnp = {
+    displayName: "SetHostLayoutRequest",
+    id: "80226a7ff3f00c89",
+    size: new $.ObjectSize(8, 0),
+  };
+  get hostLayout() {
+    return $.utils.getUint16(0, this);
+  }
+  set hostLayout(value) {
+    $.utils.setUint16(0, value, this);
+  }
+  toString() { return "SetHostLayoutRequest_" + super.toString(); }
 }
 export class GetAvailableActionsRequest extends $.Struct {
   static _capnp = {
