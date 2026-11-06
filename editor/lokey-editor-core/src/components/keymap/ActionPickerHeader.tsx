@@ -16,7 +16,7 @@ export const ActionPickerHeader: Component<ActionPickerHeaderProps> = (
     <button
       type="button"
       class="px-2 py-0.5 rounded-full hover:cursor-pointer
-        bg-neutral-350 hover:bg-neutral-400 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+        bg-neutral-300 hover:bg-neutral-350 dark:bg-neutral-700 dark:hover:bg-neutral-600"
       onClick={() => props.onSelect()}
     >
       Select
