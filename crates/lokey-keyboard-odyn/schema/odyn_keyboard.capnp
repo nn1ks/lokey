@@ -10,6 +10,11 @@ struct KeyboardActionEntry {
   action @1 :KeyboardAction;
 }
 
+enum HostLayout {
+    englishUs @0;
+    german @1;
+}
+
 # Messages
 
 struct GetNumberOfKeysRequest {
@@ -17,6 +22,16 @@ struct GetNumberOfKeysRequest {
 
 struct GetNumberOfKeysResponse {
   numKeys @0 :UInt32;
+}
+
+struct GetHostLayoutRequest {}
+
+struct GetHostLayoutResponse {
+  hostLayout @0 :HostLayout;
+}
+
+struct SetHostLayoutRequest {
+  hostLayout @0 :HostLayout;
 }
 
 struct GetAvailableActionsRequest {

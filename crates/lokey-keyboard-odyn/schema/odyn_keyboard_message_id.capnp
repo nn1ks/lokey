@@ -12,3 +12,6 @@ const getActiveActionEntriesRequest :UInt32 = 0x106;
 const getActiveActionEntriesResponse :UInt32 = 0x107;
 const addActionEntriesRequest :UInt32 = 0x108;
 const updateLayoutRequest :UInt32 = 0x109;
+const getHostLayoutRequest :UInt32 = 0x10a;
+const getHostLayoutResponse :UInt32 = 0x10b;
+const setHostLayoutRequest :UInt32 = 0x10c;
