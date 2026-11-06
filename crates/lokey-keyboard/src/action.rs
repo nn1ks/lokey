@@ -6,7 +6,7 @@ use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_sync::signal::Signal;
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Timer, WithTimeout};
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::toggle;
 use lokey::util::{error, unwrap, warn};
@@ -433,7 +433,6 @@ impl<A: Action> Action for Toggle<A> {
 pub struct Sticky<A> {
     action: A,
     timeout: Duration,
-    lazy: bool,
     ignore_modifiers: bool,
     is_held: AtomicBool,
     was_released: AtomicBool,
@@ -444,7 +443,6 @@ impl<A: Action> Sticky<A> {
         Self {
             action,
             timeout: Duration::from_secs(1),
-            lazy: false,
             ignore_modifiers: true,
             is_held: AtomicBool::new(false),
             was_released: AtomicBool::new(false),
@@ -453,11 +451,6 @@ impl<A: Action> Sticky<A> {
 
     pub const fn timeout(mut self, value: Duration) -> Self {
         self.timeout = value;
-        self
-    }
-
-    pub const fn lazy(mut self, value: bool) -> Self {
-        self.lazy = value;
         self
     }
 
@@ -483,9 +476,7 @@ impl<A: Action> Action for Sticky<A> {
         };
         self.is_held.store(true, Ordering::SeqCst);
         let mut observer = unwrap!(context.external_channel.try_observer::<KeyboardReport>());
-        if !self.lazy {
-            self.action.on_press(context).await;
-        }
+        self.action.on_press(context).await;
         let fut1 = async {
             loop {
                 let keyboard_report = observer.next().await;
@@ -495,20 +486,10 @@ impl<A: Action> Action for Sticky<A> {
                 if self.ignore_modifiers && new_keys.iter().all(|key| key.is_modifier()) {
                     continue;
                 }
-                if self.lazy {
-                    self.action.on_press(context).await;
-                }
                 break;
             }
         };
-        let fut2 = Timer::after(self.timeout);
-        let was_pressed = match select(fut1, fut2).await {
-            Either::First(()) => true,
-            Either::Second(()) => !self.lazy,
-        };
-        if !was_pressed {
-            self.action.on_press(context).await;
-        }
+        let _ = fut1.with_timeout(self.timeout).await;
         if !self.is_held.load(Ordering::SeqCst) {
             self.was_released.store(true, Ordering::SeqCst);
             self.action.on_release(context).await;
