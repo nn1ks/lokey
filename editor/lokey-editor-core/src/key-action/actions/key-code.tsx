@@ -9,6 +9,7 @@ import {
   ArrowUp,
   Command,
   CornerDownLeft,
+  CornerDownRight,
   Delete,
   Option,
   Power,
@@ -30,7 +31,7 @@ import type { KeyAction } from "../action";
 import { buildAction } from "../codec/build";
 import { englishUsKeyCodes } from "../layouts/english-us";
 import { germanKeyCodes } from "../layouts/german";
-import type { KeyCodeEncoding } from "../layouts/types";
+import type { KeyCodeEncoding, RawKeyCode } from "../layouts/types";
 import {
   IconSubtitleCombination,
   Small,
@@ -38,7 +39,7 @@ import {
   TextSubtitleCombination,
 } from "../render";
 import { None } from "./none";
-import { JSX } from "solid-js";
+import { Component, For, JSX, Show } from "solid-js";
 import {
   DecodeContext,
   EncodeContext,
@@ -46,6 +47,7 @@ import {
   RemapLayersContext,
 } from "../contexts";
 import assertNever from "assert-never";
+import { useKeyboardActions } from "../../contexts";
 
 export class KeyCode implements KeyAction {
   static readonly actionId = ActionId.keyCode;
@@ -124,7 +126,7 @@ export class KeyCode implements KeyAction {
   }
 
   renderTooltip(): JSX.Element {
-    return <>{this.value}</>;
+    return <KeyCodeTooltip keyCode={this} />;
   }
 
   renderPicker(_ctx: PickerContext): JSX.Element {
@@ -864,3 +866,62 @@ function renderButtonContent(action: KeyCode, level: number): JSX.Element {
       return <>{action.value}</>;
   }
 }
+
+const KeyCodeTooltip: Component<{ keyCode: KeyCode }> = (props) => {
+  const { hostLayout } = useKeyboardActions();
+
+  const content = (rawKeyCodes: RawKeyCode[]) => {
+    return (
+      <div class="flex flex-col">
+        <div class="flex gap-1">
+          <span>Key:</span>
+          <span>{props.keyCode.value}</span>
+        </div>
+        <div class="flex gap-1">
+          <CornerDownRight size="20" />
+          <For each={rawKeyCodes} fallback={"Unknown"}>
+            {(rawKeyCode, index) => (
+              <>
+                <Show when={index() !== 0}>
+                  <span>+</span>
+                </Show>
+                <span>{rawKeyCode.name}</span>
+                <span class="text-neutral-400 dark:text-neutral-600">
+                  ({`0x${rawKeyCode.code.toString(16)}`})
+                </span>
+              </>
+            )}
+          </For>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <Show when={hostLayout()}>
+        {(hostLayout) => {
+          const keyCodes = keyCodesForLayout(hostLayout());
+          const keyCodeEncoding = keyCodes.get(props.keyCode);
+
+          if (!keyCodeEncoding) {
+            return content([]);
+          }
+
+          if (keyCodeEncoding.kind === "single") {
+            return content([keyCodeEncoding.rawKeyCode]);
+          }
+
+          if (keyCodeEncoding.kind === "combined") {
+            return content([
+              keyCodeEncoding.rawKeyCode1,
+              keyCodeEncoding.rawKeyCode2,
+            ]);
+          }
+
+          assertNever(keyCodeEncoding);
+        }}
+      </Show>
+    </div>
+  );
+};
