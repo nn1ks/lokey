@@ -2,22 +2,57 @@ import { Select, createListCollection } from "@ark-ui/solid/select";
 import * as capnp from "capnp-es";
 import { ChevronsUpDownIcon, Layers2 } from "lucide-solid";
 import { For, createMemo } from "solid-js";
-import type { Component } from "solid-js";
+import type { Component, JSX } from "solid-js";
 import { Portal } from "solid-js/web";
-import { LayerAction } from "lokey-editor-odyn/keyboard";
+import { KeyboardAction, LayerAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import { useKeyboardActions } from "../../contexts/KeyboardActionContext";
 import type { KeyAction } from "../action";
-import { buildAction, buildActionEntry } from "../codec/entries";
-import { defineAction } from "../definition";
-import type { PickerContext } from "../definition";
+import { buildAction } from "../codec/build";
+import {
+  DecodeContext,
+  EncodeContext,
+  PickerContext,
+  RemapLayersContext,
+} from "../contexts";
 import { IconSubtitleCombination } from "../render";
 
 export class Layer implements KeyAction {
+  static readonly actionId = ActionId.layer;
   readonly actionId = ActionId.layer;
 
-  constructor(readonly index: number) {}
+  constructor(public index: number) {}
+
+  encode(_ctx: EncodeContext): KeyboardAction {
+    return buildAction(ActionId.layer, LayerAction, (layerAction) => {
+      layerAction.layer = this.index;
+    });
+  }
+
+  static decode(payload: Uint8Array, _ctx: DecodeContext): Layer {
+    const message = new capnp.Message(payload, false);
+    return new Layer(message.getRoot(LayerAction).layer);
+  }
+
+  renderButtonContent(_level: number): JSX.Element {
+    const layerName = `Layer ${this.index + 1}`;
+    return <IconSubtitleCombination icon={<Layers2 />} subtitle={layerName} />;
+  }
+
+  renderTooltip(): JSX.Element {
+    return <>Layer {this.index + 1}</>;
+  }
+
+  renderPicker(ctx: PickerContext): JSX.Element {
+    return <LayerPicker action={this} ctx={ctx} />;
+  }
+
+  remapLayers(ctx: RemapLayersContext): boolean {
+    const oldIndex = this.index;
+    this.index = ctx.remapLayer(this.index);
+    return oldIndex !== this.index;
+  }
 }
 
 const LayerPicker: Component<{
@@ -103,32 +138,3 @@ const LayerPicker: Component<{
     </div>
   );
 };
-
-export const layerActionDefinition = defineAction<Layer>({
-  actionId: ActionId.layer,
-  label: "Layer",
-  encode: (action, ctx) => ({
-    rootActionEntry: buildActionEntry(
-      ctx.allocateEntryId(),
-      buildAction(ActionId.layer, LayerAction, (layerAction) => {
-        layerAction.layer = action.index;
-      }),
-    ),
-    childActionEntries: [],
-  }),
-  decode: (payload) => {
-    const message = new capnp.Message(payload, false);
-    return new Layer(message.getRoot(LayerAction).layer);
-  },
-  render: (action) => {
-    const layerName = `Layer ${action.index + 1}`;
-    return <IconSubtitleCombination icon={<Layers2 />} subtitle={layerName} />;
-  },
-  renderTooltip: (action) => <>Layer {action.index + 1}</>,
-  remap: (action, ctx) => {
-    const index = ctx.remapLayer(action.index);
-    return index === action.index ? action : new Layer(index);
-  },
-  children: () => [],
-  renderPicker: (action, ctx) => <LayerPicker action={action} ctx={ctx} />,
-});

@@ -1,40 +1,23 @@
-import type { KeyAction } from "./action";
-import type { ActionDefinition } from "./definition";
-
-/**
- * Type-erased definition used internally by the registry. The registry only
- * passes actions whose `actionId` matches the definition, so the cast in
- * `register` is safe.
- */
-export type RegisteredActionDefinition = ActionDefinition<KeyAction>;
+import type { KeyAction, KeyActionClass } from "./action";
 
 export class ActionRegistry {
-  readonly #byId = new Map<number, RegisteredActionDefinition>();
+  readonly #byId = new Map<number, KeyActionClass>();
 
-  register<A extends KeyAction>(definition: ActionDefinition<A>): void {
-    if (this.#byId.has(definition.actionId)) {
+  register<A extends KeyAction>(cls: KeyActionClass<A>): void {
+    if (this.#byId.has(cls.actionId)) {
       throw new Error(
-        `An action with ID ${definition.actionId} is already registered.`,
+        `An action with ID ${cls.actionId} is already registered.`,
       );
     }
-    this.#byId.set(
-      definition.actionId,
-      definition as unknown as RegisteredActionDefinition,
-    );
+    this.#byId.set(cls.actionId, cls as KeyActionClass);
   }
 
-  byId(actionId: number): RegisteredActionDefinition | undefined {
+  byId(actionId: number): KeyActionClass | undefined {
     return this.#byId.get(actionId);
   }
 
-  all(): RegisteredActionDefinition[] {
+  all(): KeyActionClass[] {
     return [...this.#byId.values()];
-  }
-
-  available(actionIds: ReadonlySet<number>): RegisteredActionDefinition[] {
-    return this.all().filter((definition) =>
-      actionIds.has(definition.actionId),
-    );
   }
 }
 

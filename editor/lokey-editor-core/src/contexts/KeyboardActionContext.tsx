@@ -4,7 +4,6 @@ import {
   createMemo,
   createResource,
   createSignal,
-  untrack,
   useContext,
 } from "solid-js";
 import type { Accessor, Component, ParentProps } from "solid-js";
@@ -12,17 +11,23 @@ import {
   GetActiveActionEntriesResponse,
   GetLayoutResponse,
   HostLayout,
+  KeyboardAction,
   KeyboardActionEntry,
 } from "lokey-editor-odyn/keyboard";
 import { None } from "../key-action/actions/none";
 import type { KeyAction, RootKeyAction } from "../key-action";
-import { decodeKeyState, encodeKeyState } from "../key-action/codec/key-state";
+import {
+  decodeRootKeyAction,
+  encodeRootKeyAction,
+} from "../key-action/codec/root-key-action";
 import type { ActionRegistry } from "../key-action/registry";
 import type { Layout } from "../layouts";
 import { useConnection } from "./ConnectionContext";
 import { useMessageManager } from ".";
 import type { MessageManager } from "../protocol/MessageManager";
 import { ActionRegistryContextProvider } from "./ActionRegistryContext";
+import { buildActionEntry } from "../key-action/codec/build";
+import { DecodeContext } from "../key-action/contexts";
 
 const noneAction: KeyAction = new None();
 
@@ -180,32 +185,35 @@ export class KeyboardActionContextValue {
       return;
     }
 
-    const next = current.map((key): RootKeyAction => {
-      if (key.kind === "single") {
-        return {
-          kind: "single",
-          action: remapLayer(key.action, from, to, this.#registry),
-        };
+    const actionsChanged = current
+      .map((key): boolean => {
+        if (key.kind === "single") {
+          return remapLayer(key.action, from, to);
+        }
+
+        const actions = [...key.actions];
+        while (actions.length < layerCount) {
+          actions.push(noneAction);
+        }
+
+        const [moved] = actions.splice(from, 1);
+        actions.splice(to, 0, moved ?? noneAction);
+
+        actions.forEach((action) => remapLayer(action, from, to));
+
+        key.actions = actions;
+
+        return true;
+      })
+      .some((v) => v);
+
+    if (actionsChanged) {
+      const keys = this.#keys();
+      if (keys) {
+        this.#setKeys([...keys]);
+        await this.#persist(keys);
       }
-
-      const actions = [...key.actions];
-      while (actions.length < layerCount) {
-        actions.push(noneAction);
-      }
-
-      const [moved] = actions.splice(from, 1);
-      actions.splice(to, 0, moved ?? noneAction);
-
-      return {
-        kind: "perLayer",
-        actions: actions.map((action) =>
-          remapLayer(action, from, to, this.#registry),
-        ),
-      };
-    });
-
-    this.#setKeys(next);
-    await this.#persist(next);
+    }
   }
 
   #requireKeys(): RootKeyAction[] {
@@ -226,12 +234,18 @@ export class KeyboardActionContextValue {
     const entries: KeyboardActionEntry[] = [];
     let nextEntryId = 0;
 
+    const pushAction = (action: KeyboardAction) => {
+      const entryId = nextEntryId;
+      nextEntryId++;
+      const actionEntry = buildActionEntry(entryId, action);
+      entries.push(actionEntry);
+      return entryId;
+    };
+
     const keyEntryIds = keys.map((key) =>
-      encodeKeyState(key, {
-        registry: this.#registry,
-        layout,
-        allocateEntryId: () => nextEntryId++,
-        pushEntry: (entry) => entries.push(entry),
+      encodeRootKeyAction(key, {
+        hostLayout: layout,
+        pushAction,
       }),
     );
 
@@ -444,19 +458,20 @@ function resolveKeys(
 
   const resolveEntry = (entryId: number) => entries.get(entryId);
 
+  const ctx: DecodeContext = {
+    hostLayout: actualHostLayout,
+    registry,
+    resolveEntry: (actionEntryId) => entries.get(actionEntryId)?.action!, // TODO: remove "!"
+  };
+
   const actionEntryIds = layout.actionEntryIds;
   const keys: RootKeyAction[] = [];
   for (let i = 0; i < actionEntryIds.length; i++) {
     const entry = resolveEntry(actionEntryIds.get(i));
+    // TODO: show error instead of falling back to "None" action
     keys.push(
       entry
-        ? decodeKeyState(
-            entry,
-            resolveEntry,
-            registry,
-            actualHostLayout,
-            noneAction,
-          )
+        ? decodeRootKeyAction(entry, ctx)
         : { kind: "single", action: noneAction },
     );
   }
@@ -480,19 +495,8 @@ function remapLayerIndex(index: number, from: number, to: number): number {
 }
 
 /** Rewrites the layer indices referenced by an action after a layer move. */
-function remapLayer(
-  action: KeyAction,
-  from: number,
-  to: number,
-  registry: ActionRegistry,
-): KeyAction {
-  const definition = registry.byId(action.actionId);
-  if (!definition) {
-    return action;
-  }
-
-  return definition.remap(action, {
+function remapLayer(action: KeyAction, from: number, to: number): boolean {
+  return action.remapLayers({
     remapLayer: (index) => remapLayerIndex(index, from, to),
-    remapAction: (child) => remapLayer(child, from, to, registry),
   });
 }

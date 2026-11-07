@@ -1,24 +1,8 @@
-import { ActionRenderer, ActionTooltipRenderer } from "./ActionRenderer";
-import { ActionPickerRenderer } from "./ActionPickerRenderer";
-import KeyActionPicker from "./KeyActionPicker";
-import KeyActionPickerDialog from "./KeyActionPickerDialog";
-import KeymapPage from "./KeymapPage";
-import LayerSelectorBar from "./LayerSelectorBar";
-import LayerSelectorButton from "./LayerSelectorButton";
-import KeyButton from "./KeyButton";
-import PageHeading from "../PageHeading";
-import Options from "./Options";
-
-export {
-  ActionPickerRenderer,
-  ActionRenderer,
-  ActionTooltipRenderer,
-  KeyActionPicker,
-  KeyActionPickerDialog,
-  KeyButton,
-  KeymapPage,
-  LayerSelectorBar,
-  LayerSelectorButton,
-  Options,
-  PageHeading,
-};
+export { KeyActionPicker } from "./KeyActionPicker";
+export { KeyActionPickerDialog } from "./KeyActionPickerDialog";
+export { KeymapPage } from "./KeymapPage";
+export { LayerSelectorBar } from "./LayerSelectorBar";
+export { LayerSelectorButton } from "./LayerSelectorButton";
+export { KeyButton } from "./KeyButton";
+export { PageHeading } from "../PageHeading";
+export { Options } from "./Options";

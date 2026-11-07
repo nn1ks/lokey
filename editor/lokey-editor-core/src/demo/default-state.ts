@@ -1,5 +1,6 @@
 import {
   HostLayout,
+  KeyboardAction,
   type KeyboardActionEntry,
 } from "lokey-editor-odyn/keyboard";
 import type { ActionEntryId, State } from "./shared";
@@ -15,8 +16,8 @@ import {
   Transparent,
 } from "../key-action";
 import type { KeyAction, RootKeyAction } from "../key-action";
-import { actionRegistry } from "../key-action/builtins";
-import { encodeKeyState } from "../key-action/codec/key-state";
+import { encodeRootKeyAction } from "../key-action/codec/root-key-action";
+import { buildActionEntry } from "../key-action/codec/build";
 
 const layer0Actions: KeyAction[] = [
   KeyCode.Q,
@@ -186,9 +187,12 @@ export function defaultState(): State {
   const keyboardLayout = new Array<ActionEntryId>();
   let nextEntryId = 0;
 
-  const allocateEntryId = () => nextEntryId++;
-  const pushEntry = (entry: KeyboardActionEntry) => {
-    keyboardActionEntries.set(entry.entryId, entry);
+  const pushAction = (action: KeyboardAction) => {
+    const entryId = nextEntryId;
+    nextEntryId++;
+    const actionEntry = buildActionEntry(entryId, action);
+    keyboardActionEntries.set(entryId, actionEntry);
+    return entryId;
   };
 
   for (let i = 0; i < numKeys; i++) {
@@ -198,11 +202,9 @@ export function defaultState(): State {
     );
     const key: RootKeyAction = { kind: "perLayer", actions };
     keyboardLayout.push(
-      encodeKeyState(key, {
-        registry: actionRegistry,
-        layout: "german",
-        allocateEntryId,
-        pushEntry,
+      encodeRootKeyAction(key, {
+        hostLayout: "german",
+        pushAction,
       }),
     );
   }

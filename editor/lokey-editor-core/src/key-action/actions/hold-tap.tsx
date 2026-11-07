@@ -1,23 +1,29 @@
 import * as capnp from "capnp-es";
-import { ChevronRight, Ellipsis } from "lucide-solid";
+import { Ellipsis } from "lucide-solid";
 import { createSignal } from "solid-js";
-import type { Component } from "solid-js";
-import { HoldTapAction } from "lokey-editor-odyn/keyboard";
+import type { Component, JSX } from "solid-js";
+import { HoldTapAction, KeyboardAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
 import { ActionPickerDurationRow } from "../../components/keymap/ActionPickerDurationRow";
 import type { KeyAction } from "../action";
-import { buildAction, buildActionEntry } from "../codec/entries";
-import { defineAction } from "../definition";
-import type { PickerContext } from "../definition";
+import { buildAction } from "../codec/build";
 import { Labelled, Split } from "../render";
 import { Accordion } from "@ark-ui/solid/accordion";
+import {
+  EncodeContext,
+  DecodeContext,
+  PickerContext,
+  RemapLayersContext,
+} from "../contexts";
+import { decodeAction } from "../codec/decode";
 
 export class HoldTap<
   H extends KeyAction = KeyAction,
   T extends KeyAction = KeyAction,
 > implements KeyAction {
+  static readonly actionId = ActionId.holdTap;
   readonly actionId = ActionId.holdTap;
 
   constructor(
@@ -26,6 +32,83 @@ export class HoldTap<
     /** Tapping term in milliseconds. */
     readonly tappingTerm: number = 200,
   ) {}
+
+  encode(ctx: EncodeContext): KeyboardAction {
+    const holdAction = this.holdAction.encode(ctx);
+    const tapAction = this.tapAction.encode(ctx);
+
+    const holdActionEntryId = ctx.pushAction(holdAction);
+    const tapActionEntryId = ctx.pushAction(tapAction);
+
+    return buildAction(ActionId.holdTap, HoldTapAction, (holdTapAction) => {
+      holdTapAction.holdActionEntryId = holdActionEntryId;
+      holdTapAction.tapActionEntryId = tapActionEntryId;
+      holdTapAction.tappingTerm = this.tappingTerm;
+    });
+  }
+
+  static decode(payload: Uint8Array, ctx: DecodeContext): HoldTap {
+    const message = new capnp.Message(payload, false);
+    const holdTap = message.getRoot(HoldTapAction);
+    return new HoldTap(
+      decodeAction(ctx.resolveEntry(holdTap.holdActionEntryId), ctx),
+      decodeAction(ctx.resolveEntry(holdTap.tapActionEntryId), ctx),
+      holdTap.tappingTerm,
+    );
+  }
+
+  renderButtonContent(level: number): JSX.Element {
+    if (level > 0) return <Ellipsis />;
+
+    return (
+      <Split
+        action1={
+          <Labelled label="Hold">
+            {this.holdAction.renderButtonContent(level + 1)}
+          </Labelled>
+        }
+        action2={
+          <Labelled label="Tap">
+            {this.tapAction.renderButtonContent(level + 1)}
+          </Labelled>
+        }
+      />
+    );
+  }
+
+  renderTooltip(): JSX.Element {
+    return (
+      <div class="flex items-stretch gap-2">
+        <div class="flex min-w-12 flex-col items-center gap-1">
+          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
+            Hold
+          </div>
+          <div class="flex min-h-6 items-center justify-center">
+            {this.holdAction.renderTooltip()}
+          </div>
+        </div>
+        <div class="w-px bg-neutral-600 dark:bg-neutral-400" />
+        <div class="flex min-w-12 flex-col items-center gap-1">
+          <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
+            Tap
+          </div>
+          <div class="flex min-h-6 items-center justify-center">
+            {this.tapAction.renderTooltip()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  renderPicker(ctx: PickerContext): JSX.Element {
+    return <HoldTapPicker action={this} ctx={ctx} />;
+  }
+
+  remapLayers(ctx: RemapLayersContext): boolean {
+    const holdActionChanged = this.holdAction.remapLayers(ctx);
+    const tapActionChanged = this.tapAction.remapLayers(ctx);
+    return holdActionChanged || tapActionChanged;
+  }
 }
 
 const withHoldTapChildren = (action: HoldTap, children: KeyAction[]): HoldTap =>
@@ -94,81 +177,3 @@ const HoldTapPicker: Component<{
     </>
   );
 };
-
-export const holdTapActionDefinition = defineAction<HoldTap>({
-  actionId: ActionId.holdTap,
-  label: "Hold Tap",
-  encode: (action, ctx) => {
-    const holdActionEntryId = ctx.encodeChild(action.holdAction);
-    const tapActionEntryId = ctx.encodeChild(action.tapAction);
-
-    return {
-      rootActionEntry: buildActionEntry(
-        ctx.allocateEntryId(),
-        buildAction(ActionId.holdTap, HoldTapAction, (holdTapAction) => {
-          holdTapAction.holdActionEntryId = holdActionEntryId;
-          holdTapAction.tapActionEntryId = tapActionEntryId;
-          holdTapAction.tappingTerm = action.tappingTerm;
-        }),
-      ),
-      childActionEntries: [],
-    };
-  },
-  decode: (payload, ctx) => {
-    const message = new capnp.Message(payload, false);
-    const holdTap = message.getRoot(HoldTapAction);
-    return new HoldTap(
-      ctx.decodeChild(holdTap.holdActionEntryId),
-      ctx.decodeChild(holdTap.tapActionEntryId),
-      holdTap.tappingTerm,
-    );
-  },
-  render: (action, level, ctx) => {
-    if (level > 0) return <Ellipsis />;
-
-    return (
-      <Split
-        action1={
-          <Labelled label="Hold">
-            {ctx.renderAction(action.holdAction, level + 1)}
-          </Labelled>
-        }
-        action2={
-          <Labelled label="Tap">
-            {ctx.renderAction(action.tapAction, level + 1)}
-          </Labelled>
-        }
-      />
-    );
-  },
-  renderTooltip: (action, ctx) => (
-    <div class="flex items-stretch gap-2">
-      <div class="flex min-w-12 flex-col items-center gap-1">
-        <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
-          Hold
-        </div>
-        <div class="flex min-h-6 items-center justify-center">
-          {ctx.renderTooltip(action.holdAction)}
-        </div>
-      </div>
-      <div class="w-px bg-neutral-600 dark:bg-neutral-400" />
-      <div class="flex min-w-12 flex-col items-center gap-1">
-        <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
-          Tap
-        </div>
-        <div class="flex min-h-6 items-center justify-center">
-          {ctx.renderTooltip(action.tapAction)}
-        </div>
-      </div>
-    </div>
-  ),
-  remap: (action, ctx) =>
-    new HoldTap(
-      ctx.remapAction(action.holdAction),
-      ctx.remapAction(action.tapAction),
-      action.tappingTerm,
-    ),
-  children: (action) => [action.holdAction, action.tapAction],
-  renderPicker: (action, ctx) => <HoldTapPicker action={action} ctx={ctx} />,
-  withChildren: withHoldTapChildren,
-});

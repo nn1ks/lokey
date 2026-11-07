@@ -149,6 +149,7 @@
   ],
   "dependencies": {
     "@ark-ui/solid": "^5.39.1",
+    "assert-never": "^1.4.0",
     "capnp-es": "^0.0.16",
     "lokey-editor-odyn": "workspace:*",
     "lucide-solid": "^1.45.0"

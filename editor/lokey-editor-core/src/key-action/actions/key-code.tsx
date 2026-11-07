@@ -19,6 +19,7 @@ import {
   VolumeX,
 } from "lucide-solid";
 import {
+  KeyboardAction,
   KeyCodeAction,
   KeyCodeType,
   OrderedAction,
@@ -26,9 +27,7 @@ import {
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import type { Layout } from "../../layouts";
 import type { KeyAction } from "../action";
-import type { ActionEntries } from "../codec/entries";
-import { buildAction, buildActionEntry } from "../codec/entries";
-import { defineAction } from "../definition";
+import { buildAction } from "../codec/build";
 import { englishUsKeyCodes } from "../layouts/english-us";
 import { germanKeyCodes } from "../layouts/german";
 import type { KeyCodeEncoding } from "../layouts/types";
@@ -38,14 +37,102 @@ import {
   SmallTextSubtitleCombination,
   TextSubtitleCombination,
 } from "../render";
-import { None } from "..";
+import { None } from "./none";
+import { JSX } from "solid-js";
+import {
+  DecodeContext,
+  EncodeContext,
+  PickerContext,
+  RemapLayersContext,
+} from "../contexts";
+import assertNever from "assert-never";
 
 export class KeyCode implements KeyAction {
+  static readonly actionId = ActionId.keyCode;
   readonly actionId = ActionId.keyCode;
+
   readonly value: string;
 
   private constructor(value: string) {
     this.value = value;
+  }
+
+  encode(ctx: EncodeContext): KeyboardAction {
+    const encoding = keyCodesForLayout(ctx.hostLayout).get(this);
+    if (!encoding) {
+      console.warn(
+        `Invalid key code "${this.value}" for layout "${ctx.hostLayout}".`,
+      );
+      return new None().encode(ctx);
+    }
+
+    if (encoding.kind === "single") {
+      return buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
+        action.keyCode = encoding.rawKeyCode.code;
+        action.type = KeyCodeType.KEYBOARD;
+      });
+    }
+
+    if (encoding.kind === "combined") {
+      const action1 = buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
+        action.keyCode = encoding.rawKeyCode1.code;
+        action.type = KeyCodeType.KEYBOARD;
+      });
+      const action2 = buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
+        action.keyCode = encoding.rawKeyCode2.code;
+        action.type = KeyCodeType.KEYBOARD;
+      });
+
+      const action1EntryId = ctx.pushAction(action1);
+      const action2EntryId = ctx.pushAction(action2);
+
+      return buildAction(ActionId.ordered, OrderedAction, (action) => {
+        action.action1EntryId = action1EntryId;
+        action.action2EntryId = action2EntryId;
+      });
+    }
+
+    assertNever(encoding);
+  }
+
+  static decode(payload: Uint8Array, ctx: DecodeContext): KeyCode {
+    const message = new capnp.Message(payload, false);
+    const keyCodeAction = message.getRoot(KeyCodeAction);
+
+    if (keyCodeAction.type === KeyCodeType.KEYBOARD) {
+      const keyCode = reverseKeyCodes(ctx.hostLayout).simple.get(
+        keyCodeAction.keyCode,
+      );
+      if (!keyCode) {
+        throw new Error(
+          `Unknown key code 0x${keyCodeAction.keyCode.toString(16)} for layout ${ctx.hostLayout}.`,
+        );
+      }
+
+      return keyCode;
+    }
+
+    if (keyCodeAction.type === KeyCodeType.CONSUMER) {
+      throw new Error("Consumer key codes are not supported yet.");
+    }
+
+    throw new Error(`Unknown key code type "${keyCodeAction.type}".`);
+  }
+
+  renderButtonContent(level: number): JSX.Element {
+    return renderButtonContent(this, level);
+  }
+
+  renderTooltip(): JSX.Element {
+    return <>{this.value}</>;
+  }
+
+  renderPicker(_ctx: PickerContext): JSX.Element {
+    return this.renderButtonContent(0);
+  }
+
+  remapLayers(_ctx: RemapLayersContext): boolean {
+    return false;
   }
 
   static readonly LControl = new KeyCode("LControl");
@@ -329,587 +416,451 @@ export function reverseKeyCodes(layout: Layout): ReverseKeyCodes {
   return reverseKeyCodesByLayout[layout];
 }
 
-/** All key codes supported by the English-US layout. */
-export const keyCodes: readonly KeyCode[] = [
-  ...keyCodesForLayout("english-us").keys(),
-];
-
-export const keyCodeActionDefinition = defineAction<KeyCode>({
-  actionId: ActionId.keyCode,
-  label: "Key Code",
-  encode: (action, ctx) => {
-    const encoding = keyCodesForLayout(ctx.layout).get(action);
-    if (!encoding) {
-      console.warn(
-        `Invalid key code "${action.value}" for layout "${ctx.layout}".`,
+function renderButtonContent(action: KeyCode, level: number): JSX.Element {
+  switch (action) {
+    case KeyCode.LControl:
+      return level == 0 ? (
+        <TextSubtitleCombination text="Ctrl" subtitle="Left" />
+      ) : (
+        <>Ctrl</>
       );
-      return {
-        rootActionEntry: buildActionEntry(
-          ctx.allocateEntryId(),
-          new None().encode(),
-        ),
-        childActionEntries: [],
-      };
-    }
-
-    switch (encoding.kind) {
-      case "single":
-        return encodeSingleKeyCode(
-          encoding.rawKeyCode.code,
-          ctx.allocateEntryId,
-        );
-      case "combined":
-        return encodeCombinedKeyCode(
-          encoding.rawKeyCode1.code,
-          encoding.rawKeyCode2.code,
-          ctx.allocateEntryId,
-        );
-    }
-  },
-  decode: (payload, ctx) => {
-    const message = new capnp.Message(payload, false);
-    const keyCodeAction = message.getRoot(KeyCodeAction);
-
-    if (keyCodeAction.type !== KeyCodeType.KEYBOARD) {
-      throw new Error("Consumer key codes are not supported yet.");
-    }
-
-    const keyCode = reverseKeyCodes(ctx.layout).simple.get(
-      keyCodeAction.keyCode,
-    );
-    if (!keyCode) {
-      throw new Error(
-        `Unknown key code 0x${keyCodeAction.keyCode.toString(16)} for layout ${ctx.layout}.`,
+    case KeyCode.RControl:
+      return level == 0 ? (
+        <TextSubtitleCombination text="Ctrl" subtitle="Right" />
+      ) : (
+        <>Ctrl</>
       );
-    }
-
-    return keyCode;
-  },
-  render: (action, level) => {
-    switch (action) {
-      case KeyCode.LControl:
-        return level == 0 ? (
-          <TextSubtitleCombination text="Ctrl" subtitle="Left" />
-        ) : (
-          <>Ctrl</>
-        );
-      case KeyCode.RControl:
-        return level == 0 ? (
-          <TextSubtitleCombination text="Ctrl" subtitle="Right" />
-        ) : (
-          <>Ctrl</>
-        );
-      case KeyCode.LShift:
-        return level == 0 ? (
-          <IconSubtitleCombination
-            icon={<ArrowBigUp />}
-            subtitle="Left Shift"
-          />
-        ) : (
-          <ArrowBigUp />
-        );
-      case KeyCode.RShift:
-        return level == 0 ? (
-          <IconSubtitleCombination
-            icon={<ArrowBigUp />}
-            subtitle="Right Shift"
-          />
-        ) : (
-          <ArrowBigUp />
-        );
-      case KeyCode.LAlt:
-        return level == 0 ? (
-          <IconSubtitleCombination icon={<Option />} subtitle="Left Alt" />
-        ) : (
-          <Option />
-        );
-      case KeyCode.RAlt:
-        return level == 0 ? (
-          <IconSubtitleCombination icon={<Option />} subtitle="Right Alt" />
-        ) : (
-          <Option />
-        );
-      case KeyCode.LGui:
-        return level == 0 ? (
-          <IconSubtitleCombination icon={<Command />} subtitle="Left Super" />
-        ) : (
-          <Command />
-        );
-      case KeyCode.RGui:
-        return level == 0 ? (
-          <IconSubtitleCombination icon={<Command />} subtitle="Right Super" />
-        ) : (
-          <Command />
-        );
-      case KeyCode.AE:
-        return <>Ä</>;
-      case KeyCode.OE:
-        return <>Ö</>;
-      case KeyCode.UE:
-        return <>Ü</>;
-      case KeyCode.SharpS:
-        return <>ß</>;
-      case KeyCode.N1:
-        return <>1</>;
-      case KeyCode.N2:
-        return <>2</>;
-      case KeyCode.N3:
-        return <>3</>;
-      case KeyCode.N4:
-        return <>4</>;
-      case KeyCode.N5:
-        return <>5</>;
-      case KeyCode.N6:
-        return <>6</>;
-      case KeyCode.N7:
-        return <>7</>;
-      case KeyCode.N8:
-        return <>8</>;
-      case KeyCode.N9:
-        return <>9</>;
-      case KeyCode.N0:
-        return <>0</>;
-      case KeyCode.Enter:
-        return <CornerDownLeft />;
-      case KeyCode.Escape:
-        return <>ESC</>;
-      case KeyCode.Backspace:
-        return <Delete />;
-      case KeyCode.Tab:
-        return <ArrowRightToLine />;
-      case KeyCode.Space:
-        return <SpaceIcon />;
-      case KeyCode.CapsLock:
-        return <ArrowBigUpDash />;
-      case KeyCode.Minus:
-        return <>-</>;
-      case KeyCode.Equal:
-        return <>=</>;
-      case KeyCode.LeftParen:
-        return <>(</>;
-      case KeyCode.RightParen:
-        return <>)</>;
-      case KeyCode.LeftBracket:
-        return <>[</>;
-      case KeyCode.RightBracket:
-        return <>]</>;
-      case KeyCode.LeftBrace:
-        return <>{"{"}</>;
-      case KeyCode.RightBrace:
-        return <>{"}"}</>;
-      case KeyCode.Backslash:
-        return <>{"\\"}</>;
-      case KeyCode.Hash:
-        return <>#</>;
-      case KeyCode.Semicolon:
-        return <>;</>;
-      case KeyCode.Apostrophe:
-        return <>'</>;
-      case KeyCode.Grave:
-        return <>`</>;
-      case KeyCode.Comma:
-        return <>,</>;
-      case KeyCode.Dot:
-        return <>.</>;
-      case KeyCode.Slash:
-        return <>/</>;
-      case KeyCode.Tilde:
-        return <>~</>;
-      case KeyCode.ExclamationMark:
-        return <>!</>;
-      case KeyCode.At:
-        return <>@</>;
-      case KeyCode.Dollar:
-        return <>$</>;
-      case KeyCode.Euro:
-        return <>€</>;
-      case KeyCode.Percent:
-        return <>%</>;
-      case KeyCode.Caret:
-        return <>^</>;
-      case KeyCode.Ampersand:
-        return <>{"&"}</>;
-      case KeyCode.Asterisk:
-        return <>*</>;
-      case KeyCode.Underscore:
-        return <>_</>;
-      case KeyCode.Plus:
-        return <>+</>;
-      case KeyCode.Pipe:
-        return <>|</>;
-      case KeyCode.Colon:
-        return <>:</>;
-      case KeyCode.DoubleQuote:
-        return <>{'"'}</>;
-      case KeyCode.GreaterThan:
-        return <>{">"}</>;
-      case KeyCode.LessThan:
-        return <>{"<"}</>;
-      case KeyCode.QuestionMark:
-        return <>?</>;
-      case KeyCode.SectionSign:
-        return <>§</>;
-      case KeyCode.Degree:
-        return <>°</>;
-      case KeyCode.Acute:
-        return <>`</>;
-      case KeyCode.PrintScreen:
-        return <Small>Print Screen</Small>;
-      case KeyCode.ScrollLock:
-        return <Small>Scroll Lock</Small>;
-      case KeyCode.PageUp:
-        return <Small>Page Up</Small>;
-      case KeyCode.PageDown:
-        return <Small>Page Down</Small>;
-      case KeyCode.Pause:
-        return <Small>Pause</Small>;
-      case KeyCode.Insert:
-        return <Small>Insert</Small>;
-      case KeyCode.Home:
-        return <Small>Home</Small>;
-      case KeyCode.Delete:
-        return <Small>Delete</Small>;
-      case KeyCode.End:
-        return <Small>End</Small>;
-      case KeyCode.Left:
-        return <ArrowLeft />;
-      case KeyCode.Right:
-        return <ArrowRight />;
-      case KeyCode.Up:
-        return <ArrowUp />;
-      case KeyCode.Down:
-        return <ArrowDown />;
-      case KeyCode.Application:
-        return <Small>Application</Small>;
-      case KeyCode.Power:
-        return <Power />;
-      case KeyCode.Execute:
-        return <Small>Execute</Small>;
-      case KeyCode.Help:
-        return <Small>Help</Small>;
-      case KeyCode.Menu:
-        return <Small>Menu</Small>;
-      case KeyCode.Select:
-        return <Small>Select</Small>;
-      case KeyCode.Stop:
-        return <Small>Stop</Small>;
-      case KeyCode.Again:
-        return <Small>Again</Small>;
-      case KeyCode.Undo:
-        return <Small>Undo</Small>;
-      case KeyCode.Cut:
-        return <Small>Cut</Small>;
-      case KeyCode.Copy:
-        return <Small>Copy</Small>;
-      case KeyCode.Paste:
-        return <Small>Paste</Small>;
-      case KeyCode.Find:
-        return <Small>Find</Small>;
-      case KeyCode.LockingCapsLock:
-        return <Small>Locking Caps Lock</Small>;
-      case KeyCode.LockingNumLock:
-        return <Small>Locking Num Lock</Small>;
-      case KeyCode.LockingScrollLock:
-        return <Small>Locking Scroll Lock</Small>;
-      case KeyCode.Mute:
-        return <VolumeX />;
-      case KeyCode.VolumeDown:
-        return <Volume1 />;
-      case KeyCode.VolumeUp:
-        return <Volume2 />;
-      case KeyCode.NonUsBackslash:
-        return <Small>Non-US Backslash</Small>;
-      case KeyCode.International1:
-        return <Small>Int 1</Small>;
-      case KeyCode.International2:
-        return <Small>Int 2</Small>;
-      case KeyCode.International3:
-        return <Small>Int 3</Small>;
-      case KeyCode.International4:
-        return <Small>Int 4</Small>;
-      case KeyCode.International5:
-        return <Small>Int 5</Small>;
-      case KeyCode.International6:
-        return <Small>Int 6</Small>;
-      case KeyCode.International7:
-        return <Small>Int 7</Small>;
-      case KeyCode.International8:
-        return <Small>Int 8</Small>;
-      case KeyCode.International9:
-        return <Small>Int 9</Small>;
-      case KeyCode.Lang1:
-        return <Small>Lang 1</Small>;
-      case KeyCode.Lang2:
-        return <Small>Lang 2</Small>;
-      case KeyCode.Lang3:
-        return <Small>Lang 3</Small>;
-      case KeyCode.Lang4:
-        return <Small>Lang 4</Small>;
-      case KeyCode.Lang5:
-        return <Small>Lang 5</Small>;
-      case KeyCode.Lang6:
-        return <Small>Lang 6</Small>;
-      case KeyCode.Lang7:
-        return <Small>Lang 7</Small>;
-      case KeyCode.Lang8:
-        return <Small>Lang 8</Small>;
-      case KeyCode.Lang9:
-        return <Small>Lang 9</Small>;
-      case KeyCode.Kp1:
-        return <TextSubtitleCombination text="1" subtitle="Keypad" />;
-      case KeyCode.Kp2:
-        return <TextSubtitleCombination text="2" subtitle="Keypad" />;
-      case KeyCode.Kp3:
-        return <TextSubtitleCombination text="3" subtitle="Keypad" />;
-      case KeyCode.Kp4:
-        return <TextSubtitleCombination text="4" subtitle="Keypad" />;
-      case KeyCode.Kp5:
-        return <TextSubtitleCombination text="5" subtitle="Keypad" />;
-      case KeyCode.Kp6:
-        return <TextSubtitleCombination text="6" subtitle="Keypad" />;
-      case KeyCode.Kp7:
-        return <TextSubtitleCombination text="7" subtitle="Keypad" />;
-      case KeyCode.Kp8:
-        return <TextSubtitleCombination text="8" subtitle="Keypad" />;
-      case KeyCode.Kp9:
-        return <TextSubtitleCombination text="9" subtitle="Keypad" />;
-      case KeyCode.Kp0:
-        return <TextSubtitleCombination text="0" subtitle="Keypad" />;
-      case KeyCode.Kp00:
-        return <TextSubtitleCombination text="00" subtitle="Keypad" />;
-      case KeyCode.Kp000:
-        return <TextSubtitleCombination text="000" subtitle="Keypad" />;
-      case KeyCode.NumLock:
-        return <Small>Num Lock</Small>;
-      case KeyCode.KpEnter:
-        return (
-          <IconSubtitleCombination
-            icon={<CornerDownLeft />}
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpTab:
-        return (
-          <IconSubtitleCombination
-            icon={<ArrowRightToLine />}
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpBackspace:
-        return <IconSubtitleCombination icon={<Delete />} subtitle="Keypad" />;
-      case KeyCode.KpA:
-        return <TextSubtitleCombination text="A" subtitle="Keypad" />;
-      case KeyCode.KpB:
-        return <TextSubtitleCombination text="B" subtitle="Keypad" />;
-      case KeyCode.KpC:
-        return <TextSubtitleCombination text="C" subtitle="Keypad" />;
-      case KeyCode.KpD:
-        return <TextSubtitleCombination text="D" subtitle="Keypad" />;
-      case KeyCode.KpE:
-        return <TextSubtitleCombination text="E" subtitle="Keypad" />;
-      case KeyCode.KpF:
-        return <TextSubtitleCombination text="F" subtitle="Keypad" />;
-      case KeyCode.KpMemoryStore:
-        return (
-          <SmallTextSubtitleCombination text="Memory Store" subtitle="Keypad" />
-        );
-      case KeyCode.KpMemoryRecall:
-        return (
-          <SmallTextSubtitleCombination
-            text="Memory Recall"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpMemoryClear:
-        return (
-          <SmallTextSubtitleCombination text="Memory Clear" subtitle="Keypad" />
-        );
-      case KeyCode.KpMemoryAdd:
-        return (
-          <SmallTextSubtitleCombination text="Memory Add" subtitle="Keypad" />
-        );
-      case KeyCode.KpMemorySubtract:
-        return (
-          <SmallTextSubtitleCombination
-            text="Memory Subtract"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpMemoryMultiply:
-        return (
-          <SmallTextSubtitleCombination
-            text="Memory Multiply"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpMemoryDivide:
-        return (
-          <SmallTextSubtitleCombination
-            text="Memory Divide"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpClear:
-        return <SmallTextSubtitleCombination text="Clear" subtitle="Keypad" />;
-      case KeyCode.KpClearEntry:
-        return (
-          <SmallTextSubtitleCombination text="Clear Entry" subtitle="Keypad" />
-        );
-      case KeyCode.KpBinary:
-        return <SmallTextSubtitleCombination text="Binary" subtitle="Keypad" />;
-      case KeyCode.KpOctal:
-        return <SmallTextSubtitleCombination text="Octal" subtitle="Keypad" />;
-      case KeyCode.KpDecimal:
-        return (
-          <SmallTextSubtitleCombination text="Decimal" subtitle="Keypad" />
-        );
-      case KeyCode.KpHexadecimal:
-        return (
-          <SmallTextSubtitleCombination text="Hexadecimal" subtitle="Keypad" />
-        );
-      case KeyCode.KpSlash:
-        return <TextSubtitleCombination text="/" subtitle="Keypad" />;
-      case KeyCode.KpAsterisk:
-        return <TextSubtitleCombination text="*" subtitle="Keypad" />;
-      case KeyCode.KpMinus:
-        return <TextSubtitleCombination text="-" subtitle="Keypad" />;
-      case KeyCode.KpPlus:
-        return <TextSubtitleCombination text="+" subtitle="Keypad" />;
-      case KeyCode.KpDot:
-        return <TextSubtitleCombination text="." subtitle="Keypad" />;
-      case KeyCode.KpEqual:
-        return <TextSubtitleCombination text="=" subtitle="Keypad" />;
-      case KeyCode.KpComma:
-        return <TextSubtitleCombination text="," subtitle="Keypad" />;
-      case KeyCode.KpEqualSign:
-        return <TextSubtitleCombination text="=" subtitle="Keypad" />;
-      case KeyCode.KpThousandsSeparator:
-        return (
-          <SmallTextSubtitleCombination
-            text="Thousands Separator"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpDecimalSeparator:
-        return (
-          <SmallTextSubtitleCombination
-            text="Decimal Separator"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpCurrencyUnit:
-        return (
-          <SmallTextSubtitleCombination
-            text="Currency Unit"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpCurrencySubunit:
-        return (
-          <SmallTextSubtitleCombination
-            text="Currency Subunit"
-            subtitle="Keypad"
-          />
-        );
-      case KeyCode.KpLeftParen:
-        return <TextSubtitleCombination text="(" subtitle="Keypad" />;
-      case KeyCode.KpRightParen:
-        return <TextSubtitleCombination text="(" subtitle="Keypad" />;
-      case KeyCode.KpLeftBrace:
-        return <TextSubtitleCombination text="{" subtitle="Keypad" />;
-      case KeyCode.KpRightBrace:
-        return <TextSubtitleCombination text="}" subtitle="Keypad" />;
-      case KeyCode.KpXor:
-        return <SmallTextSubtitleCombination text="XOR" subtitle="Keypad" />;
-      case KeyCode.KpCaret:
-        return <TextSubtitleCombination text="^" subtitle="Keypad" />;
-      case KeyCode.KpPercent:
-        return <TextSubtitleCombination text="%" subtitle="Keypad" />;
-      case KeyCode.KpLessThan:
-        return <TextSubtitleCombination text="<" subtitle="Keypad" />;
-      case KeyCode.KpGreaterThan:
-        return <TextSubtitleCombination text=">" subtitle="Keypad" />;
-      case KeyCode.KpAmpersand:
-        return <TextSubtitleCombination text="&" subtitle="Keypad" />;
-      case KeyCode.KpDoubleAmpersand:
-        return <TextSubtitleCombination text="&&" subtitle="Keypad" />;
-      case KeyCode.KpPipe:
-        return <TextSubtitleCombination text="|" subtitle="Keypad" />;
-      case KeyCode.KpDoublePipe:
-        return <TextSubtitleCombination text="||" subtitle="Keypad" />;
-      case KeyCode.KpColon:
-        return <TextSubtitleCombination text=":" subtitle="Keypad" />;
-      case KeyCode.KpHash:
-        return <TextSubtitleCombination text="#" subtitle="Keypad" />;
-      case KeyCode.KpSpace:
-        return <IconSubtitleCombination icon={<Space />} subtitle="Keypad" />;
-      case KeyCode.KpAt:
-        return <TextSubtitleCombination text="@" subtitle="Keypad" />;
-      case KeyCode.KpExclamation:
-        return <TextSubtitleCombination text="!" subtitle="Keypad" />;
-      case KeyCode.KpPlusMinus:
-        return <TextSubtitleCombination text="+-" subtitle="Keypad" />;
-      default:
-        return <>{action.value}</>;
-    }
-  },
-  renderTooltip: (action) => {
-    return <>{action.value}</>;
-  },
-  remap: (action) => action,
-  children: () => [],
-});
-
-function encodeSingleKeyCode(
-  value: number,
-  allocateEntryId: () => number,
-): ActionEntries {
-  return {
-    rootActionEntry: buildActionEntry(
-      allocateEntryId(),
-      buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
-        action.keyCode = value;
-        action.type = KeyCodeType.KEYBOARD;
-      }),
-    ),
-    childActionEntries: [],
-  };
-}
-
-function encodeCombinedKeyCode(
-  keyCode1: number,
-  keyCode2: number,
-  allocateEntryId: () => number,
-): ActionEntries {
-  const entryId1 = allocateEntryId();
-  const entryId2 = allocateEntryId();
-
-  const entry1 = buildActionEntry(
-    entryId1,
-    buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
-      action.keyCode = keyCode1;
-      action.type = KeyCodeType.KEYBOARD;
-    }),
-  );
-  const entry2 = buildActionEntry(
-    entryId2,
-    buildAction(ActionId.keyCode, KeyCodeAction, (action) => {
-      action.keyCode = keyCode2;
-      action.type = KeyCodeType.KEYBOARD;
-    }),
-  );
-
-  const sequenceAction = buildAction(
-    ActionId.ordered,
-    OrderedAction,
-    (action) => {
-      action.action1EntryId = entryId1;
-      action.action2EntryId = entryId2;
-    },
-  );
-
-  return {
-    rootActionEntry: buildActionEntry(allocateEntryId(), sequenceAction),
-    childActionEntries: [entry1, entry2],
-  };
+    case KeyCode.LShift:
+      return level == 0 ? (
+        <IconSubtitleCombination icon={<ArrowBigUp />} subtitle="Left Shift" />
+      ) : (
+        <ArrowBigUp />
+      );
+    case KeyCode.RShift:
+      return level == 0 ? (
+        <IconSubtitleCombination icon={<ArrowBigUp />} subtitle="Right Shift" />
+      ) : (
+        <ArrowBigUp />
+      );
+    case KeyCode.LAlt:
+      return level == 0 ? (
+        <IconSubtitleCombination icon={<Option />} subtitle="Left Alt" />
+      ) : (
+        <Option />
+      );
+    case KeyCode.RAlt:
+      return level == 0 ? (
+        <IconSubtitleCombination icon={<Option />} subtitle="Right Alt" />
+      ) : (
+        <Option />
+      );
+    case KeyCode.LGui:
+      return level == 0 ? (
+        <IconSubtitleCombination icon={<Command />} subtitle="Left Super" />
+      ) : (
+        <Command />
+      );
+    case KeyCode.RGui:
+      return level == 0 ? (
+        <IconSubtitleCombination icon={<Command />} subtitle="Right Super" />
+      ) : (
+        <Command />
+      );
+    case KeyCode.AE:
+      return <>Ä</>;
+    case KeyCode.OE:
+      return <>Ö</>;
+    case KeyCode.UE:
+      return <>Ü</>;
+    case KeyCode.SharpS:
+      return <>ß</>;
+    case KeyCode.N1:
+      return <>1</>;
+    case KeyCode.N2:
+      return <>2</>;
+    case KeyCode.N3:
+      return <>3</>;
+    case KeyCode.N4:
+      return <>4</>;
+    case KeyCode.N5:
+      return <>5</>;
+    case KeyCode.N6:
+      return <>6</>;
+    case KeyCode.N7:
+      return <>7</>;
+    case KeyCode.N8:
+      return <>8</>;
+    case KeyCode.N9:
+      return <>9</>;
+    case KeyCode.N0:
+      return <>0</>;
+    case KeyCode.Enter:
+      return <CornerDownLeft />;
+    case KeyCode.Escape:
+      return <>ESC</>;
+    case KeyCode.Backspace:
+      return <Delete />;
+    case KeyCode.Tab:
+      return <ArrowRightToLine />;
+    case KeyCode.Space:
+      return <SpaceIcon />;
+    case KeyCode.CapsLock:
+      return <ArrowBigUpDash />;
+    case KeyCode.Minus:
+      return <>-</>;
+    case KeyCode.Equal:
+      return <>=</>;
+    case KeyCode.LeftParen:
+      return <>(</>;
+    case KeyCode.RightParen:
+      return <>)</>;
+    case KeyCode.LeftBracket:
+      return <>[</>;
+    case KeyCode.RightBracket:
+      return <>]</>;
+    case KeyCode.LeftBrace:
+      return <>{"{"}</>;
+    case KeyCode.RightBrace:
+      return <>{"}"}</>;
+    case KeyCode.Backslash:
+      return <>{"\\"}</>;
+    case KeyCode.Hash:
+      return <>#</>;
+    case KeyCode.Semicolon:
+      return <>;</>;
+    case KeyCode.Apostrophe:
+      return <>'</>;
+    case KeyCode.Grave:
+      return <>`</>;
+    case KeyCode.Comma:
+      return <>,</>;
+    case KeyCode.Dot:
+      return <>.</>;
+    case KeyCode.Slash:
+      return <>/</>;
+    case KeyCode.Tilde:
+      return <>~</>;
+    case KeyCode.ExclamationMark:
+      return <>!</>;
+    case KeyCode.At:
+      return <>@</>;
+    case KeyCode.Dollar:
+      return <>$</>;
+    case KeyCode.Euro:
+      return <>€</>;
+    case KeyCode.Percent:
+      return <>%</>;
+    case KeyCode.Caret:
+      return <>^</>;
+    case KeyCode.Ampersand:
+      return <>{"&"}</>;
+    case KeyCode.Asterisk:
+      return <>*</>;
+    case KeyCode.Underscore:
+      return <>_</>;
+    case KeyCode.Plus:
+      return <>+</>;
+    case KeyCode.Pipe:
+      return <>|</>;
+    case KeyCode.Colon:
+      return <>:</>;
+    case KeyCode.DoubleQuote:
+      return <>{'"'}</>;
+    case KeyCode.GreaterThan:
+      return <>{">"}</>;
+    case KeyCode.LessThan:
+      return <>{"<"}</>;
+    case KeyCode.QuestionMark:
+      return <>?</>;
+    case KeyCode.SectionSign:
+      return <>§</>;
+    case KeyCode.Degree:
+      return <>°</>;
+    case KeyCode.Acute:
+      return <>`</>;
+    case KeyCode.PrintScreen:
+      return <Small>Print Screen</Small>;
+    case KeyCode.ScrollLock:
+      return <Small>Scroll Lock</Small>;
+    case KeyCode.PageUp:
+      return <Small>Page Up</Small>;
+    case KeyCode.PageDown:
+      return <Small>Page Down</Small>;
+    case KeyCode.Pause:
+      return <Small>Pause</Small>;
+    case KeyCode.Insert:
+      return <Small>Insert</Small>;
+    case KeyCode.Home:
+      return <Small>Home</Small>;
+    case KeyCode.Delete:
+      return <Small>Delete</Small>;
+    case KeyCode.End:
+      return <Small>End</Small>;
+    case KeyCode.Left:
+      return <ArrowLeft />;
+    case KeyCode.Right:
+      return <ArrowRight />;
+    case KeyCode.Up:
+      return <ArrowUp />;
+    case KeyCode.Down:
+      return <ArrowDown />;
+    case KeyCode.Application:
+      return <Small>Application</Small>;
+    case KeyCode.Power:
+      return <Power />;
+    case KeyCode.Execute:
+      return <Small>Execute</Small>;
+    case KeyCode.Help:
+      return <Small>Help</Small>;
+    case KeyCode.Menu:
+      return <Small>Menu</Small>;
+    case KeyCode.Select:
+      return <Small>Select</Small>;
+    case KeyCode.Stop:
+      return <Small>Stop</Small>;
+    case KeyCode.Again:
+      return <Small>Again</Small>;
+    case KeyCode.Undo:
+      return <Small>Undo</Small>;
+    case KeyCode.Cut:
+      return <Small>Cut</Small>;
+    case KeyCode.Copy:
+      return <Small>Copy</Small>;
+    case KeyCode.Paste:
+      return <Small>Paste</Small>;
+    case KeyCode.Find:
+      return <Small>Find</Small>;
+    case KeyCode.LockingCapsLock:
+      return <Small>Locking Caps Lock</Small>;
+    case KeyCode.LockingNumLock:
+      return <Small>Locking Num Lock</Small>;
+    case KeyCode.LockingScrollLock:
+      return <Small>Locking Scroll Lock</Small>;
+    case KeyCode.Mute:
+      return <VolumeX />;
+    case KeyCode.VolumeDown:
+      return <Volume1 />;
+    case KeyCode.VolumeUp:
+      return <Volume2 />;
+    case KeyCode.NonUsBackslash:
+      return <Small>Non-US Backslash</Small>;
+    case KeyCode.International1:
+      return <Small>Int 1</Small>;
+    case KeyCode.International2:
+      return <Small>Int 2</Small>;
+    case KeyCode.International3:
+      return <Small>Int 3</Small>;
+    case KeyCode.International4:
+      return <Small>Int 4</Small>;
+    case KeyCode.International5:
+      return <Small>Int 5</Small>;
+    case KeyCode.International6:
+      return <Small>Int 6</Small>;
+    case KeyCode.International7:
+      return <Small>Int 7</Small>;
+    case KeyCode.International8:
+      return <Small>Int 8</Small>;
+    case KeyCode.International9:
+      return <Small>Int 9</Small>;
+    case KeyCode.Lang1:
+      return <Small>Lang 1</Small>;
+    case KeyCode.Lang2:
+      return <Small>Lang 2</Small>;
+    case KeyCode.Lang3:
+      return <Small>Lang 3</Small>;
+    case KeyCode.Lang4:
+      return <Small>Lang 4</Small>;
+    case KeyCode.Lang5:
+      return <Small>Lang 5</Small>;
+    case KeyCode.Lang6:
+      return <Small>Lang 6</Small>;
+    case KeyCode.Lang7:
+      return <Small>Lang 7</Small>;
+    case KeyCode.Lang8:
+      return <Small>Lang 8</Small>;
+    case KeyCode.Lang9:
+      return <Small>Lang 9</Small>;
+    case KeyCode.Kp1:
+      return <TextSubtitleCombination text="1" subtitle="Keypad" />;
+    case KeyCode.Kp2:
+      return <TextSubtitleCombination text="2" subtitle="Keypad" />;
+    case KeyCode.Kp3:
+      return <TextSubtitleCombination text="3" subtitle="Keypad" />;
+    case KeyCode.Kp4:
+      return <TextSubtitleCombination text="4" subtitle="Keypad" />;
+    case KeyCode.Kp5:
+      return <TextSubtitleCombination text="5" subtitle="Keypad" />;
+    case KeyCode.Kp6:
+      return <TextSubtitleCombination text="6" subtitle="Keypad" />;
+    case KeyCode.Kp7:
+      return <TextSubtitleCombination text="7" subtitle="Keypad" />;
+    case KeyCode.Kp8:
+      return <TextSubtitleCombination text="8" subtitle="Keypad" />;
+    case KeyCode.Kp9:
+      return <TextSubtitleCombination text="9" subtitle="Keypad" />;
+    case KeyCode.Kp0:
+      return <TextSubtitleCombination text="0" subtitle="Keypad" />;
+    case KeyCode.Kp00:
+      return <TextSubtitleCombination text="00" subtitle="Keypad" />;
+    case KeyCode.Kp000:
+      return <TextSubtitleCombination text="000" subtitle="Keypad" />;
+    case KeyCode.NumLock:
+      return <Small>Num Lock</Small>;
+    case KeyCode.KpEnter:
+      return (
+        <IconSubtitleCombination icon={<CornerDownLeft />} subtitle="Keypad" />
+      );
+    case KeyCode.KpTab:
+      return (
+        <IconSubtitleCombination
+          icon={<ArrowRightToLine />}
+          subtitle="Keypad"
+        />
+      );
+    case KeyCode.KpBackspace:
+      return <IconSubtitleCombination icon={<Delete />} subtitle="Keypad" />;
+    case KeyCode.KpA:
+      return <TextSubtitleCombination text="A" subtitle="Keypad" />;
+    case KeyCode.KpB:
+      return <TextSubtitleCombination text="B" subtitle="Keypad" />;
+    case KeyCode.KpC:
+      return <TextSubtitleCombination text="C" subtitle="Keypad" />;
+    case KeyCode.KpD:
+      return <TextSubtitleCombination text="D" subtitle="Keypad" />;
+    case KeyCode.KpE:
+      return <TextSubtitleCombination text="E" subtitle="Keypad" />;
+    case KeyCode.KpF:
+      return <TextSubtitleCombination text="F" subtitle="Keypad" />;
+    case KeyCode.KpMemoryStore:
+      return (
+        <SmallTextSubtitleCombination text="Memory Store" subtitle="Keypad" />
+      );
+    case KeyCode.KpMemoryRecall:
+      return (
+        <SmallTextSubtitleCombination text="Memory Recall" subtitle="Keypad" />
+      );
+    case KeyCode.KpMemoryClear:
+      return (
+        <SmallTextSubtitleCombination text="Memory Clear" subtitle="Keypad" />
+      );
+    case KeyCode.KpMemoryAdd:
+      return (
+        <SmallTextSubtitleCombination text="Memory Add" subtitle="Keypad" />
+      );
+    case KeyCode.KpMemorySubtract:
+      return (
+        <SmallTextSubtitleCombination
+          text="Memory Subtract"
+          subtitle="Keypad"
+        />
+      );
+    case KeyCode.KpMemoryMultiply:
+      return (
+        <SmallTextSubtitleCombination
+          text="Memory Multiply"
+          subtitle="Keypad"
+        />
+      );
+    case KeyCode.KpMemoryDivide:
+      return (
+        <SmallTextSubtitleCombination text="Memory Divide" subtitle="Keypad" />
+      );
+    case KeyCode.KpClear:
+      return <SmallTextSubtitleCombination text="Clear" subtitle="Keypad" />;
+    case KeyCode.KpClearEntry:
+      return (
+        <SmallTextSubtitleCombination text="Clear Entry" subtitle="Keypad" />
+      );
+    case KeyCode.KpBinary:
+      return <SmallTextSubtitleCombination text="Binary" subtitle="Keypad" />;
+    case KeyCode.KpOctal:
+      return <SmallTextSubtitleCombination text="Octal" subtitle="Keypad" />;
+    case KeyCode.KpDecimal:
+      return <SmallTextSubtitleCombination text="Decimal" subtitle="Keypad" />;
+    case KeyCode.KpHexadecimal:
+      return (
+        <SmallTextSubtitleCombination text="Hexadecimal" subtitle="Keypad" />
+      );
+    case KeyCode.KpSlash:
+      return <TextSubtitleCombination text="/" subtitle="Keypad" />;
+    case KeyCode.KpAsterisk:
+      return <TextSubtitleCombination text="*" subtitle="Keypad" />;
+    case KeyCode.KpMinus:
+      return <TextSubtitleCombination text="-" subtitle="Keypad" />;
+    case KeyCode.KpPlus:
+      return <TextSubtitleCombination text="+" subtitle="Keypad" />;
+    case KeyCode.KpDot:
+      return <TextSubtitleCombination text="." subtitle="Keypad" />;
+    case KeyCode.KpEqual:
+      return <TextSubtitleCombination text="=" subtitle="Keypad" />;
+    case KeyCode.KpComma:
+      return <TextSubtitleCombination text="," subtitle="Keypad" />;
+    case KeyCode.KpEqualSign:
+      return <TextSubtitleCombination text="=" subtitle="Keypad" />;
+    case KeyCode.KpThousandsSeparator:
+      return (
+        <SmallTextSubtitleCombination
+          text="Thousands Separator"
+          subtitle="Keypad"
+        />
+      );
+    case KeyCode.KpDecimalSeparator:
+      return (
+        <SmallTextSubtitleCombination
+          text="Decimal Separator"
+          subtitle="Keypad"
+        />
+      );
+    case KeyCode.KpCurrencyUnit:
+      return (
+        <SmallTextSubtitleCombination text="Currency Unit" subtitle="Keypad" />
+      );
+    case KeyCode.KpCurrencySubunit:
+      return (
+        <SmallTextSubtitleCombination
+          text="Currency Subunit"
+          subtitle="Keypad"
+        />
+      );
+    case KeyCode.KpLeftParen:
+      return <TextSubtitleCombination text="(" subtitle="Keypad" />;
+    case KeyCode.KpRightParen:
+      return <TextSubtitleCombination text="(" subtitle="Keypad" />;
+    case KeyCode.KpLeftBrace:
+      return <TextSubtitleCombination text="{" subtitle="Keypad" />;
+    case KeyCode.KpRightBrace:
+      return <TextSubtitleCombination text="}" subtitle="Keypad" />;
+    case KeyCode.KpXor:
+      return <SmallTextSubtitleCombination text="XOR" subtitle="Keypad" />;
+    case KeyCode.KpCaret:
+      return <TextSubtitleCombination text="^" subtitle="Keypad" />;
+    case KeyCode.KpPercent:
+      return <TextSubtitleCombination text="%" subtitle="Keypad" />;
+    case KeyCode.KpLessThan:
+      return <TextSubtitleCombination text="<" subtitle="Keypad" />;
+    case KeyCode.KpGreaterThan:
+      return <TextSubtitleCombination text=">" subtitle="Keypad" />;
+    case KeyCode.KpAmpersand:
+      return <TextSubtitleCombination text={"&"} subtitle="Keypad" />;
+    case KeyCode.KpDoubleAmpersand:
+      return <TextSubtitleCombination text="&&" subtitle="Keypad" />;
+    case KeyCode.KpPipe:
+      return <TextSubtitleCombination text="|" subtitle="Keypad" />;
+    case KeyCode.KpDoublePipe:
+      return <TextSubtitleCombination text="||" subtitle="Keypad" />;
+    case KeyCode.KpColon:
+      return <TextSubtitleCombination text=":" subtitle="Keypad" />;
+    case KeyCode.KpHash:
+      return <TextSubtitleCombination text="#" subtitle="Keypad" />;
+    case KeyCode.KpSpace:
+      return <IconSubtitleCombination icon={<Space />} subtitle="Keypad" />;
+    case KeyCode.KpAt:
+      return <TextSubtitleCombination text="@" subtitle="Keypad" />;
+    case KeyCode.KpExclamation:
+      return <TextSubtitleCombination text="!" subtitle="Keypad" />;
+    case KeyCode.KpPlusMinus:
+      return <TextSubtitleCombination text="+-" subtitle="Keypad" />;
+    default:
+      return <>{action.value}</>;
+  }
 }

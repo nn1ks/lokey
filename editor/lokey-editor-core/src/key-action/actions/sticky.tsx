@@ -2,20 +2,26 @@ import { Accordion } from "@ark-ui/solid";
 import * as capnp from "capnp-es";
 import { Ellipsis } from "lucide-solid";
 import { createSignal } from "solid-js";
-import type { Component } from "solid-js";
-import { StickyAction } from "lokey-editor-odyn/keyboard";
+import type { Component, JSX } from "solid-js";
+import { KeyboardAction, StickyAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
 import { ActionPickerDurationRow } from "../../components/keymap/ActionPickerDurationRow";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import { ActionPickerSwitchRow } from "../../components/keymap/ActionPickerSwitchRow";
 import type { KeyAction } from "../action";
-import { buildAction, buildActionEntry } from "../codec/entries";
-import { defineAction } from "../definition";
-import type { PickerContext } from "../definition";
+import { buildAction } from "../codec/build";
+import {
+  DecodeContext,
+  EncodeContext,
+  PickerContext,
+  RemapLayersContext,
+} from "../contexts";
 import { Labelled } from "../render";
+import { decodeAction } from "../codec/decode";
 
 export class Sticky<A extends KeyAction = KeyAction> implements KeyAction {
+  static readonly actionId = ActionId.sticky;
   readonly actionId = ActionId.sticky;
 
   constructor(
@@ -24,6 +30,58 @@ export class Sticky<A extends KeyAction = KeyAction> implements KeyAction {
     readonly timeout: number = 1000,
     readonly ignoreModifiers: boolean = true,
   ) {}
+
+  encode(ctx: EncodeContext): KeyboardAction {
+    const action = this.action.encode(ctx);
+    const actionEntryId = ctx.pushAction(action);
+
+    return buildAction(ActionId.sticky, StickyAction, (stickyAction) => {
+      stickyAction.actionEntryId = actionEntryId;
+      stickyAction.timeout = this.timeout;
+      stickyAction.ignoreModifiers = this.ignoreModifiers;
+    });
+  }
+
+  static decode(payload: Uint8Array, ctx: DecodeContext): Sticky {
+    const message = new capnp.Message(payload, false);
+    const sticky = message.getRoot(StickyAction);
+    return new Sticky(
+      decodeAction(ctx.resolveEntry(sticky.actionEntryId), ctx),
+      sticky.timeout,
+      sticky.ignoreModifiers,
+    );
+  }
+
+  renderButtonContent(level: number): JSX.Element {
+    if (level > 0) return <Ellipsis />;
+
+    return (
+      <Labelled label="Sticky">
+        {this.action.renderButtonContent(level + 1)}
+      </Labelled>
+    );
+  }
+
+  renderTooltip(): JSX.Element {
+    return (
+      <div class="flex flex-col items-center gap-1">
+        <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
+          Sticky
+        </div>
+        <div class="flex min-h-6 items-center justify-center">
+          {this.action.renderTooltip()}
+        </div>
+      </div>
+    );
+  }
+
+  renderPicker(ctx: PickerContext): JSX.Element {
+    return <StickyPicker action={this} ctx={ctx} />;
+  }
+
+  remapLayers(ctx: RemapLayersContext): boolean {
+    return this.action.remapLayers(ctx);
+  }
 }
 
 type StickyChanges = Partial<{
@@ -90,56 +148,3 @@ const StickyPicker: Component<{
     </>
   );
 };
-
-export const stickyActionDefinition = defineAction<Sticky>({
-  actionId: ActionId.sticky,
-  label: "Sticky",
-  encode: (action, ctx) => {
-    const actionEntryId = ctx.encodeChild(action.action);
-
-    return {
-      rootActionEntry: buildActionEntry(
-        ctx.allocateEntryId(),
-        buildAction(ActionId.sticky, StickyAction, (stickyAction) => {
-          stickyAction.actionEntryId = actionEntryId;
-          stickyAction.timeout = action.timeout;
-          stickyAction.ignoreModifiers = action.ignoreModifiers;
-        }),
-      ),
-      childActionEntries: [],
-    };
-  },
-  decode: (payload, ctx) => {
-    const message = new capnp.Message(payload, false);
-    const sticky = message.getRoot(StickyAction);
-    return new Sticky(
-      ctx.decodeChild(sticky.actionEntryId),
-      sticky.timeout,
-      sticky.ignoreModifiers,
-    );
-  },
-  render: (action, level, ctx) => {
-    if (level > 0) return <Ellipsis />;
-
-    return (
-      <Labelled label="Sticky">
-        {ctx.renderAction(action.action, level + 1)}
-      </Labelled>
-    );
-  },
-  renderTooltip: (action, ctx) => (
-    <div class="flex flex-col items-center gap-1">
-      <div class="text-neutral-500 text-[0.65rem] font-semibold tracking-[0.08em] uppercase">
-        Sticky
-      </div>
-      <div class="flex min-h-6 items-center justify-center">
-        {ctx.renderTooltip(action.action)}
-      </div>
-    </div>
-  ),
-  remap: (action, ctx) =>
-    withSticky(action, { action: ctx.remapAction(action.action) }),
-  children: (action) => [action.action],
-  renderPicker: (action, ctx) => <StickyPicker action={action} ctx={ctx} />,
-  withChildren: withStickyChildren,
-});

@@ -12,9 +12,7 @@ import { Toggle } from "../../key-action/actions/toggle";
 import { Transparent } from "../../key-action/actions/transparent";
 import type { KeyAction } from "../../key-action/action";
 import StyledTooltipContent from "../StyledTooltipContent";
-import { ActionRenderer, ActionTooltipRenderer } from "./ActionRenderer";
 import styles from "./KeyActionPicker.module.css";
-import { ActionPickerRenderer } from "./ActionPickerRenderer";
 import { keyCodeGroups, keyCodeCategoryOrder } from "./key-code-groups";
 import type { KeyCodeCategory } from "./key-code-groups";
 import { Unordered } from "../../key-action/actions/unordered";
@@ -131,12 +129,12 @@ const ActionGrid: Component<{
             `}
             onClick={() => props.onSelect(action)}
           >
-            <ActionRenderer action={action} level={0} />
+            {action.renderButtonContent(0)}
           </Tooltip.Trigger>
           <Portal>
             <Tooltip.Positioner>
               <StyledTooltipContent>
-                <ActionTooltipRenderer action={action} />
+                {action.renderTooltip()}
               </StyledTooltipContent>
             </Tooltip.Positioner>
           </Portal>
@@ -212,13 +210,13 @@ const PickerActionList: Component<{
       return [];
     }
 
-    const definition = registry.byId(selected.actionId);
-    if (!definition || definition.children(selected).length === 0) {
+    const cls = registry.byId(selected.actionId);
+    if (!cls) {
       return [];
     }
 
     const action = props.actions.find((action) => isSelected(selected, action));
-    return action ? [definition.actionId.toString()] : [];
+    return action ? [cls.actionId.toString()] : [];
   };
 
   const [value, setValue] = createSignal<string[]>(selectedAccordion());
@@ -257,10 +255,9 @@ const PickerActionList: Component<{
               }`}
               value={action.actionId.toString()}
             >
-              <ActionPickerRenderer
-                action={selectedOrDefaultAction()}
-                onSelect={props.onSelect}
-              />
+              {selectedOrDefaultAction().renderPicker({
+                onSelect: props.onSelect,
+              })}
             </Accordion.Item>
           );
         }}

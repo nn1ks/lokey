@@ -1,23 +1,18 @@
 import * as capnp from "capnp-es";
 import {
-  KeyboardAction as KeyboardActionStruct,
+  KeyboardAction,
   KeyboardActionEntry,
   PerLayerAction,
 } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 
-export type ActionEntries = {
-  rootActionEntry: KeyboardActionEntry;
-  childActionEntries: KeyboardActionEntry[];
-};
-
 export function buildAction<T extends capnp.Struct>(
   actionId: number,
   actionType: capnp.StructCtor<T>,
   setAction: (action: T) => void,
-): KeyboardActionStruct {
+): KeyboardAction {
   const capnpMessage = new capnp.Message();
-  const actionWrapper = capnpMessage.initRoot(KeyboardActionStruct);
+  const actionWrapper = capnpMessage.initRoot(KeyboardAction);
   actionWrapper.actionId = actionId;
 
   const capnpMessageInner = new capnp.Message();
@@ -35,9 +30,9 @@ export function buildAction<T extends capnp.Struct>(
 export function buildRawAction(
   actionId: number,
   payload: Uint8Array,
-): KeyboardActionStruct {
+): KeyboardAction {
   const capnpMessage = new capnp.Message();
-  const actionWrapper = capnpMessage.initRoot(KeyboardActionStruct);
+  const actionWrapper = capnpMessage.initRoot(KeyboardAction);
   actionWrapper.actionId = actionId;
   actionWrapper._initPayload(payload.byteLength).copyBuffer(payload);
   return actionWrapper;
@@ -45,7 +40,7 @@ export function buildRawAction(
 
 export function buildActionEntry(
   entryId: number,
-  action: KeyboardActionStruct,
+  action: KeyboardAction,
 ): KeyboardActionEntry {
   const capnpMessage = new capnp.Message();
   const entry = capnpMessage.initRoot(KeyboardActionEntry);
@@ -57,7 +52,7 @@ export function buildActionEntry(
 export function buildPerLayerAction(
   actionEntryIds: number[],
   layers: number[],
-): KeyboardActionStruct {
+): KeyboardAction {
   if (actionEntryIds.length !== layers.length) {
     throw new Error(
       `A per-layer action requires the same number of entry IDs and layers, got ${actionEntryIds.length} and ${layers.length}.`,
