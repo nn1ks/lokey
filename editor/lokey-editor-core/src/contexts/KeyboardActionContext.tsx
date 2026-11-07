@@ -24,7 +24,7 @@ import type { ActionRegistry } from "../key-action/registry";
 import type { Layout } from "../layouts";
 import { useConnection } from "./ConnectionContext";
 import { useMessageManager } from ".";
-import type { MessageManager } from "../protocol/MessageManager";
+import type { MessageManager } from "../protocol/message-manager";
 import { ActionRegistryContextProvider } from "./ActionRegistryContext";
 import { buildActionEntry } from "../key-action/codec/build";
 import { DecodeContext } from "../key-action/contexts";

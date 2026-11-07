@@ -9,7 +9,7 @@ import type { Accessor, ParentComponent } from "solid-js";
 import { useConnection } from "./ConnectionContext";
 import { useMessageManager } from ".";
 import * as hookId from "lokey-editor-odyn/led-array/hook-id";
-import type { MessageManager } from "../protocol/MessageManager";
+import type { MessageManager } from "../protocol/message-manager";
 
 export type LedArrayHooks = {
   boot: boolean;

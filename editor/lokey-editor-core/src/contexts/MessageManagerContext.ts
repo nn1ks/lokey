@@ -1,5 +1,5 @@
 import { createContext, useContext } from "solid-js";
-import type { MessageManager } from "../protocol/MessageManager";
+import type { MessageManager } from "../protocol/message-manager";
 
 export const MessageManagerContext = createContext<MessageManager>();
 

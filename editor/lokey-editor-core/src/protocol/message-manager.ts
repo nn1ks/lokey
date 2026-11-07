@@ -8,7 +8,7 @@ import {
 import * as coreMessageId from "lokey-editor-odyn/core/message-id";
 import * as ledArrayMessageId from "lokey-editor-odyn/led-array/message-id";
 import * as keyboardMessageId from "lokey-editor-odyn/keyboard/message-id";
-import PubSub from "./PubSub";
+import PubSub from "./pub-sub";
 import { DemoMessageHandler } from "../demo";
 import {
   GetLedArrayHookCapabilitiesRequest,
