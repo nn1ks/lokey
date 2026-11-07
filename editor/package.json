@@ -9,6 +9,7 @@
     "build:core": "pnpm --filter lokey-editor-core run build",
     "build:app": "pnpm --filter lokey-editor run build",
     "dev": "pnpm --filter lokey-editor run dev",
+    "serve": "pnpm --filter lokey-editor run serve",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm -r run typecheck",
