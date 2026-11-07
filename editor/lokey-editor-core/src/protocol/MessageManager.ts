@@ -117,6 +117,24 @@ export class MessageManager {
     });
   }
 
+  #buildRequestMessage<TRequest extends capnp.Struct>(
+    requestId: number,
+    requestType: capnp.StructCtor<TRequest>,
+    setRequest: (message: TRequest) => void,
+  ): capnp.Message {
+    const capnpRequestMessage = new capnp.Message();
+    const requestMessage = capnpRequestMessage.initRoot(requestType);
+    setRequest(requestMessage);
+    const payload = new Uint8Array(capnpRequestMessage.toArrayBuffer());
+
+    const message = new capnp.Message();
+    const envelope = message.initRoot(Message);
+    envelope.sequenceNumber = 0;
+    envelope.id = requestId;
+    envelope._initPayload(payload.byteLength).copyBuffer(payload);
+    return message;
+  }
+
   async requestSingle<
     TRequest extends capnp.Struct,
     TResponse extends capnp.Struct,
@@ -131,16 +149,11 @@ export class MessageManager {
       throw this.readError;
     }
 
-    const capnpRequestMessage = new capnp.Message();
-    const requestMessage = capnpRequestMessage.initRoot(requestType);
-    setRequest(requestMessage);
-    const payload = new Uint8Array(capnpRequestMessage.toArrayBuffer());
-
-    const message = new capnp.Message();
-    const envelope = message.initRoot(Message);
-    envelope.sequenceNumber = 0;
-    envelope.id = requestId;
-    envelope._initPayload(payload.byteLength).copyBuffer(payload);
+    const requestMessage = this.#buildRequestMessage(
+      requestId,
+      requestType,
+      setRequest,
+    );
 
     return new Promise<TResponse>((resolve, reject) => {
       const unsubscribe = this.messages.subscribe((message) => {
@@ -163,7 +176,62 @@ export class MessageManager {
       });
 
       void this.transport
-        .write(new Uint8Array(message.toArrayBuffer()))
+        .write(new Uint8Array(requestMessage.toArrayBuffer()))
+        .catch((cause) => {
+          unsubscribe();
+          reject(cause);
+        });
+    });
+  }
+
+  async requestMultipart<
+    TRequest extends capnp.Struct,
+    TResponse extends capnp.Struct,
+  >(
+    requestId: number,
+    requestType: capnp.StructCtor<TRequest>,
+    setRequest: (message: TRequest) => void,
+    responseId: number,
+    responseType: capnp.StructCtor<TResponse>,
+    finished: (message: TResponse) => boolean,
+  ): Promise<TResponse[]> {
+    if (this.readError) {
+      throw this.readError;
+    }
+
+    const requestMessage = this.#buildRequestMessage(
+      requestId,
+      requestType,
+      setRequest,
+    );
+
+    return new Promise<TResponse[]>((resolve, reject) => {
+      const responses: TResponse[] = [];
+
+      const unsubscribe = this.messages.subscribe((message) => {
+        if (message.id !== responseId) {
+          return;
+        }
+
+        try {
+          const responsePayload = new Uint8Array(
+            message.payload.toArrayBuffer(),
+          );
+          const responseMessage = new capnp.Message(responsePayload, false);
+          const response = responseMessage.getRoot(responseType);
+          responses.push(response);
+          if (finished(response)) {
+            unsubscribe();
+            resolve(responses);
+          }
+        } catch (cause) {
+          unsubscribe();
+          reject(cause);
+        }
+      });
+
+      void this.transport
+        .write(new Uint8Array(requestMessage.toArrayBuffer()))
         .catch((cause) => {
           unsubscribe();
           reject(cause);
@@ -233,23 +301,25 @@ export class MessageManager {
     );
   }
 
-  async getLayout(): Promise<GetLayoutResponse> {
-    return await this.requestSingle(
+  async getLayout(): Promise<GetLayoutResponse[]> {
+    return await this.requestMultipart(
       keyboardMessageId.getLayoutRequest,
       GetLayoutRequest,
       (_request) => {},
       keyboardMessageId.getLayoutResponse,
       GetLayoutResponse,
+      (response) => response.isFinalResponse,
     );
   }
 
-  async getActiveActionEntries(): Promise<GetActiveActionEntriesResponse> {
-    return await this.requestSingle(
+  async getActiveActionEntries(): Promise<GetActiveActionEntriesResponse[]> {
+    return await this.requestMultipart(
       keyboardMessageId.getActiveActionEntriesRequest,
       GetActiveActionEntriesRequest,
       (_request) => {},
       keyboardMessageId.getActiveActionEntriesResponse,
       GetActiveActionEntriesResponse,
+      (response) => response.isFinalResponse,
     );
   }
 

@@ -437,17 +437,18 @@ function convertToRawHostLayout(hostLayout: Layout): HostLayout {
 }
 
 function resolveKeys(
-  layout: GetLayoutResponse,
-  entriesResponse: GetActiveActionEntriesResponse,
+  layoutResponses: GetLayoutResponse[],
+  entriesResponses: GetActiveActionEntriesResponse[],
   hostLayout: HostLayout,
   registry: ActionRegistry,
   noneAction: KeyAction,
 ): RootKeyAction[] {
   const entries = new Map<number, KeyboardActionEntry>();
-  const entryList = entriesResponse.entries;
-  for (let i = 0; i < entryList.length; i++) {
-    const entry = entryList.get(i);
-    entries.set(entry.entryId, entry);
+
+  for (const entriesResponse of entriesResponses) {
+    for (const entry of entriesResponse.entries) {
+      entries.set(entry.entryId, entry);
+    }
   }
 
   let actualHostLayout = convertFromRawHostLayout(hostLayout);
@@ -464,10 +465,15 @@ function resolveKeys(
     resolveEntry: (actionEntryId) => entries.get(actionEntryId)?.action!, // TODO: remove "!"
   };
 
-  const actionEntryIds = layout.actionEntryIds;
+  const actionEntryIds = [];
+  for (const layoutResponse of layoutResponses) {
+    actionEntryIds.push(...layoutResponse.actionEntryIds);
+  }
+
   const keys: RootKeyAction[] = [];
-  for (let i = 0; i < actionEntryIds.length; i++) {
-    const entry = resolveEntry(actionEntryIds.get(i));
+
+  for (const actionEntryId of actionEntryIds) {
+    const entry = resolveEntry(actionEntryId);
     // TODO: show error instead of falling back to "None" action
     keys.push(
       entry
