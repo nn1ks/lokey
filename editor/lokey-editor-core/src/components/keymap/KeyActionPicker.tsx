@@ -340,10 +340,10 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
       <For each={keyCodeCategoryOrder}>
         {(category) => (
           <Tabs.Content value={category} class="data-[state=closed]:hidden">
-            <Show when={hostLayout()}>
+            <Show when={hostLayout()} keyed>
               {(hostLayout) => (
                 <CategoryGrid
-                  actions={keyCodeActions(hostLayout()).get(category)!}
+                  actions={keyCodeActions(hostLayout).get(category)!}
                   onSelect={(action) => props.onSelect(action, true)}
                   selectedAction={props.selectedAction}
                 />
