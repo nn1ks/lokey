@@ -51,7 +51,9 @@ export const Labelled: Component<ParentProps<{ label: string }>> = (props) => (
     >
       {props.label}
     </div>
-    <div class="px-3">{props.children}</div>
+    <div class="w-full h-full flex justify-center items-center">
+      {props.children}
+    </div>
   </div>
 );
 
