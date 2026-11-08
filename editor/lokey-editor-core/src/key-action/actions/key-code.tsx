@@ -15,6 +15,7 @@ import {
   Power,
   Space,
   Space as SpaceIcon,
+  TriangleAlert,
   Volume1,
   Volume2,
   VolumeX,
@@ -122,7 +123,7 @@ export class KeyCode implements KeyAction {
   }
 
   renderButtonContent(level: number): JSX.Element {
-    return renderButtonContent(this, level);
+    return <KeyCodeButtonContent keyCode={this} level={level} />;
   }
 
   renderTooltip(): JSX.Element {
@@ -417,6 +418,38 @@ export function keyCodesForLayout(
 export function reverseKeyCodes(layout: Layout): ReverseKeyCodes {
   return reverseKeyCodesByLayout[layout];
 }
+
+const KeyCodeButtonContent: Component<{ keyCode: KeyCode; level: number }> = (
+  props,
+) => {
+  const { hostLayout } = useKeyboardActions();
+
+  const buttonContent = renderButtonContent(props.keyCode, props.level);
+
+  const isValid = createMemo(() => {
+    const hostLayoutValue = hostLayout();
+    if (!hostLayoutValue) {
+      return false;
+    }
+    return keyCodesForLayout(hostLayoutValue).get(props.keyCode) !== undefined;
+  });
+
+  return (
+    <Switch>
+      <Match when={isValid()}>{buttonContent}</Match>
+      <Match when={!isValid()}>
+        <div class="relative w-full h-full">
+          <div class="w-full h-full flex justify-center items-center">
+            {buttonContent}
+          </div>
+          <div class="absolute bottom-1 right-1 [&_svg]:size-[1em]! text-yellow-800 dark:text-yellow-200">
+            <TriangleAlert />
+          </div>
+        </div>
+      </Match>
+    </Switch>
+  );
+};
 
 function renderButtonContent(action: KeyCode, level: number): JSX.Element {
   switch (action) {
