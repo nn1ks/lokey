@@ -39,7 +39,7 @@ import {
   TextSubtitleCombination,
 } from "../render";
 import { None } from "./none";
-import { Component, For, JSX, Show } from "solid-js";
+import { Component, createMemo, For, JSX, Match, Show, Switch } from "solid-js";
 import {
   DecodeContext,
   EncodeContext,
@@ -898,30 +898,28 @@ const KeyCodeTooltip: Component<{ keyCode: KeyCode }> = (props) => {
   };
 
   return (
-    <div>
-      <Show when={hostLayout()}>
-        {(hostLayout) => {
-          const keyCodes = keyCodesForLayout(hostLayout());
-          const keyCodeEncoding = keyCodes.get(props.keyCode);
+    <Show when={hostLayout()} keyed>
+      {(hostLayout) => {
+        const keyCodes = keyCodesForLayout(hostLayout);
+        const keyCodeEncoding = keyCodes.get(props.keyCode);
 
-          if (!keyCodeEncoding) {
-            return content([]);
-          }
+        if (!keyCodeEncoding) {
+          return content([]);
+        }
 
-          if (keyCodeEncoding.kind === "single") {
-            return content([keyCodeEncoding.rawKeyCode]);
-          }
+        if (keyCodeEncoding.kind === "single") {
+          return content([keyCodeEncoding.rawKeyCode]);
+        }
 
-          if (keyCodeEncoding.kind === "combined") {
-            return content([
-              keyCodeEncoding.rawKeyCode1,
-              keyCodeEncoding.rawKeyCode2,
-            ]);
-          }
+        if (keyCodeEncoding.kind === "combined") {
+          return content([
+            keyCodeEncoding.rawKeyCode1,
+            keyCodeEncoding.rawKeyCode2,
+          ]);
+        }
 
-          assertNever(keyCodeEncoding);
-        }}
-      </Show>
-    </div>
+        assertNever(keyCodeEncoding);
+      }}
+    </Show>
   );
 };
