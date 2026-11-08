@@ -7,12 +7,11 @@ import { Sticky } from "./actions/sticky";
 import { Toggle } from "./actions/toggle";
 import { Unordered } from "./actions/unordered";
 import { Transparent } from "./actions/transparent";
-import type { ActionRegistry } from "./registry";
-import { createActionRegistry } from "./registry";
+import { ActionRegistry } from "./registry";
 
 /** Creates a registry populated with the built-in action definitions. */
 export function createDefaultRegistry(): ActionRegistry {
-  const registry = createActionRegistry();
+  const registry = new ActionRegistry();
   registry.register(None);
   registry.register(Transparent);
   registry.register(Layer);

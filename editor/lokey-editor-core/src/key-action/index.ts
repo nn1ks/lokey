@@ -9,7 +9,7 @@ export {
 } from "./codec/root-key-action";
 export type { Layout } from "./layouts";
 export { isLayout, layouts } from "./layouts";
-export { ActionRegistry, createActionRegistry } from "./registry";
+export { ActionRegistry } from "./registry";
 export { UnknownAction } from "./actions/unknown";
 export type {
   PickerContext,

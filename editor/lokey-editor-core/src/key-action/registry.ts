@@ -3,6 +3,8 @@ import type { KeyAction, KeyActionClass } from "./action";
 export class ActionRegistry {
   readonly #byId = new Map<number, KeyActionClass>();
 
+  constructor() {}
+
   register<A extends KeyAction>(cls: KeyActionClass<A>): void {
     if (this.#byId.has(cls.actionId)) {
       throw new Error(
@@ -19,8 +21,4 @@ export class ActionRegistry {
   all(): KeyActionClass[] {
     return [...this.#byId.values()];
   }
-}
-
-export function createActionRegistry(): ActionRegistry {
-  return new ActionRegistry();
 }
