@@ -1,4 +1,7 @@
-import { KeyboardAction } from "lokey-editor-odyn/keyboard";
+import {
+  KeyboardAction,
+  KeyboardActionEntry,
+} from "lokey-editor-odyn/keyboard";
 import { Layout } from "../layouts";
 import { ActionRegistry } from "./registry";
 
@@ -6,8 +9,11 @@ export interface EncodeContext {
   /** The host layout used to translate key codes. */
   readonly hostLayout: Layout;
 
-  /** Pushes an action to the context and returns the ID of the created KeyboardActionEntry. */
-  pushAction(action: KeyboardAction): number;
+  /** Returns the next available action entry ID. */
+  nextActionEntryId(): number;
+
+  /** Pushes an action entry to the context. */
+  pushActionEntry(action: KeyboardActionEntry): void;
 }
 
 export interface DecodeContext {
@@ -22,11 +28,14 @@ export interface DecodeContext {
 }
 
 export interface PickerContext {
-  /** Selects the action and closes the picker. */
-  onSelect(action: import("./action").KeyAction, close: boolean): void;
+  selectAction(): void;
+
+  addAction(action: import("./action").KeyAction): void;
+
+  closePicker(): void;
 }
 
 export interface RemapLayersContext {
-  /** Maps a layer index through a layer move. */
-  remapLayer(index: number): number;
+  /** Converts the given layer into the new layer as part of the remap. */
+  convertLayer(index: number): number;
 }

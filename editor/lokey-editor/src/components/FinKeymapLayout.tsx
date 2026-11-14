@@ -5,14 +5,14 @@ import {
   KeyButton,
 } from "lokey-editor-core/components/keymap";
 import {
-  useKeyboardActions,
+  useKeymapState,
   useSelectedLayer,
   useTheme,
 } from "lokey-editor-core/contexts";
 import styles from "./FinKeymapLayout.module.css";
 
 export const FinKeymapLayout: Component = () => {
-  const keyboardActions = useKeyboardActions();
+  const keymapState = useKeymapState();
   const selectedLayer = useSelectedLayer();
   const { theme } = useTheme();
 
@@ -23,14 +23,12 @@ export const FinKeymapLayout: Component = () => {
 
   const selectedAction = () => {
     const key = selectedKey();
-    return key
-      ? keyboardActions.actions()[key.keyIndex]?.[key.layer]
-      : undefined;
+    return key ? keymapState.actionAt(key.layer, key.keyIndex) : undefined;
   };
 
   const keyIndices = createMemo(() =>
     Array.from(
-      { length: keyboardActions.actions().length },
+      { length: keymapState.rootActionEntryIds.length },
       (_, index) => index,
     ),
   );
@@ -60,30 +58,37 @@ export const FinKeymapLayout: Component = () => {
         alt="Fin keyboard layout"
       />
       <div class={styles.key_button_container}>
-        <Index each={keyIndices()}>
-          {(keyIndex) => {
-            const action = createMemo(() => {
-              const layer = selectedLayer();
-              return keyboardActions.actions()[keyIndex()]?.[layer];
-            });
+        <Show when={keymapState.rootActionEntryIds.length > 0}>
+          <Index each={keyIndices()}>
+            {(keyIndex) => {
+              const action = createMemo(() => {
+                const layerCount = keymapState.layerCount();
+                // `selectedLayer` can briefly be out of range while a layer is
+                // being removed, so clamp it to the last valid layer.
+                const layer = Math.min(selectedLayer(), layerCount - 1);
+                return keymapState.actionAt(layer, keyIndex());
+              });
 
-            return (
-              <Show when={action()}>
-                {(action) => (
-                  <KeyButton
-                    keyAction={action()}
-                    onClick={() =>
-                      setSelectedKey({
-                        keyIndex: keyIndex(),
-                        layer: selectedLayer(),
-                      })
-                    }
-                  />
-                )}
-              </Show>
-            );
-          }}
-        </Index>
+              return (
+                <Show when={action()} keyed>
+                  {(action) => {
+                    return (
+                      <KeyButton
+                        keyAction={action}
+                        onClick={() =>
+                          setSelectedKey({
+                            keyIndex: keyIndex(),
+                            layer: selectedLayer(),
+                          })
+                        }
+                      />
+                    );
+                  }}
+                </Show>
+              );
+            }}
+          </Index>
+        </Show>
       </div>
       <KeyActionPickerDialog
         open={selectedKey() !== undefined}
@@ -95,7 +100,7 @@ export const FinKeymapLayout: Component = () => {
         onSelect={(action) => {
           const key = selectedKey();
           if (key) {
-            void keyboardActions.setAction(key.keyIndex, key.layer, action);
+            void keymapState.pushActionAt(action, key.layer, key.keyIndex);
           }
         }}
         selectedAction={selectedAction()}

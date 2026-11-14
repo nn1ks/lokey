@@ -17,11 +17,12 @@ import { keyCodeGroups, keyCodeCategoryOrder } from "./key-code-groups";
 import type { KeyCodeCategory } from "./key-code-groups";
 import { Unordered } from "../../key-action/actions/unordered";
 import { useActionRegistry } from "../../contexts/ActionRegistryContext";
-import { useKeyboardActions } from "../../contexts";
+import { useKeymapState } from "../../contexts";
 import { Layout } from "../../layouts";
 
 export type KeyActionPickerProps = {
-  onSelect: (action: KeyAction, close: boolean) => void;
+  onSelect: (action: KeyAction) => void;
+  onClose: () => void;
   selectedAction?: KeyAction;
 };
 
@@ -54,16 +55,18 @@ function tabForAction(
       if (actualKeyCodeGroups[category].kind === "flat") {
         if (
           actualKeyCodeGroups[category].content.some(
-            (keyCode) => keyCode.value === action.value,
+            (keyCodeValue) => keyCodeValue === action.value,
           )
         ) {
           return category;
         }
       } else if (actualKeyCodeGroups[category].kind === "group") {
-        for (const keyCodes of Object.values(
+        for (const keyCodeValues of Object.values(
           actualKeyCodeGroups[category].content,
         )) {
-          if (keyCodes.some((keyCode) => keyCode.value === action.value)) {
+          if (
+            keyCodeValues.some((keyCodeValue) => keyCodeValue === action.value)
+          ) {
             return category;
           }
         }
@@ -90,12 +93,18 @@ function keyCodeActions(layout: Layout): Map<KeyCodeCategory, PickerActions> {
     keyCodeCategoryOrder.map((category): [KeyCodeCategory, PickerActions] => {
       const content = actualKeyCodeGroups[category];
       if (content.kind === "flat") {
-        return [category, { kind: "flat", actions: content.content }];
+        const actions = content.content.map(
+          (keyCodeValue) => new KeyCode(undefined, keyCodeValue),
+        );
+        return [category, { kind: "flat", actions }];
       }
 
       const actions: GroupPickerActions = {};
-      for (const [group, keyCodes] of Object.entries(content.content)) {
-        actions[group] = keyCodes;
+      for (const [group, keyCodeValues] of Object.entries(content.content)) {
+        const flatActions = keyCodeValues.map(
+          (keyCodeValue) => new KeyCode(undefined, keyCodeValue),
+        );
+        actions[group] = flatActions;
       }
       return [category, { kind: "group", actions: actions }];
     }),
@@ -105,6 +114,7 @@ function keyCodeActions(layout: Layout): Map<KeyCodeCategory, PickerActions> {
 const ActionGrid: Component<{
   actions: readonly KeyAction[];
   onSelect: (action: KeyAction) => void;
+  onClose: () => void;
   selectedAction?: KeyAction;
 }> = (props) => (
   <div class="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
@@ -127,7 +137,10 @@ const ActionGrid: Component<{
                   : ""
               }
             `}
-            onClick={() => props.onSelect(action)}
+            onClick={() => {
+              props.onSelect(action);
+              props.onClose();
+            }}
           >
             {action.renderButtonContent(0)}
           </Tooltip.Trigger>
@@ -147,6 +160,7 @@ const ActionGrid: Component<{
 const GroupedActionGrid: Component<{
   groups: GroupPickerActions;
   onSelect: (action: KeyAction) => void;
+  onClose: () => void;
   selectedAction?: KeyAction;
 }> = (props) => (
   <div class="flex flex-col gap-3">
@@ -159,6 +173,7 @@ const GroupedActionGrid: Component<{
           <ActionGrid
             actions={actions}
             onSelect={props.onSelect}
+            onClose={props.onClose}
             selectedAction={props.selectedAction}
           />
         </div>
@@ -170,6 +185,7 @@ const GroupedActionGrid: Component<{
 const CategoryGrid: Component<{
   actions: PickerActions;
   onSelect: (action: KeyAction) => void;
+  onClose: () => void;
   selectedAction?: KeyAction;
 }> = (props) => {
   const actions = () => props.actions;
@@ -181,6 +197,7 @@ const CategoryGrid: Component<{
             (actions() as { kind: "flat"; actions: FlatPickerActions }).actions
           }
           onSelect={props.onSelect}
+          onClose={props.onClose}
           selectedAction={props.selectedAction}
         />
       ) : (
@@ -190,6 +207,7 @@ const CategoryGrid: Component<{
               .actions
           }
           onSelect={props.onSelect}
+          onClose={props.onClose}
           selectedAction={props.selectedAction}
         />
       )}
@@ -199,7 +217,8 @@ const CategoryGrid: Component<{
 
 const PickerActionList: Component<{
   actions: readonly KeyAction[];
-  onSelect: (action: KeyAction, close: boolean) => void;
+  onSelect: (action: KeyAction) => void;
+  onClose: () => void;
   selectedAction?: KeyAction;
 }> = (props) => {
   const registry = useActionRegistry();
@@ -256,7 +275,9 @@ const PickerActionList: Component<{
               value={action.actionId.toString()}
             >
               {selectedOrDefaultAction().renderPicker({
-                onSelect: props.onSelect,
+                selectAction: () => props.onSelect(selectedOrDefaultAction()),
+                addAction: (action) => {}, // TODO
+                closePicker: props.onClose,
               })}
             </Accordion.Item>
           );
@@ -267,7 +288,7 @@ const PickerActionList: Component<{
 };
 
 export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
-  const { hostLayout } = useKeyboardActions();
+  const { hostLayout } = useKeymapState();
 
   const [activeTab, setActiveTab] = createSignal(
     tabForAction(props.selectedAction, hostLayout()),
@@ -280,17 +301,17 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
   });
 
   const listedBehaviourActions = createMemo<readonly KeyAction[]>(() => [
-    new Layer(0),
-    new HoldTap(new None(), new None()),
-    new Ordered(new None(), new None()),
-    new Unordered(new None(), new None()),
-    new Sticky(new None()),
-    new Toggle(new None()),
+    new Layer(undefined, 0),
+    new HoldTap(undefined, new None(undefined), new None(undefined)),
+    new Ordered(undefined, new None(undefined), new None(undefined)),
+    new Unordered(undefined, new None(undefined), new None(undefined)),
+    new Sticky(undefined, new None(undefined)),
+    new Toggle(undefined, new None(undefined)),
   ]);
 
   const simpleBehaviourActions = createMemo<readonly KeyAction[]>(() => [
-    new None(),
-    new Transparent(),
+    new None(undefined),
+    new Transparent(undefined),
   ]);
 
   return (
@@ -327,12 +348,14 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
         <div class="flex flex-col gap-2">
           <ActionGrid
             actions={simpleBehaviourActions()}
-            onSelect={(action) => props.onSelect(action, true)}
+            onSelect={props.onSelect}
+            onClose={props.onClose}
             selectedAction={props.selectedAction}
           />
           <PickerActionList
             actions={listedBehaviourActions()}
             onSelect={props.onSelect}
+            onClose={props.onClose}
             selectedAction={props.selectedAction}
           />
         </div>
@@ -344,7 +367,8 @@ export const KeyActionPicker: Component<KeyActionPickerProps> = (props) => {
               {(hostLayout) => (
                 <CategoryGrid
                   actions={keyCodeActions(hostLayout).get(category)!}
-                  onSelect={(action) => props.onSelect(action, true)}
+                  onSelect={props.onSelect}
+                  onClose={props.onClose}
                   selectedAction={props.selectedAction}
                 />
               )}

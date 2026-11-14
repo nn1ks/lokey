@@ -1,14 +1,14 @@
 import * as capnp from "capnp-es";
 import { Ellipsis } from "lucide-solid";
 import { createSignal } from "solid-js";
-import type { Component, JSX } from "solid-js";
-import { HoldTapAction, KeyboardAction } from "lokey-editor-odyn/keyboard";
+import type { Accessor, Component, JSX, Setter } from "solid-js";
+import { HoldTapAction, KeyboardActionEntry } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
 import { ActionPickerDurationRow } from "../../components/keymap/ActionPickerDurationRow";
 import type { KeyAction } from "../action";
-import { buildAction } from "../codec/build";
+import { buildAction, buildActionEntry } from "../codec/build";
 import { Labelled, Split } from "../render";
 import { Accordion } from "@ark-ui/solid/accordion";
 import {
@@ -19,40 +19,77 @@ import {
 } from "../contexts";
 import { decodeAction } from "../codec/decode";
 
-export class HoldTap<
-  H extends KeyAction = KeyAction,
-  T extends KeyAction = KeyAction,
-> implements KeyAction {
+export class HoldTap implements KeyAction {
   static readonly actionId = ActionId.holdTap;
   readonly actionId = ActionId.holdTap;
 
+  readonly holdAction: Accessor<KeyAction>;
+  readonly setHoldAction: Setter<KeyAction>;
+  readonly tapAction: Accessor<KeyAction>;
+  readonly setTapAction: Setter<KeyAction>;
+  readonly tappingTerm: Accessor<number>;
+  readonly setTappingTerm: Setter<number>;
+
   constructor(
-    readonly holdAction: H,
-    readonly tapAction: T,
+    public actionEntryId: number | undefined,
+    holdAction: KeyAction,
+    tapAction: KeyAction,
     /** Tapping term in milliseconds. */
-    readonly tappingTerm: number = 200,
-  ) {}
-
-  encode(ctx: EncodeContext): KeyboardAction {
-    const holdAction = this.holdAction.encode(ctx);
-    const tapAction = this.tapAction.encode(ctx);
-
-    const holdActionEntryId = ctx.pushAction(holdAction);
-    const tapActionEntryId = ctx.pushAction(tapAction);
-
-    return buildAction(ActionId.holdTap, HoldTapAction, (holdTapAction) => {
-      holdTapAction.holdActionEntryId = holdActionEntryId;
-      holdTapAction.tapActionEntryId = tapActionEntryId;
-      holdTapAction.tappingTerm = this.tappingTerm;
-    });
+    tappingTerm: number = 200,
+  ) {
+    const [localHoldAction, localSetHoldAction] = createSignal(holdAction);
+    this.holdAction = localHoldAction;
+    this.setHoldAction = localSetHoldAction;
+    const [localTapAction, localSetTapAction] = createSignal(tapAction);
+    this.tapAction = localTapAction;
+    this.setTapAction = localSetTapAction;
+    const [localTappingTerm, localSetTappingTerm] = createSignal(tappingTerm);
+    this.tappingTerm = localTappingTerm;
+    this.setTappingTerm = localSetTappingTerm;
   }
 
-  static decode(payload: Uint8Array, ctx: DecodeContext): HoldTap {
-    const message = new capnp.Message(payload, false);
+  encode(ctx: EncodeContext): KeyboardActionEntry {
+    const holdActionEntry = this.holdAction().encode(ctx);
+    const tapActionEntry = this.tapAction().encode(ctx);
+
+    ctx.pushActionEntry(holdActionEntry);
+    ctx.pushActionEntry(tapActionEntry);
+
+    const action = buildAction(
+      ActionId.holdTap,
+      HoldTapAction,
+      (holdTapAction) => {
+        holdTapAction.holdActionEntryId = holdActionEntry.entryId;
+        holdTapAction.tapActionEntryId = tapActionEntry.entryId;
+        holdTapAction.tappingTerm = this.tappingTerm();
+      },
+    );
+
+    const entryId = this.actionEntryId ?? ctx.nextActionEntryId();
+    this.actionEntryId = entryId;
+
+    return buildActionEntry(entryId, action);
+  }
+
+  static decode(
+    actionEntryId: number | undefined,
+    actionPayload: Uint8Array,
+    ctx: DecodeContext,
+  ): HoldTap {
+    const message = new capnp.Message(actionPayload, false);
     const holdTap = message.getRoot(HoldTapAction);
     return new HoldTap(
-      decodeAction(ctx.resolveEntry(holdTap.holdActionEntryId), ctx),
-      decodeAction(ctx.resolveEntry(holdTap.tapActionEntryId), ctx),
+      actionEntryId,
+      decodeAction(
+        holdTap.holdActionEntryId,
+        ctx.resolveEntry(holdTap.holdActionEntryId),
+        ctx,
+      ),
+      decodeAction(
+        holdTap.tapActionEntryId,
+        ctx.resolveEntry(holdTap.tapActionEntryId),
+        ctx,
+      ),
       holdTap.tappingTerm,
     );
   }
@@ -64,12 +101,12 @@ export class HoldTap<
       <Split
         action1={
           <Labelled label="Hold">
-            {this.holdAction.renderButtonContent(level + 1)}
+            {this.holdAction().renderButtonContent(level + 1)}
           </Labelled>
         }
         action2={
           <Labelled label="Tap">
-            {this.tapAction.renderButtonContent(level + 1)}
+            {this.tapAction().renderButtonContent(level + 1)}
           </Labelled>
         }
       />
@@ -84,7 +121,7 @@ export class HoldTap<
             Hold
           </div>
           <div class="flex min-h-6 items-center justify-center">
-            {this.holdAction.renderTooltip()}
+            {this.holdAction().renderTooltip()}
           </div>
         </div>
         <div class="w-px bg-neutral-600 dark:bg-neutral-400" />
@@ -93,7 +130,7 @@ export class HoldTap<
             Tap
           </div>
           <div class="flex min-h-6 items-center justify-center">
-            {this.tapAction.renderTooltip()}
+            {this.tapAction().renderTooltip()}
           </div>
         </div>
       </div>
@@ -104,72 +141,56 @@ export class HoldTap<
     return <HoldTapPicker action={this} ctx={ctx} />;
   }
 
-  remapLayers(ctx: RemapLayersContext): boolean {
-    const holdActionChanged = this.holdAction.remapLayers(ctx);
-    const tapActionChanged = this.tapAction.remapLayers(ctx);
-    return holdActionChanged || tapActionChanged;
+  remapLayers(ctx: RemapLayersContext): void {
+    this.holdAction().remapLayers(ctx);
+    this.tapAction().remapLayers(ctx);
   }
 }
-
-const withHoldTapChildren = (action: HoldTap, children: KeyAction[]): HoldTap =>
-  new HoldTap(children[0]!, children[1]!, action.tappingTerm);
-
-const withHoldTapTappingTerm = (
-  action: HoldTap,
-  tappingTerm: number,
-): HoldTap => new HoldTap(action.holdAction, action.tapAction, tappingTerm);
 
 const HoldTapPicker: Component<{
   action: HoldTap;
   ctx: PickerContext;
 }> = (props) => {
-  const [currentAction, setCurrentAction] = createSignal(props.action);
-
   return (
     <>
       <ActionPickerHeader
         label="Hold Tap"
         withAccordionTrigger={true}
-        onSelect={() => props.ctx.onSelect(currentAction(), true)}
+        onSelect={() => {
+          props.ctx.selectAction();
+          props.ctx.closePicker();
+        }}
       />
       <Accordion.ItemContent class="data-[state=closed]:hidden">
         <div class="flex flex-col gap-2 p-2 pt-0">
           <ActionPickerDurationRow
             label="Tapping Term"
-            value={currentAction().tappingTerm}
+            value={props.action.tappingTerm()}
             min={0}
             max={10000}
             step={50}
             unit="ms"
-            onValueCommit={() => props.ctx.onSelect(currentAction(), false)}
-            onValueChange={(value) => {
-              setCurrentAction(withHoldTapTappingTerm(currentAction(), value));
-            }}
+            onValueCommit={() => props.ctx.selectAction()}
+            onValueChange={(value) => props.action.setTappingTerm(value)}
           />
           <ActionPickerChildRow
             label="Hold"
-            action={currentAction().holdAction}
+            action={props.action.holdAction()}
             onSelect={(action) => {
-              setCurrentAction(
-                withHoldTapChildren(currentAction(), [
-                  action,
-                  currentAction().tapAction,
-                ]),
-              );
-              props.ctx.onSelect(currentAction(), false);
+              action.actionEntryId = props.action.holdAction().actionEntryId;
+              props.action.setHoldAction(action);
+              props.ctx.selectAction();
+              props.ctx.addAction(action);
             }}
           />
           <ActionPickerChildRow
             label="Tap"
-            action={currentAction().tapAction}
+            action={props.action.tapAction()}
             onSelect={(action) => {
-              setCurrentAction(
-                withHoldTapChildren(currentAction(), [
-                  currentAction().holdAction,
-                  action,
-                ]),
-              );
-              props.ctx.onSelect(currentAction(), false);
+              action.actionEntryId = props.action.tapAction().actionEntryId;
+              props.action.setTapAction(action);
+              props.ctx.selectAction();
+              props.ctx.addAction(action);
             }}
           />
         </div>

@@ -8,9 +8,10 @@ import { Toggle } from "./actions/toggle";
 import { Unordered } from "./actions/unordered";
 import { Transparent } from "./actions/transparent";
 import { ActionRegistry } from "./registry";
+import { PerLayer } from "./actions/per-layer";
 
 /** Creates a registry populated with the built-in action definitions. */
-export function createDefaultRegistry(): ActionRegistry {
+export function createDefaultActionRegistry(): ActionRegistry {
   const registry = new ActionRegistry();
   registry.register(None);
   registry.register(Transparent);
@@ -21,8 +22,6 @@ export function createDefaultRegistry(): ActionRegistry {
   registry.register(Sticky);
   registry.register(Toggle);
   registry.register(KeyCode);
+  registry.register(PerLayer);
   return registry;
 }
-
-/** The default registry used by the editor. */
-export const actionRegistry = createDefaultRegistry();

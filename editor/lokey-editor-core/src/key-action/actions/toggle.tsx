@@ -2,13 +2,13 @@ import { Accordion } from "@ark-ui/solid";
 import * as capnp from "capnp-es";
 import { Ellipsis } from "lucide-solid";
 import { createSignal } from "solid-js";
-import type { Component, JSX } from "solid-js";
-import { KeyboardAction, ToggleAction } from "lokey-editor-odyn/keyboard";
+import type { Accessor, Component, JSX, Setter } from "solid-js";
+import { KeyboardActionEntry, ToggleAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import type { KeyAction } from "../action";
-import { buildAction } from "../codec/build";
+import { buildAction, buildActionEntry } from "../codec/build";
 import {
   DecodeContext,
   EncodeContext,
@@ -18,26 +18,54 @@ import {
 import { Labelled } from "../render";
 import { decodeAction } from "../codec/decode";
 
-export class Toggle<A extends KeyAction = KeyAction> implements KeyAction {
+export class Toggle implements KeyAction {
   static readonly actionId = ActionId.toggle;
   readonly actionId = ActionId.toggle;
 
-  constructor(readonly action: A) {}
+  readonly action: Accessor<KeyAction>;
+  readonly setAction: Setter<KeyAction>;
 
-  encode(ctx: EncodeContext): KeyboardAction {
-    const action = this.action.encode(ctx);
-    const actionEntryId = ctx.pushAction(action);
-
-    return buildAction(ActionId.toggle, ToggleAction, (toggleAction) => {
-      toggleAction.actionEntryId = actionEntryId;
-    });
+  constructor(
+    public actionEntryId: number | undefined,
+    action: KeyAction,
+  ) {
+    const [localAction, localSetAction] = createSignal(action);
+    this.action = localAction;
+    this.setAction = localSetAction;
   }
 
-  static decode(payload: Uint8Array, ctx: DecodeContext): Toggle {
-    const message = new capnp.Message(payload, false);
+  encode(ctx: EncodeContext): KeyboardActionEntry {
+    const childAction = this.action().encode(ctx);
+    ctx.pushActionEntry(childAction);
+
+    const action = buildAction(
+      ActionId.toggle,
+      ToggleAction,
+      (toggleAction) => {
+        toggleAction.actionEntryId = childAction.entryId;
+      },
+    );
+
+    const entryId = this.actionEntryId ?? ctx.nextActionEntryId();
+    this.actionEntryId = entryId;
+
+    return buildActionEntry(entryId, action);
+  }
+
+  static decode(
+    actionEntryId: number | undefined,
+    actionPayload: Uint8Array,
+    ctx: DecodeContext,
+  ): Toggle {
+    const message = new capnp.Message(actionPayload, false);
     const toggle = message.getRoot(ToggleAction);
     return new Toggle(
-      decodeAction(ctx.resolveEntry(toggle.actionEntryId), ctx),
+      actionEntryId,
+      decodeAction(
+        toggle.actionEntryId,
+        ctx.resolveEntry(toggle.actionEntryId),
+        ctx,
+      ),
     );
   }
 
@@ -46,7 +74,7 @@ export class Toggle<A extends KeyAction = KeyAction> implements KeyAction {
 
     return (
       <Labelled label="Toggle">
-        {this.action.renderButtonContent(level + 1)}
+        {this.action().renderButtonContent(level + 1)}
       </Labelled>
     );
   }
@@ -58,7 +86,7 @@ export class Toggle<A extends KeyAction = KeyAction> implements KeyAction {
           Toggle
         </div>
         <div class="flex min-h-6 items-center justify-center">
-          {this.action.renderTooltip()}
+          {this.action().renderTooltip()}
         </div>
       </div>
     );
@@ -68,13 +96,13 @@ export class Toggle<A extends KeyAction = KeyAction> implements KeyAction {
     return <TogglePicker action={this} ctx={ctx} />;
   }
 
-  remapLayers(ctx: RemapLayersContext): boolean {
-    return this.action.remapLayers(ctx);
+  remapLayers(ctx: RemapLayersContext): void {
+    this.action().remapLayers(ctx);
   }
 }
 
 const withToggleChildren = (action: Toggle, children: KeyAction[]): Toggle =>
-  new Toggle(children[0]!);
+  new Toggle(action.actionEntryId, children[0]!);
 
 const TogglePicker: Component<{
   action: Toggle;
@@ -87,17 +115,18 @@ const TogglePicker: Component<{
       <ActionPickerHeader
         label="Toggle"
         withAccordionTrigger={true}
-        onSelect={() => props.ctx.onSelect(currentAction(), true)}
+        onSelect={() => props.ctx.selectAction()}
       />
       <Accordion.ItemContent class="data-[state=closed]:hidden">
         <div class="flex flex-col gap-2 p-2 pt-0">
           <ActionPickerChildRow
             label="Action"
-            action={currentAction().action}
+            action={props.action.action()}
             onSelect={(action) => {
-              const next = new Toggle(action);
-              setCurrentAction(next);
-              props.ctx.onSelect(next, false);
+              action.actionEntryId = props.action.action().actionEntryId;
+              props.action.setAction(action);
+              props.ctx.selectAction();
+              props.ctx.addAction(action);
             }}
           />
         </div>

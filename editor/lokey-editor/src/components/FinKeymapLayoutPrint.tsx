@@ -1,7 +1,7 @@
 import { For } from "solid-js";
 import type { Component } from "solid-js";
 import type { KeyAction } from "lokey-editor-core";
-import { useKeyboardActions } from "lokey-editor-core/contexts";
+import { useKeymapState } from "lokey-editor-core/contexts";
 import styles from "./FinKeymapLayout.module.css";
 
 const PrintKey: Component<{ keyAction: KeyAction }> = (props) => {
@@ -27,16 +27,15 @@ const PrintKey: Component<{ keyAction: KeyAction }> = (props) => {
 };
 
 export const FinKeymapLayoutPrint: Component = () => {
-  const keyboardActions = useKeyboardActions();
+  const keymapState = useKeymapState();
 
   const layers = () =>
-    Array.from({ length: keyboardActions.layerCount() }, (_, index) => index);
+    Array.from({ length: keymapState.layerCount() }, (_, index) => index);
 
-  const keyActions = (layer: number) =>
-    keyboardActions
-      .actions()
-      .map((layers) => layers[layer])
-      .filter((action) => action !== undefined);
+  const keyIndicesArray = Array.from(
+    { length: keymapState.rootActionEntryIds.length },
+    (_, index) => index,
+  );
 
   return (
     <div class="flex flex-col gap-8 bg-white p-4">
@@ -60,8 +59,12 @@ export const FinKeymapLayoutPrint: Component = () => {
                 alt="Fin keyboard layout"
               />
               <div class={styles.key_button_container}>
-                <For each={keyActions(layer)}>
-                  {(action) => <PrintKey keyAction={action} />}
+                <For each={keyIndicesArray}>
+                  {(keyIndex) => (
+                    <PrintKey
+                      keyAction={keymapState.actionAt(layer, keyIndex)}
+                    />
+                  )}
                 </For>
               </div>
             </div>

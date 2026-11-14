@@ -1,10 +1,10 @@
 import * as capnp from "capnp-es";
 import { CircleOff } from "lucide-solid";
-import { KeyboardAction, NoneAction } from "lokey-editor-odyn/keyboard";
+import { KeyboardActionEntry, NoneAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import type { JSX } from "solid-js";
 import type { KeyAction } from "../action";
-import { buildAction } from "../codec/build";
+import { buildAction, buildActionEntry } from "../codec/build";
 import {
   DecodeContext,
   EncodeContext,
@@ -16,14 +16,25 @@ export class None implements KeyAction {
   static readonly actionId = ActionId.none;
   readonly actionId = ActionId.none;
 
-  encode(_ctx: EncodeContext): KeyboardAction {
-    return buildAction(ActionId.none, NoneAction, () => {});
+  constructor(public actionEntryId: number | undefined) {}
+
+  encode(ctx: EncodeContext): KeyboardActionEntry {
+    const entryId = this.actionEntryId ?? ctx.nextActionEntryId();
+    this.actionEntryId = entryId;
+    return buildActionEntry(
+      entryId,
+      buildAction(ActionId.none, NoneAction, () => {}),
+    );
   }
 
-  static decode(payload: Uint8Array, _ctx: DecodeContext): None {
-    const message = new capnp.Message(payload, false);
+  static decode(
+    actionEntryId: number | undefined,
+    actionPayload: Uint8Array,
+    _ctx: DecodeContext,
+  ): None {
+    const message = new capnp.Message(actionPayload, false);
     message.getRoot(NoneAction);
-    return new None();
+    return new None(actionEntryId);
   }
 
   renderButtonContent(_level: number): JSX.Element {
@@ -38,7 +49,5 @@ export class None implements KeyAction {
     return this.renderButtonContent(0);
   }
 
-  remapLayers(_ctx: RemapLayersContext): boolean {
-    return false;
-  }
+  remapLayers(_ctx: RemapLayersContext): void {}
 }

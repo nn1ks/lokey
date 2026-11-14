@@ -3,7 +3,7 @@ import { createMemo, For, Show, splitProps } from "solid-js";
 import type { Component, JSX } from "solid-js";
 import { ChevronsUpDownIcon } from "lucide-solid";
 import type { ButtonProps } from "../Button";
-import { useKeyboardActions, useToast } from "../../contexts";
+import { useKeymapState, useToast } from "../../contexts";
 import { isLayout, layouts } from "../../layouts";
 
 const hostLayoutCollection = createListCollection({ items: [...layouts] });
@@ -46,7 +46,7 @@ const OptionsSection: Component<{ title: string; children: JSX.Element }> = (
   return (
     <div class="flex flex-1 justify-start sm:justify-center">
       <div class="flex flex-col gap-2">
-        <span class="font-medium italic text-neutral-600 dark:text-neutral-400">
+        <span class="font-medium text-neutral-600 dark:text-neutral-400">
           {props.title}
         </span>
         {props.children}
@@ -60,12 +60,11 @@ export type OptionsProps = {
 };
 
 export const Options: Component<OptionsProps> = (props) => {
-  const keyboardActions = useKeyboardActions();
+  const keymapState = useKeymapState();
   const toast = useToast();
 
   const hostLayoutArray = createMemo(() => {
-    const hostLayout = keyboardActions.hostLayout();
-    return hostLayout === undefined ? [] : [hostLayout];
+    return [keymapState.hostLayout()];
   });
 
   return (
@@ -78,7 +77,7 @@ export const Options: Component<OptionsProps> = (props) => {
           onValueChange={(details) => {
             const value = details.value[0];
             if (value !== undefined && isLayout(value)) {
-              void keyboardActions.setHostLayout(value).catch((error) => {
+              void keymapState.setHostLayout(value).catch((error) => {
                 // eslint-disable-next-line no-console
                 console.error("Unable to change the host layout.", error);
               });

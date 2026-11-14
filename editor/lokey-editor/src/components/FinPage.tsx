@@ -7,10 +7,12 @@ import {
 } from "lokey-editor-core/components";
 import { LedArrayPage } from "lokey-editor-core/components/led-array";
 import { KeymapPage } from "lokey-editor-core/components/keymap";
+import { createDefaultActionRegistry } from "lokey-editor-core/key-action";
 import FinKeymapLayout from "./FinKeymapLayout";
 import FinKeymapLayoutPrint from "./FinKeymapLayoutPrint";
 
 export const FinPage: Component = () => {
+  const actionRegistry = createDefaultActionRegistry();
   return (
     <PageTabs defaultValue="keymap">
       <Tabs.List>
@@ -25,6 +27,7 @@ export const FinPage: Component = () => {
       <Tabs.Content value="keymap">
         <KeymapPage
           class="max-w-[calc(1130px+2*var(--page-padding-x)+1px)]"
+          actionRegistry={actionRegistry}
           printView={FinKeymapLayoutPrint}
         >
           <FinKeymapLayout />

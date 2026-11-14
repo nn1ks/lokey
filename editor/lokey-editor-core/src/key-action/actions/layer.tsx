@@ -1,15 +1,14 @@
 import { Select, createListCollection } from "@ark-ui/solid/select";
 import * as capnp from "capnp-es";
 import { ChevronsUpDownIcon, Layers2 } from "lucide-solid";
-import { For, createMemo } from "solid-js";
-import type { Component, JSX } from "solid-js";
+import { For, createMemo, createSignal } from "solid-js";
+import type { Accessor, Component, JSX, Setter } from "solid-js";
 import { Portal } from "solid-js/web";
-import { KeyboardAction, LayerAction } from "lokey-editor-odyn/keyboard";
+import { KeyboardActionEntry, LayerAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
-import { useKeyboardActions } from "../../contexts/KeyboardActionContext";
 import type { KeyAction } from "../action";
-import { buildAction } from "../codec/build";
+import { buildAction, buildActionEntry } from "../codec/build";
 import {
   DecodeContext,
   EncodeContext,
@@ -17,41 +16,58 @@ import {
   RemapLayersContext,
 } from "../contexts";
 import { IconSubtitleCombination } from "../render";
+import { useKeymapState } from "../../contexts";
 
 export class Layer implements KeyAction {
   static readonly actionId = ActionId.layer;
   readonly actionId = ActionId.layer;
 
-  constructor(public index: number) {}
+  readonly index: Accessor<number>;
+  readonly setIndex: Setter<number>;
 
-  encode(_ctx: EncodeContext): KeyboardAction {
-    return buildAction(ActionId.layer, LayerAction, (layerAction) => {
-      layerAction.layer = this.index;
-    });
+  constructor(
+    public actionEntryId: number | undefined,
+    index: number,
+  ) {
+    const [localIndex, localSetIndex] = createSignal(index);
+    this.index = localIndex;
+    this.setIndex = localSetIndex;
   }
 
-  static decode(payload: Uint8Array, _ctx: DecodeContext): Layer {
-    const message = new capnp.Message(payload, false);
-    return new Layer(message.getRoot(LayerAction).layer);
+  encode(ctx: EncodeContext): KeyboardActionEntry {
+    const entryId = this.actionEntryId ?? ctx.nextActionEntryId();
+    this.actionEntryId = entryId;
+    const action = buildAction(ActionId.layer, LayerAction, (layerAction) => {
+      layerAction.layer = this.index();
+    });
+    return buildActionEntry(entryId, action);
+  }
+
+  static decode(
+    actionEntryId: number | undefined,
+    actionPayload: Uint8Array,
+    _ctx: DecodeContext,
+  ): Layer {
+    const message = new capnp.Message(actionPayload, false);
+    return new Layer(actionEntryId, message.getRoot(LayerAction).layer);
   }
 
   renderButtonContent(_level: number): JSX.Element {
-    const layerName = `Layer ${this.index + 1}`;
+    const layerName = `Layer ${this.index() + 1}`;
     return <IconSubtitleCombination icon={<Layers2 />} subtitle={layerName} />;
   }
 
   renderTooltip(): JSX.Element {
-    return <>Layer {this.index + 1}</>;
+    return <>Layer {this.index() + 1}</>;
   }
 
   renderPicker(ctx: PickerContext): JSX.Element {
     return <LayerPicker action={this} ctx={ctx} />;
   }
 
-  remapLayers(ctx: RemapLayersContext): boolean {
-    const oldIndex = this.index;
-    this.index = ctx.remapLayer(this.index);
-    return oldIndex !== this.index;
+  remapLayers(ctx: RemapLayersContext): void {
+    const oldIndex = this.index();
+    this.setIndex(ctx.convertLayer(oldIndex));
   }
 }
 
@@ -59,16 +75,13 @@ const LayerPicker: Component<{
   action: Layer;
   ctx: PickerContext;
 }> = (props) => {
-  const keyboardActions = useKeyboardActions();
+  const { layerCount } = useKeymapState();
   const collection = createMemo(() =>
     createListCollection({
-      items: Array.from(
-        { length: keyboardActions.layerCount() },
-        (_, index) => ({
-          value: String(index),
-          label: `Layer ${index + 1}`,
-        }),
-      ),
+      items: Array.from({ length: layerCount() }, (_, index) => ({
+        value: String(index),
+        label: `Layer ${index + 1}`,
+      })),
     }),
   );
 
@@ -77,16 +90,17 @@ const LayerPicker: Component<{
       <ActionPickerHeader
         label="Layer"
         withAccordionTrigger={false}
-        onSelect={() => props.ctx.onSelect(props.action, true)}
+        onSelect={() => props.ctx.selectAction()}
       />
       <Select.Root
         class="p-2 pt-0"
         collection={collection()}
-        value={[String(props.action.index)]}
+        value={[String(props.action.index())]}
         onSelect={(details) => {
           const value = details.value[0];
           if (value !== undefined) {
-            props.ctx.onSelect(new Layer(Number(value)), false);
+            props.action.setIndex(Number(value));
+            props.ctx.selectAction();
           }
         }}
       >

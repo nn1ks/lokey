@@ -63,7 +63,8 @@ export const ActionPickerChildRow: Component<ActionPickerChildRowProps> = (
           <Show when={rootValue().includes(itemValue)}>
             <div class="rounded-b-sm p-2 border-t bg-neutral-50 border-neutral-300 dark:bg-neutral-900 dark:border-neutral-800">
               <KeyActionPicker
-                onSelect={(action) => props.onSelect(action)}
+                onSelect={props.onSelect}
+                onClose={() => {}}
                 selectedAction={props.action}
               />
             </div>

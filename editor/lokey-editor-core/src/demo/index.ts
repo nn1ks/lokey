@@ -1,6 +1,6 @@
 import * as capnp from "capnp-es";
 import { defaultState } from "./default-state";
-import { State, numKeys, ActionId, ActionEntryId } from "./shared";
+import { numKeys } from "./shared";
 import {
   GetDeviceCapabilitiesResponse,
   SuccessResponse,
@@ -12,8 +12,6 @@ import {
   GetHostLayoutResponse,
   GetLayoutResponse,
   GetNumberOfKeysResponse,
-  HostLayout,
-  KeyboardActionEntry,
   SetHostLayoutRequest,
   UpdateLayoutRequest,
 } from "lokey-editor-odyn/keyboard";

@@ -1,7 +1,7 @@
-import { KeyboardAction } from "lokey-editor-odyn/keyboard";
+import { KeyboardActionEntry } from "lokey-editor-odyn/keyboard";
 import type { JSX } from "solid-js";
 import type { KeyAction } from "../action";
-import { buildRawAction } from "../codec/build";
+import { buildActionEntry, buildRawAction } from "../codec/build";
 import type {
   EncodeContext,
   PickerContext,
@@ -15,12 +15,18 @@ import { CircleQuestionMark } from "lucide-solid";
  */
 export class UnknownAction implements KeyAction {
   constructor(
+    public actionEntryId: number | undefined,
     readonly actionId: number,
     readonly payload: Uint8Array,
   ) {}
 
-  encode(_ctx: EncodeContext): KeyboardAction {
-    return buildRawAction(this.actionId, this.payload);
+  encode(ctx: EncodeContext): KeyboardActionEntry {
+    const action = buildRawAction(this.actionId, this.payload);
+
+    const entryId = this.actionEntryId ?? ctx.nextActionEntryId();
+    this.actionEntryId = entryId;
+
+    return buildActionEntry(entryId, action);
   }
 
   renderButtonContent(_level: number): JSX.Element {
@@ -35,7 +41,5 @@ export class UnknownAction implements KeyAction {
     return this.renderButtonContent(0);
   }
 
-  remapLayers(_ctx: RemapLayersContext): boolean {
-    return false;
-  }
+  remapLayers(_ctx: RemapLayersContext): void {}
 }

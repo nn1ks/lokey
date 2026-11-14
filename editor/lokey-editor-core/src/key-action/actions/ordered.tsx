@@ -2,13 +2,13 @@ import { Accordion } from "@ark-ui/solid";
 import * as capnp from "capnp-es";
 import { Ellipsis } from "lucide-solid";
 import { createSignal } from "solid-js";
-import type { Component, JSX } from "solid-js";
-import { KeyboardAction, OrderedAction } from "lokey-editor-odyn/keyboard";
+import type { Accessor, Component, JSX, Setter } from "solid-js";
+import { KeyboardActionEntry, OrderedAction } from "lokey-editor-odyn/keyboard";
 import * as ActionId from "lokey-editor-odyn/keyboard/action-id";
 import { ActionPickerChildRow } from "../../components/keymap/ActionPickerChildRow";
 import { ActionPickerHeader } from "../../components/keymap/ActionPickerHeader";
 import type { KeyAction } from "../action";
-import { buildAction } from "../codec/build";
+import { buildAction, buildActionEntry } from "../codec/build";
 import {
   DecodeContext,
   EncodeContext,
@@ -16,42 +16,68 @@ import {
   RemapLayersContext,
 } from "../contexts";
 import { Split } from "../render";
-import { KeyCode, keyCodesForLayout, reverseKeyCodes } from "./key-code";
+import { KeyCode } from "./key-code";
 import { decodeAction } from "../codec/decode";
+import { keyCodeValues, reverseKeyCodeValues } from "../key-code-value";
 
-export class Ordered<
-  A1 extends KeyAction = KeyAction,
-  A2 extends KeyAction = KeyAction,
-> implements KeyAction {
+export class Ordered implements KeyAction {
   static readonly actionId = ActionId.ordered;
   readonly actionId = ActionId.ordered;
 
+  readonly action1: Accessor<KeyAction>;
+  readonly setAction1: Setter<KeyAction>;
+  readonly action2: Accessor<KeyAction>;
+  readonly setAction2: Setter<KeyAction>;
+
   constructor(
-    readonly action1: A1,
-    readonly action2: A2,
-  ) {}
-
-  encode(ctx: EncodeContext): KeyboardAction {
-    const action1 = this.action1.encode(ctx);
-    const action2 = this.action2.encode(ctx);
-
-    const action1EntryId = ctx.pushAction(action1);
-    const action2EntryId = ctx.pushAction(action2);
-
-    return buildAction(ActionId.ordered, OrderedAction, (orderedAction) => {
-      orderedAction.action1EntryId = action1EntryId;
-      orderedAction.action2EntryId = action2EntryId;
-    });
+    public actionEntryId: number | undefined,
+    action1: KeyAction,
+    action2: KeyAction,
+  ) {
+    const [localAction1, localSetAction1] = createSignal(action1);
+    this.action1 = localAction1;
+    this.setAction1 = localSetAction1;
+    const [localAction2, localSetAction2] = createSignal(action2);
+    this.action2 = localAction2;
+    this.setAction2 = localSetAction2;
   }
 
-  static decode(payload: Uint8Array, ctx: DecodeContext): Ordered | KeyCode {
-    const message = new capnp.Message(payload, false);
+  encode(ctx: EncodeContext): KeyboardActionEntry {
+    const action1Entry = this.action1().encode(ctx);
+    const action2Entry = this.action2().encode(ctx);
+
+    ctx.pushActionEntry(action1Entry);
+    ctx.pushActionEntry(action2Entry);
+
+    const action = buildAction(
+      ActionId.ordered,
+      OrderedAction,
+      (orderedAction) => {
+        orderedAction.action1EntryId = action1Entry.entryId;
+        orderedAction.action2EntryId = action2Entry.entryId;
+      },
+    );
+
+    const entryId = this.actionEntryId ?? ctx.nextActionEntryId();
+    this.actionEntryId = entryId;
+
+    return buildActionEntry(entryId, action);
+  }
+
+  static decode(
+    actionEntryId: number | undefined,
+    actionPayload: Uint8Array,
+    ctx: DecodeContext,
+  ): Ordered | KeyCode {
+    const message = new capnp.Message(actionPayload, false);
     const orderedAction = message.getRoot(OrderedAction);
     const action1 = decodeAction(
+      orderedAction.action1EntryId,
       ctx.resolveEntry(orderedAction.action1EntryId),
       ctx,
     );
     const action2 = decodeAction(
+      orderedAction.action2EntryId,
       ctx.resolveEntry(orderedAction.action2EntryId),
       ctx,
     );
@@ -59,17 +85,18 @@ export class Ordered<
     // A sequence that encodes a single character (e.g. German "=" as
     // Shift+0) collapses back into that key code.
     if (action1 instanceof KeyCode && action2 instanceof KeyCode) {
-      const encoding1 = keyCodesForLayout(ctx.hostLayout).get(action1);
-      const encoding2 = keyCodesForLayout(ctx.hostLayout).get(action2);
+      const encoding1 = keyCodeValues(ctx.hostLayout).get(action1.value);
+      const encoding2 = keyCodeValues(ctx.hostLayout).get(action2.value);
       if (encoding1?.kind === "single" && encoding2?.kind === "single") {
-        const keyCode = reverseKeyCodes(ctx.hostLayout).sequence.get(
-          `${encoding1.rawKeyCode.code}:${encoding2.rawKeyCode.code}`,
+        const keyCodeValue = reverseKeyCodeValues(ctx.hostLayout).get(
+          encoding1.rawKeyCode.code,
+          encoding2.rawKeyCode.code,
         );
-        if (keyCode) return keyCode;
+        if (keyCodeValue) return new KeyCode(actionEntryId, keyCodeValue);
       }
     }
 
-    return new Ordered(action1, action2);
+    return new Ordered(actionEntryId, action1, action2);
   }
 
   renderButtonContent(level: number): JSX.Element {
@@ -77,8 +104,8 @@ export class Ordered<
 
     return (
       <Split
-        action1={this.action1.renderButtonContent(level + 1)}
-        action2={this.action2.renderButtonContent(level + 1)}
+        action1={this.action1().renderButtonContent(level + 1)}
+        action2={this.action2().renderButtonContent(level + 1)}
       />
     );
   }
@@ -91,7 +118,7 @@ export class Ordered<
             1
           </div>
           <div class="flex min-h-6 items-center justify-center">
-            {this.action1.renderTooltip()}
+            {this.action1().renderTooltip()}
           </div>
         </div>
         <div class="w-px bg-neutral-600 dark:bg-neutral-400" />
@@ -100,7 +127,7 @@ export class Ordered<
             2
           </div>
           <div class="flex min-h-6 items-center justify-center">
-            {this.action2.renderTooltip()}
+            {this.action2().renderTooltip()}
           </div>
         </div>
       </div>
@@ -111,55 +138,43 @@ export class Ordered<
     return <OrderedPicker action={this} ctx={ctx} />;
   }
 
-  remapLayers(ctx: RemapLayersContext): boolean {
-    const action1Changed = this.action1.remapLayers(ctx);
-    const action2Changed = this.action2.remapLayers(ctx);
-    return action1Changed || action2Changed;
+  remapLayers(ctx: RemapLayersContext): void {
+    this.action1().remapLayers(ctx);
+    this.action2().remapLayers(ctx);
   }
 }
-
-const withOrderedChildren = (action: Ordered, children: KeyAction[]): Ordered =>
-  new Ordered(children[0]!, children[1]!);
 
 const OrderedPicker: Component<{
   action: Ordered;
   ctx: PickerContext;
 }> = (props) => {
-  const [currentAction, setCurrentAction] = createSignal(props.action);
-
   return (
     <>
       <ActionPickerHeader
         label="Ordered"
         withAccordionTrigger={true}
-        onSelect={() => props.ctx.onSelect(currentAction(), true)}
+        onSelect={() => props.ctx.selectAction()}
       />
       <Accordion.ItemContent class="data-[state=closed]:hidden">
         <div class="flex flex-col gap-2 p-2 pt-0">
           <ActionPickerChildRow
             label="1"
-            action={currentAction().action1}
+            action={props.action.action1()}
             onSelect={(action) => {
-              const children = [
-                currentAction().action1,
-                currentAction().action2,
-              ];
-              children[0] = action;
-              setCurrentAction(withOrderedChildren(currentAction(), children));
-              props.ctx.onSelect(currentAction(), false);
+              action.actionEntryId = props.action.action1().actionEntryId;
+              props.action.setAction1(action);
+              props.ctx.selectAction();
+              props.ctx.addAction(action);
             }}
           />
           <ActionPickerChildRow
             label="2"
-            action={currentAction().action2}
+            action={props.action.action2()}
             onSelect={(action) => {
-              const children = [
-                currentAction().action1,
-                currentAction().action2,
-              ];
-              children[1] = action;
-              setCurrentAction(withOrderedChildren(currentAction(), children));
-              props.ctx.onSelect(currentAction(), false);
+              action.actionEntryId = props.action.action2().actionEntryId;
+              props.action.setAction2(action);
+              props.ctx.selectAction();
+              props.ctx.addAction(action);
             }}
           />
         </div>

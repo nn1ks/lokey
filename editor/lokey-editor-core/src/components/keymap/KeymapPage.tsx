@@ -10,36 +10,40 @@ import PageHeading from "../PageHeading";
 import PoweredByLokey from "../PoweredByLokey";
 import WithoutPagePadding from "../WithoutPagePadding";
 import {
-  KeyboardActionContextProvider,
+  ActionRegistryContextProvider,
+  KeymapStateContext,
   SelectedLayerContext,
-  useKeyboardActions,
+  useKeymapState,
   useToast,
 } from "../../contexts";
-import { actionRegistry } from "../../key-action/builtins";
+import { KeymapStateInitializer } from "./KeymapStateInitializer";
+import { LoadingIndicator, StartPage } from "../start";
+import { ActionRegistry } from "../../key-action";
 
 export type KeymapPageProps = {
   children: JSX.Element;
+  actionRegistry: ActionRegistry;
   class?: string;
   /** View that is rendered instead of the page when printing. */
   printView?: Component;
 };
 
 const KeymapContent: Component<KeymapPageProps> = (props) => {
-  const keyboardActions = useKeyboardActions();
+  const keymapState = useKeymapState();
   const [selectedLayer, setSelectedLayer] = createSignal(0);
   const [pendingRemoval, setPendingRemoval] = createSignal<number>();
 
   const toast = useToast();
 
   createEffect(() => {
-    const layerCount = keyboardActions.layerCount();
+    const layerCount = keymapState.layerCount();
     if (layerCount > 0 && selectedLayer() >= layerCount) {
       setSelectedLayer(layerCount - 1);
     }
   });
 
   const removeLayer = (layer: number) => {
-    if (keyboardActions.layerCount() <= 1) {
+    if (keymapState.layerCount() <= 1) {
       toast.createToast({
         title: `Failed to remove Layer ${layer + 1}`,
         description: "At least one layer is required.",
@@ -57,7 +61,7 @@ const KeymapContent: Component<KeymapPageProps> = (props) => {
       return;
     }
 
-    void keyboardActions.deleteLayer(layer);
+    void keymapState.removeLayer(layer);
     toast.createToast({
       title: `Removed Layer ${layer + 1}`,
       type: "info",
@@ -76,22 +80,22 @@ const KeymapContent: Component<KeymapPageProps> = (props) => {
         />
         <WithoutPagePadding>
           <LayerSelectorBar
-            layerCount={keyboardActions.layerCount()}
+            layerCount={keymapState.layerCount()}
             selected={selectedLayer()}
             onSelect={setSelectedLayer}
             onMoveLeft={(layer) => {
               if (layer <= 0) return;
-              void keyboardActions.moveLayer(layer, layer - 1);
+              void keymapState.moveLayer(layer, layer - 1);
               setSelectedLayer(layer - 1);
             }}
             onMoveRight={(layer) => {
-              if (layer >= keyboardActions.layerCount() - 1) return;
-              void keyboardActions.moveLayer(layer, layer + 1);
+              if (layer >= keymapState.layerCount() - 1) return;
+              void keymapState.moveLayer(layer, layer + 1);
               setSelectedLayer(layer + 1);
             }}
             onCreate={() => {
-              const newLayer = keyboardActions.layerCount();
-              void keyboardActions.addLayer();
+              const newLayer = keymapState.layerCount();
+              void keymapState.addLayer();
               setSelectedLayer(newLayer);
             }}
             onRemove={removeLayer}
@@ -130,9 +134,21 @@ const KeymapContent: Component<KeymapPageProps> = (props) => {
 
 export const KeymapPage: Component<KeymapPageProps> = (props) => {
   return (
-    <KeyboardActionContextProvider registry={actionRegistry}>
-      <KeymapContent {...props} />
-    </KeyboardActionContextProvider>
+    <ActionRegistryContextProvider actionRegistry={props.actionRegistry}>
+      <KeymapStateInitializer
+        fallback={
+          <div class="flex w-full max-w-76 flex-col items-center gap-4 py-20">
+            <LoadingIndicator label="Retrieving keymap..." />
+          </div>
+        }
+      >
+        {(state) => (
+          <KeymapStateContext.Provider value={state}>
+            <KeymapContent {...props} />
+          </KeymapStateContext.Provider>
+        )}
+      </KeymapStateInitializer>
+    </ActionRegistryContextProvider>
   );
 };
 

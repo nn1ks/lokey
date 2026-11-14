@@ -5,13 +5,13 @@ import type { ActionRegistry } from "../key-action/registry";
 const ActionRegistryContext = createContext<ActionRegistry>();
 
 export type ActionRegistryContextProviderProps = ParentProps<{
-  registry: ActionRegistry;
+  actionRegistry: ActionRegistry;
 }>;
 
 export const ActionRegistryContextProvider: Component<
   ActionRegistryContextProviderProps
 > = (props) => (
-  <ActionRegistryContext.Provider value={props.registry}>
+  <ActionRegistryContext.Provider value={props.actionRegistry}>
     {props.children}
   </ActionRegistryContext.Provider>
 );
