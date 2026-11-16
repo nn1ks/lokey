@@ -33,7 +33,7 @@ document-features = "0.2.11"
 embassy-futures = "0.1.1"
 embassy-sync = "0.8.0"
 embassy-usb = { version = "0.6.0", default-features = false }
-lokey = { path = "../lokey", version = "0.0.1" }
+lokey = { path = "../lokey", version = "0.0.2" }
 lokey-usb-macros = { path = "../lokey-usb-macros", optional = true }
 portable-atomic = { version = "1.6.0", default-features = false, features = ["critical-section", "require-cas"] }
 typeid = "1.0.3"
