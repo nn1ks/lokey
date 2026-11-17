@@ -480,7 +480,7 @@ jobs:
             mcu_features: ""
           - mcu: nrf52840
             target: thumbv7em-none-eabihf
-            mcu_features: "nrf52840"
+            mcu_features: "pwm-nrf52840"
     env:
       FEATURE_COMBINATIONS: ";defmt;odyn;ble;defmt odyn ble"
     steps:
