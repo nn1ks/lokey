@@ -489,6 +489,8 @@ jobs:
         run: |
           rustc --version
           cargo --version
+      - name: Install capnpc
+        run: sudo apt-get update && sudo apt-get install -y capnproto
       - name: Build
         run: |
           export IFS=";"
