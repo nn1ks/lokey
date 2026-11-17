@@ -8,6 +8,8 @@
 
 #[cfg(feature = "nrf52840")]
 pub mod nrf52840;
+#[cfg(feature = "odyn")]
+pub mod odyn;
 pub mod pwm;
 
 use arrayvec::ArrayVec;
@@ -17,7 +19,9 @@ use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
 use generic_array::GenericArray;
 use lokey::util::{unwrap, warn};
-use lokey::{Address, Component, DynContext, internal};
+use lokey::{Address, AnyState, Component, Context, Device, DynContext, Transports, internal};
+#[cfg(feature = "odyn")]
+pub use odyn::OdynLedArray;
 use portable_atomic::AtomicU32;
 use postcard::experimental::max_size::MaxSize;
 use pwm::PwmChannel;
@@ -361,8 +365,49 @@ impl<'a, 'b, const N: usize> ActionHandler<'a, 'b, N> {
     }
 }
 
-pub struct LedArray<const NUM_LEDS: usize, Hooks> {
+struct LedArrayMessageHandler<const NUM_LEDS: usize> {
     context: DynContext,
+    gamma_correction: fn(f32) -> f32,
+}
+
+impl<const NUM_LEDS: usize> LedArrayMessageHandler<NUM_LEDS> {
+    fn new(context: DynContext, gamma_correction: fn(f32) -> f32) -> Self {
+        Self {
+            context,
+            gamma_correction,
+        }
+    }
+
+    async fn run(&mut self, mut pwm_channels: [&mut dyn PwmChannel; NUM_LEDS]) {
+        let mut receiver = unwrap!(self.context.internal_channel.receiver::<Message>());
+        let mut actions = ArrayVec::<(ActionId, Action, Option<Instant>), ACTION_SLOTS>::new();
+        deactivate_pwm_channels(&mut pwm_channels);
+        loop {
+            let recv = async {
+                loop {
+                    let message = receiver.next().await;
+                    if let Some(device_address) = message.filter_device
+                        && device_address != self.context.address
+                    {
+                        continue;
+                    }
+                    break (message.action_id, message.action);
+                }
+            };
+            let handle = async {
+                ActionHandler::new(&mut actions, &mut pwm_channels, self.gamma_correction)
+                    .run()
+                    .await;
+            };
+
+            if let Either::First((action_id, action)) = select(recv, handle).await {
+                actions.push((action_id, action, None));
+            }
+        }
+    }
+}
+
+pub struct LedArray<const NUM_LEDS: usize, Hooks> {
     gamma_correction: fn(f32) -> f32,
     hook_bundle: Hooks,
 }
@@ -370,9 +415,8 @@ pub struct LedArray<const NUM_LEDS: usize, Hooks> {
 impl<const NUM_LEDS: usize, Hooks: HookBundle> Component for LedArray<NUM_LEDS, Hooks> {}
 
 impl<const NUM_LEDS: usize, Hooks: HookBundle> LedArray<NUM_LEDS, Hooks> {
-    pub const fn new(context: DynContext, hook_bundle: Hooks) -> Self {
+    pub const fn new(hook_bundle: Hooks) -> Self {
         Self {
-            context,
             gamma_correction: default_gamma_correction,
             hook_bundle,
         }
@@ -383,43 +427,24 @@ impl<const NUM_LEDS: usize, Hooks: HookBundle> LedArray<NUM_LEDS, Hooks> {
         self
     }
 
-    pub async fn run(self, mut pwm_channels: [&mut dyn PwmChannel; NUM_LEDS]) {
-        let mut receiver = unwrap!(self.context.internal_channel.receiver::<Message>());
-        let mut actions = ArrayVec::<(ActionId, Action, Option<Instant>), ACTION_SLOTS>::new();
-        deactivate_pwm_channels(&mut pwm_channels);
-        let handle_messages = async {
-            loop {
-                let recv = async {
-                    loop {
-                        let message = receiver.next().await;
-                        if let Some(device_address) = message.filter_device
-                            && device_address != self.context.address
-                        {
-                            continue;
-                        }
-                        break (message.action_id, message.action);
-                    }
-                };
-                let handle = async {
-                    ActionHandler::new(&mut actions, &mut pwm_channels, self.gamma_correction)
-                        .run()
-                        .await;
-                };
-
-                if let Either::First((action_id, action)) = select(recv, handle).await {
-                    actions.push((action_id, action, None));
-                }
-            }
-        };
-
-        let run_hooks = self.hook_bundle.run_all::<NUM_LEDS>(self.context);
-
-        join(handle_messages, run_hooks).await;
+    pub async fn run<D, T, S>(
+        mut self,
+        context: Context<D, T, S>,
+        pwm_channels: [&mut dyn PwmChannel; NUM_LEDS],
+    ) where
+        D: Device,
+        T: Transports<D::Mcu>,
+        S: AnyState,
+    {
+        let run_hooks = self.hook_bundle.run_all::<NUM_LEDS>(context.as_dyn());
+        let mut message_handler =
+            LedArrayMessageHandler::new(context.as_dyn(), self.gamma_correction);
+        join(message_handler.run(pwm_channels), run_hooks).await;
     }
 }
 
 pub trait HookBundle {
-    fn run_all<const NUM_LEDS: usize>(self, context: DynContext) -> impl Future<Output = ()>;
+    fn run_all<const NUM_LEDS: usize>(&mut self, context: DynContext) -> impl Future<Output = ()>;
 }
 
 macro_rules! impl_hook_bundle {
@@ -435,7 +460,7 @@ macro_rules! impl_hook_bundle {
                 #(T~N: Hook,)*
             {
                 #[allow(unused_variables)]
-                async fn run_all<const NUM_LEDS: usize>(self, context: DynContext) {
+                async fn run_all<const NUM_LEDS: usize>(&mut self, context: DynContext) {
                     futures_util::join!(#(self.N.run::<NUM_LEDS>(context),)*);
                 }
             }
@@ -446,13 +471,13 @@ macro_rules! impl_hook_bundle {
 impl_hook_bundle!(16);
 
 pub trait Hook {
-    fn run<const NUM_LEDS: usize>(self, context: DynContext) -> impl Future<Output = ()>;
+    fn run<const NUM_LEDS: usize>(&mut self, context: DynContext) -> impl Future<Output = ()>;
 }
 
 pub struct BootHook;
 
 impl Hook for BootHook {
-    async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
+    async fn run<const NUM_LEDS: usize>(&mut self, context: DynContext) {
         Timer::after_millis(50).await;
         let action_id = ActionId::new(context.address);
         let action = Action::SlideForwards {
@@ -467,17 +492,17 @@ impl Hook for BootHook {
 }
 
 #[cfg(feature = "ble")]
-pub use ble::{BleAdvertisementHook, BleProfileHook};
+pub use ble::{BlePairingHook, BleProfileHook};
 
 #[cfg(feature = "ble")]
 mod ble {
     use super::*;
     use lokey_ble::external;
 
-    pub struct BleAdvertisementHook;
+    pub struct BlePairingHook;
 
-    impl Hook for BleAdvertisementHook {
-        async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
+    impl Hook for BlePairingHook {
+        async fn run<const NUM_LEDS: usize>(&mut self, context: DynContext) {
             let mut receiver = unwrap!(context.internal_channel.receiver::<external::Event>());
             let mut current_action_id = None;
             loop {
@@ -524,7 +549,7 @@ mod ble {
     pub struct BleProfileHook;
 
     impl Hook for BleProfileHook {
-        async fn run<const NUM_LEDS: usize>(self, context: DynContext) {
+        async fn run<const NUM_LEDS: usize>(&mut self, context: DynContext) {
             let mut receiver = unwrap!(context.internal_channel.receiver::<external::Event>());
             loop {
                 let message = receiver.next().await;

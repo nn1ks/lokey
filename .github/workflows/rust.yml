@@ -482,7 +482,7 @@ jobs:
             target: thumbv7em-none-eabihf
             mcu_features: "nrf52840"
     env:
-      FEATURE_COMBINATIONS: ";defmt;ble;defmt ble"
+      FEATURE_COMBINATIONS: ";defmt;odyn;ble;defmt odyn ble"
     steps:
       - uses: actions/checkout@v4
       - name: Print rust version
@@ -508,7 +508,7 @@ jobs:
       - name: Run doc tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
-          cargo test -p lokey-led-array --verbose --target ${{ matrix.target }} --features "ble"
+          cargo test -p lokey-led-array --verbose --target ${{ matrix.target }} --features "odyn ble"
   lokey-led-array-odyn:
     runs-on: ubuntu-latest
     if: always()
