@@ -1,3 +1,6 @@
+#[cfg(feature = "nrf52840")]
+pub mod nrf52840;
+
 pub trait Pwm<const N: usize> {
     type Channel<'a>: PwmChannel
     where

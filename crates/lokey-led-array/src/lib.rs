@@ -6,8 +6,6 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(feature = "nrf52840")]
-pub mod nrf52840;
 #[cfg(feature = "odyn")]
 pub mod odyn;
 pub mod pwm;
