@@ -27,6 +27,8 @@ declare_const_for_feature_group!(
         ("max-payload-size-64", 64),
         ("max-payload-size-128", 128),
         ("max-payload-size-256", 256),
+        ("max-payload-size-512", 512),
+        ("max-payload-size-1024", 1024),
     ]
 );
 

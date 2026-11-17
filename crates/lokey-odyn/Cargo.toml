@@ -22,6 +22,8 @@ usb = ["dep:embassy-sync", "dep:embassy-usb", "dep:lokey", "dep:lokey-usb"]
 max-payload-size-64 = []
 max-payload-size-128 = []
 max-payload-size-256 = []
+max-payload-size-512 = []
+max-payload-size-1024 = []
 
 [dependencies]
 arrayvec = { version = "0.7.8", default-features = false }
