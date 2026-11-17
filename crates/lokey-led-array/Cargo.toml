@@ -30,7 +30,7 @@ odyn = ["dep:lokey-led-array-odyn", "dep:lokey-odyn"]
 ble = ["dep:lokey-ble"]
 
 ## Enables support for PWM of the nRF52840 microcontroller.
-nrf52840 = [
+pwm-nrf52840 = [
   "dep:embassy-nrf",
   "embassy-nrf/nrf52840",
 ]

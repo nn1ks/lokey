@@ -1,4 +1,4 @@
-#[cfg(feature = "nrf52840")]
+#[cfg(feature = "pwm-nrf52840")]
 pub mod nrf52840;
 
 pub trait Pwm<const N: usize> {
