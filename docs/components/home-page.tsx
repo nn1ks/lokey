@@ -1,75 +1,103 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock';
-import { AnimatedTitle } from './animated-title';
-import styles from './home-page.module.css';
-import { ArrowUpRight } from 'lucide-react';
+import Image from "next/image";
+import Link from "next/link";
+import { DynamicCodeBlock } from "fumadocs-ui/components/dynamic-codeblock";
+import { AnimatedTitle } from "./animated-title";
+import styles from "./home-page.module.css";
+import { ArrowUpRight } from "lucide-react";
 
 const features = [
   {
-    label: 'Toolchain',
-    title: 'Powered by Rust & Embassy',
+    label: "Toolchain",
+    title: "Powered by Rust & Embassy",
     description: (
       <>
-        Built in{' '}
-        <a href="https://www.rust-lang.org/" target="_blank" rel="noopener noreferrer">
+        Built with{" "}
+        <a
+          href="https://www.rust-lang.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Rust
-        </a>{' '}
-        for speed and safety, leveraging the async embedded framework{' '}
-        <a href="https://embassy.dev/" target="_blank" rel="noopener noreferrer">
+        </a>{" "}
+        and the{" "}
+        <a
+          href="https://embassy.dev/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Embassy
-        </a>
-        .
+        </a>{" "}
+        async framework for fast, reliable, and memory-safe firmware.
       </>
     ),
-    icon: 'chip',
+    icon: "chip",
   },
   {
-    label: 'Architecture',
-    title: 'Modular & Extensible',
+    label: "Architecture",
+    title: "Modular & Extensible",
     description:
-      'Structured as a highly modular system, making it possible to easily add functionality and use the framework for a variety of input devices.',
-    icon: 'grid',
+      "Designed around small, reusable components so you can easily extend and adapt it to any input device.",
+    icon: "grid",
   },
   {
-    label: 'Developer Experience',
-    title: 'User-Friendly API',
+    label: "Developer Experience",
+    title: "User-Friendly API",
     description:
-      'An API that is designed to be intuitive and fast, with compile-time checks that prevent mistakes from reaching your device.',
-    icon: 'code',
+      "Intuitive to use, with compile-time checks that catch mistakes before you flash your device.",
+    icon: "code",
   },
   {
-    label: 'Composability',
-    title: 'Multi-Part Device Support',
-    description: 'Includes first-class support for devices that consist of multiple parts (e.g. split keyboards).',
-    icon: 'parts',
+    label: "Configuration",
+    title: "Runtime Configuration",
+    description: (
+      <>
+        Configure your device at runtime using{" "}
+        <a
+          href="https://editor.lokey.rs"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Lokey Editor
+        </a>
+        , without needing to recompile or reflash your firmware.
+      </>
+    ),
+    icon: "cog",
   },
   {
-    label: 'Connectivity',
-    title: 'Wireless Support',
+    label: "Composability",
+    title: "Multi-Part Device Support",
     description:
-      'Supports connecting devices to the host and to each other via Bluetooth Low Energy, with power-efficient components for battery-powered use.',
-    icon: 'wireless',
+      "Includes first-class support for devices that consist of multiple parts (e.g. split keyboards).",
+    icon: "parts",
   },
   {
-    label: 'License',
-    title: 'Open Source',
-    description: 'Licensed under either of Apache License, Version 2.0 or MIT License at your option.',
-    icon: 'open-source',
+    label: "Connectivity",
+    title: "Wireless Support",
+    description:
+      "Supports connecting devices to the host and to each other via Bluetooth Low Energy, with power-efficient components for battery-powered use.",
+    icon: "wireless",
+  },
+  {
+    label: "License",
+    title: "Open Source",
+    description:
+      "Licensed under either of Apache License, Version 2.0 or MIT License at your option.",
+    icon: "open-source",
   },
 ] as const;
 
-type FeatureIconName = (typeof features)[number]['icon'];
+type FeatureIconName = (typeof features)[number]["icon"];
 
 function FeatureIcon({ name }: { name: FeatureIconName }) {
   const commonProps = {
-    viewBox: '0 0 160 160',
-    fill: 'none',
-    'aria-hidden': true,
+    viewBox: "0 0 160 160",
+    fill: "none",
+    "aria-hidden": true,
   } as const;
 
   switch (name) {
-    case 'chip':
+    case "chip":
       return (
         <svg {...commonProps}>
           <rect x="32" y="32" width="96" height="96" rx="8" />
@@ -79,7 +107,7 @@ function FeatureIcon({ name }: { name: FeatureIconName }) {
           />
         </svg>
       );
-    case 'grid':
+    case "grid":
       return (
         <svg {...commonProps}>
           <rect x="9" y="9" width="62" height="62" rx="9" />
@@ -88,7 +116,7 @@ function FeatureIcon({ name }: { name: FeatureIconName }) {
           <rect x="89" y="89" width="62" height="62" rx="9" />
         </svg>
       );
-    case 'code':
+    case "code":
       return (
         <svg {...commonProps}>
           <path
@@ -98,7 +126,18 @@ function FeatureIcon({ name }: { name: FeatureIconName }) {
           />
         </svg>
       );
-    case 'parts':
+    case "cog":
+      return (
+        <svg {...commonProps}>
+          <path
+            d="M128.7 91.2 L144.7 101 A68 68 0 0 1 130.5 125.5 L114.1 116.6 A50 50 0 0 1 94.6 127.8 L94.1 146.5 A68 68 0 0 1 65.9 146.5 L65.4 127.8 A50 50 0 0 1 45.9 116.6 L29.5 125.5 A68 68 0 0 1 15.3 101 L31.3 91.2 A50 50 0 0 1 31.3 68.8 L15.3 59 A68 68 0 0 1 29.5 34.5 L45.9 43.4 A50 50 0 0 1 65.4 32.2 L65.9 13.5 A68 68 0 0 1 94.1 13.5 L94.6 32.2 A50 50 0 0 1 114.1 43.4 L130.5 34.5 A68 68 0 0 1 144.7 59 L128.7 68.8 A50 50 0 0 1 128.7 91.2 Z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="80" cy="80" r="28" />
+        </svg>
+      );
+    case "parts":
       return (
         <svg {...commonProps}>
           <circle cx="30" cy="80" r="28" />
@@ -106,7 +145,7 @@ function FeatureIcon({ name }: { name: FeatureIconName }) {
           <line x1="58" y1="80" x2="102" y2="80" />
         </svg>
       );
-    case 'wireless':
+    case "wireless":
       return (
         <svg {...commonProps}>
           <path
@@ -116,7 +155,7 @@ function FeatureIcon({ name }: { name: FeatureIconName }) {
           />
         </svg>
       );
-    case 'open-source':
+    case "open-source":
       return (
         <svg {...commonProps}>
           <path
@@ -146,17 +185,23 @@ async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawne
 
 export default function HomePage() {
   return (
-    <div className={`${styles.homePage} mx-auto w-full max-w-6xl px-6 py-16 sm:py-24`}>
+    <div
+      className={`${styles.homePage} mx-auto w-full max-w-6xl px-6 py-16 sm:py-24`}
+    >
       <section className="grid grid-cols-1 items-center gap-12 text-left lg:gap-16 xl:gap-48 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div>
           <h1 className={`${styles.heading} max-w-4xl text-fd-foreground`}>
             <span className="heading-name">
               <AnimatedTitle>Lokey</AnimatedTitle>
             </span>
-            <span className="heading-text"> — A firmware framework for input devices</span>
+            <span className="heading-text">
+              {" "}
+              — A firmware framework for input devices
+            </span>
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-8 font-medium text-fd-muted-foreground sm:text-2xl sm:mt-6">
-            Easily create modular firmware for keyboards, mice, MIDI controllers, and more.
+            Easily create modular firmware for keyboards, mice, MIDI
+            controllers, and more.
           </p>
         </div>
         <div className="order-first flex justify-center lg:order-0">
@@ -177,7 +222,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className={`${styles.headingButtons} mt-6 flex flex-wrap justify-start gap-3 text-sm sm:text-base sm:mt-8`}>
+      <div
+        className={`${styles.headingButtons} mt-6 flex flex-wrap justify-start gap-3 text-sm sm:text-base sm:mt-8`}
+      >
         <Link
           href="/docs/framework/introduction/getting-started"
           className={`${styles.primaryButton} rounded-lg px-4 py-2 font-medium transition-colors text-fd-primary-foreground`}
@@ -205,11 +252,11 @@ export default function HomePage() {
         <DynamicCodeBlock
           lang="rust"
           code={exampleCode}
-          codeblock={{ title: 'main.rs' }}
+          codeblock={{ title: "main.rs" }}
           options={{
             themes: {
-              light: 'gruvbox-light-hard',
-              dark: 'gruvbox-dark-hard',
+              light: "gruvbox-light-hard",
+              dark: "gruvbox-dark-hard",
             },
           }}
         />
@@ -217,7 +264,10 @@ export default function HomePage() {
 
       <section className={styles.featuresSection} aria-label="Features">
         {features.map((feature, index) => (
-          <article key={feature.title} className={`${styles.featureItem} ${index % 2 === 1 ? styles.featureItemReverse : ''}`}>
+          <article
+            key={feature.title}
+            className={`${styles.featureItem} ${index % 2 === 1 ? styles.featureItemReverse : ""}`}
+          >
             <div className={styles.featureIllustration}>
               <FeatureIcon name={feature.icon} />
             </div>
@@ -229,8 +279,6 @@ export default function HomePage() {
           </article>
         ))}
       </section>
-
-
     </div>
   );
 }
