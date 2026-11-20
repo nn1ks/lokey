@@ -1,4 +1,4 @@
-import { Braces, SquarePen } from 'lucide-react';
+import { BookBookmark, Braces, SquarePen } from 'lucide-react';
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 
 export const homeLinks: NonNullable<BaseLayoutProps['links']> = [
@@ -24,6 +24,7 @@ export const homeLinks: NonNullable<BaseLayoutProps['links']> = [
   },
   {
     type: 'main',
+    icon: <BookBookmark />,
     text: 'Blog',
     url: '/blog',
   },
