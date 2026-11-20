@@ -7,17 +7,26 @@ struct Message {
 }
 
 
-struct GetDeviceCapabilitiesRequest {
-}
-
-struct GetDeviceCapabilitiesResponse {
-  deviceId @0 :UInt32;
-  maxPayloadSize @1 :UInt32;
-}
-
 struct SuccessResponse {
 }
 
 struct ErrorResponse {
   code @0 :UInt32;
+}
+
+enum DeviceType {
+    other @0;
+    keyboard @1;
+    mouse @2;
+    midiController @3;
+}
+
+struct GetDeviceCapabilitiesRequest {
+}
+
+struct GetDeviceCapabilitiesResponse {
+  maxPayloadSize @0 :UInt32;
+  deviceId @1 :UInt32;
+  deviceName @2 :Text;
+  deviceType @3 :DeviceType;
 }
