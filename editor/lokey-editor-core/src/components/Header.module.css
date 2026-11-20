@@ -1,0 +1,70 @@
+.content {
+  overflow: hidden;
+}
+
+.content[data-state="open"] {
+  animation: expand 150ms ease-out;
+}
+
+.content[data-state="closed"] {
+  animation: collapse 100ms ease-in;
+}
+
+/* On desktop the panel is a detached card, so animate it like a popover. */
+@media (min-width: 40rem) {
+  .content {
+    overflow: visible;
+  }
+
+  .content[data-state="open"] {
+    animation: popover-in 100ms ease-out;
+  }
+
+  .content[data-state="closed"] {
+    animation: popover-out 75ms ease-in;
+  }
+}
+
+@keyframes expand {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--height);
+    opacity: 1;
+  }
+}
+
+@keyframes collapse {
+  from {
+    height: var(--height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popover-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

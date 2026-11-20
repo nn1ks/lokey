@@ -1,6 +1,6 @@
 export * from "./ActionRegistryContext";
 export * from "./ConnectionContext";
-export * from "./DeviceIdContext";
+export * from "./DeviceCapabilitiesContext";
 export * from "./LedArrayContext";
 export * from "./MessageManagerContext";
 export * from "./SelectedLayerContext";

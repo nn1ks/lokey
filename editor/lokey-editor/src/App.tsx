@@ -14,12 +14,12 @@ import {
 } from "lokey-editor-core/components/start";
 import {
   ConnectionProvider,
-  DeviceIdProvider,
+  DeviceCapabilitiesProvider,
   MessageManagerContext,
   ThemeProvider,
   ToastProvider,
   useConnection,
-  useDeviceId,
+  useDeviceCapabilities,
 } from "lokey-editor-core/contexts";
 import { MessageManager } from "lokey-editor-core/protocol";
 import { FinPage } from "./components/FinPage";
@@ -37,9 +37,9 @@ const AppContent: Component = () => {
 
   return (
     <>
-      <Header title={<DefaultHeaderTitle />} />
       <Switch>
         <Match when={connection().status === "unsupported"}>
+          <Header title={<DefaultHeaderTitle />} class="max-w-250" />
           <StartPage>
             <ErrorMessage>
               Web Serial API is not supported in this browser.
@@ -48,6 +48,7 @@ const AppContent: Component = () => {
           </StartPage>
         </Match>
         <Match when={connection().status === "disconnected"}>
+          <Header title={<DefaultHeaderTitle />} class="max-w-250" />
           <StartPage>
             <SelectDeviceButton />
             <DemoButton />
@@ -57,9 +58,9 @@ const AppContent: Component = () => {
           when={connection().status === "connected" && connection().isDemo}
         >
           <MessageManagerContext.Provider value={MessageManager.fromDemo()}>
-            <DeviceIdProvider>
+            <DeviceCapabilitiesProvider>
               <DeviceContent />
-            </DeviceIdProvider>
+            </DeviceCapabilitiesProvider>
           </MessageManagerContext.Provider>
         </Match>
         <Match
@@ -71,9 +72,9 @@ const AppContent: Component = () => {
               connection().reader,
             )}
           >
-            <DeviceIdProvider>
+            <DeviceCapabilitiesProvider>
               <DeviceContent />
-            </DeviceIdProvider>
+            </DeviceCapabilitiesProvider>
           </MessageManagerContext.Provider>
         </Match>
       </Switch>
@@ -85,16 +86,18 @@ const AppContent: Component = () => {
 };
 
 const DeviceContent: Component = () => {
-  const { device } = useDeviceId();
+  const { device } = useDeviceCapabilities();
 
   return (
     <Switch>
       <Match when={device().status === "waiting-for-connection"}>
+        <Header title={<DefaultHeaderTitle />} class="max-w-250" />
         <StartPage>
           <LoadingIndicator label="Waiting for device connection..." />
         </StartPage>
       </Match>
       <Match when={device().status === "waiting-for-response"}>
+        <Header title={<DefaultHeaderTitle />} class="max-w-250" />
         <StartPage>
           <LoadingIndicator label="Retrieving Device ID..." />
         </StartPage>
@@ -105,6 +108,7 @@ const DeviceContent: Component = () => {
             <FinPage />
           </Match>
           <Match when={true}>
+            <Header title={<DefaultHeaderTitle />} class="max-w-250" />
             <StartPage>
               <ErrorMessage>
                 Device with ID 0x{device().deviceId.toString(16).toUpperCase()}{" "}

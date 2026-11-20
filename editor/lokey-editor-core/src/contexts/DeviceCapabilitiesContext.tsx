@@ -5,21 +5,28 @@ import {
   useContext,
 } from "solid-js";
 import type { Accessor, ParentComponent } from "solid-js";
+import type { DeviceType } from "lokey-editor-odyn/core";
 import { useConnection } from "./ConnectionContext";
 import { useMessageManager } from ".";
 
-export type DeviceIdState =
+export type DeviceCapabilitiesState =
   | { status: "waiting-for-connection" }
   | { status: "waiting-for-response" }
-  | { status: "retrieved"; deviceId: number };
+  | {
+      status: "retrieved";
+      deviceId: number;
+      deviceName: string;
+      deviceType: DeviceType;
+    };
 
-export type DeviceIdContextValue = {
-  device: Accessor<DeviceIdState>;
+export type DeviceCapabilitiesContextValue = {
+  device: Accessor<DeviceCapabilitiesState>;
 };
 
-export const DeviceIdContext = createContext<DeviceIdContextValue>();
+export const DeviceCapabilitiesContext =
+  createContext<DeviceCapabilitiesContextValue>();
 
-export const DeviceIdProvider: ParentComponent = (props) => {
+export const DeviceCapabilitiesProvider: ParentComponent = (props) => {
   const { connection } = useConnection();
   const messageManager = useMessageManager();
 
@@ -32,11 +39,11 @@ export const DeviceIdProvider: ParentComponent = (props) => {
     const error = capabilities.error;
     if (error) {
       // eslint-disable-next-line no-console
-      console.error("Unable to retrieve the device ID.", error);
+      console.error("Unable to retrieve the device capabilities.", error);
     }
   });
 
-  const device: Accessor<DeviceIdState> = () => {
+  const device: Accessor<DeviceCapabilitiesState> = () => {
     if (connection().status !== "connected") {
       return { status: "waiting-for-connection" };
     }
@@ -45,6 +52,8 @@ export const DeviceIdProvider: ParentComponent = (props) => {
       return {
         status: "retrieved",
         deviceId: capabilities().deviceId,
+        deviceName: capabilities().deviceName,
+        deviceType: capabilities().deviceType,
       };
     }
 
@@ -52,17 +61,19 @@ export const DeviceIdProvider: ParentComponent = (props) => {
   };
 
   return (
-    <DeviceIdContext.Provider value={{ device }}>
+    <DeviceCapabilitiesContext.Provider value={{ device }}>
       {props.children}
-    </DeviceIdContext.Provider>
+    </DeviceCapabilitiesContext.Provider>
   );
 };
 
-export const useDeviceId = () => {
-  const context = useContext(DeviceIdContext);
+export const useDeviceCapabilities = () => {
+  const context = useContext(DeviceCapabilitiesContext);
 
   if (!context) {
-    throw new Error("useDeviceId must be used inside a DeviceIdProvider");
+    throw new Error(
+      "useDeviceCapabilities must be used inside a DeviceCapabilitiesProvider",
+    );
   }
 
   return context;
