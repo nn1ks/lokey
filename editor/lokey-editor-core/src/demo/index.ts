@@ -2,6 +2,7 @@ import * as capnp from "capnp-es";
 import { defaultState } from "./default-state";
 import { numKeys } from "./shared";
 import {
+  DeviceType,
   GetDeviceCapabilitiesResponse,
   SuccessResponse,
 } from "lokey-editor-odyn/core";
@@ -173,8 +174,10 @@ export class DemoMessageHandler {
       coreMessageId.getDeviceCapabilitiesResponse,
       GetDeviceCapabilitiesResponse,
       (response) => {
-        response.deviceId = 0x1000_0001;
         response.maxPayloadSize = 32;
+        response.deviceId = 0x1000_0001;
+        response.deviceName = "Demo Device";
+        response.deviceType = DeviceType.KEYBOARD;
       },
     );
 
