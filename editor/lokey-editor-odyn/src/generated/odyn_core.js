@@ -39,34 +39,6 @@ export class Message extends $.Struct {
   }
   toString() { return "Message_" + super.toString(); }
 }
-export class GetDeviceCapabilitiesRequest extends $.Struct {
-  static _capnp = {
-    displayName: "GetDeviceCapabilitiesRequest",
-    id: "d9f7e2e2e372cb6e",
-    size: new $.ObjectSize(0, 0),
-  };
-  toString() { return "GetDeviceCapabilitiesRequest_" + super.toString(); }
-}
-export class GetDeviceCapabilitiesResponse extends $.Struct {
-  static _capnp = {
-    displayName: "GetDeviceCapabilitiesResponse",
-    id: "fe09b724fe5200e4",
-    size: new $.ObjectSize(8, 0),
-  };
-  get deviceId() {
-    return $.utils.getUint32(0, this);
-  }
-  set deviceId(value) {
-    $.utils.setUint32(0, value, this);
-  }
-  get maxPayloadSize() {
-    return $.utils.getUint32(4, this);
-  }
-  set maxPayloadSize(value) {
-    $.utils.setUint32(4, value, this);
-  }
-  toString() { return "GetDeviceCapabilitiesResponse_" + super.toString(); }
-}
 export class SuccessResponse extends $.Struct {
   static _capnp = {
     displayName: "SuccessResponse",
@@ -88,4 +60,50 @@ export class ErrorResponse extends $.Struct {
     $.utils.setUint32(0, value, this);
   }
   toString() { return "ErrorResponse_" + super.toString(); }
+}
+export const DeviceType = {
+  OTHER: 0,
+  KEYBOARD: 1,
+  MOUSE: 2,
+  MIDI_CONTROLLER: 3
+};
+export class GetDeviceCapabilitiesRequest extends $.Struct {
+  static _capnp = {
+    displayName: "GetDeviceCapabilitiesRequest",
+    id: "d9f7e2e2e372cb6e",
+    size: new $.ObjectSize(0, 0),
+  };
+  toString() { return "GetDeviceCapabilitiesRequest_" + super.toString(); }
+}
+export class GetDeviceCapabilitiesResponse extends $.Struct {
+  static _capnp = {
+    displayName: "GetDeviceCapabilitiesResponse",
+    id: "fe09b724fe5200e4",
+    size: new $.ObjectSize(16, 1),
+  };
+  get maxPayloadSize() {
+    return $.utils.getUint32(0, this);
+  }
+  set maxPayloadSize(value) {
+    $.utils.setUint32(0, value, this);
+  }
+  get deviceId() {
+    return $.utils.getUint32(4, this);
+  }
+  set deviceId(value) {
+    $.utils.setUint32(4, value, this);
+  }
+  get deviceName() {
+    return $.utils.getText(0, this);
+  }
+  set deviceName(value) {
+    $.utils.setText(0, value, this);
+  }
+  get deviceType() {
+    return $.utils.getUint16(8, this);
+  }
+  set deviceType(value) {
+    $.utils.setUint16(8, value, this);
+  }
+  toString() { return "GetDeviceCapabilitiesResponse_" + super.toString(); }
 }
