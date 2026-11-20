@@ -1,28 +1,17 @@
-import Link from "next/link";
-import { getBlogPosts } from "@/lib/source";
+import { blogAuthors, blogSource } from "@/lib/source";
+import { getPosts } from "@/lib/blog";
+import { BlogCards } from "@/components/blog";
 
-export default function Home() {
-  const posts = getBlogPosts();
-
+export default function Page() {
   return (
-    <main className="flex-1 w-full max-w-200 mx-auto px-4 py-8">
-      <h1 className="text-3xl mb-8">Latest Blog Posts</h1>
-      <div className="flex flex-col divide-y">
-        {posts.map((post) => (
-          <Link
-            key={post.url}
-            href={post.url}
-            className="block py-4 transition-colors hover:underline"
-          >
-            <h2 className="text-xl font-semibold">{post.data.title}</h2>
-            <p className="mt-0.5 text-fd-muted-foreground">
-              {post.data.date instanceof Date
-                ? post.data.date.toISOString().slice(0, 10)
-                : post.data.date}
-            </p>
-          </Link>
-        ))}
+    <div className="mx-auto w-full max-w-[900px] flex flex-col gap-6 px-4 pt-6 pb-12">
+      <div>
+        <h1 className="text-2xl font-semibold">Lokey Blog</h1>
+        <p className="text-fd-muted-foreground mt-1">
+          Latest announcements of Lokey
+        </p>
       </div>
-    </main>
+      <BlogCards posts={getPosts(blogSource.getPages(), blogAuthors)} />
+    </div>
   );
 }
