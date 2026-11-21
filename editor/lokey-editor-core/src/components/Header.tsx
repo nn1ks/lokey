@@ -92,10 +92,6 @@ export const Header: Component<HeaderProps> = (props) => {
     }
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!window.matchMedia("(min-width: 40rem)").matches) {
-        return;
-      }
-
       const target = event.target;
       if (!(target instanceof Node)) {
         return;
