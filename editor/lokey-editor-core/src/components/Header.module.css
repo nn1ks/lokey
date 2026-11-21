@@ -3,11 +3,11 @@
 }
 
 .content[data-state="open"] {
-  animation: expand 150ms ease-out;
+  animation: expand 100ms ease-out;
 }
 
 .content[data-state="closed"] {
-  animation: collapse 100ms ease-in;
+  animation: collapse 75ms ease-in;
 }
 
 /* On desktop the panel is a detached card, so animate it like a popover. */
