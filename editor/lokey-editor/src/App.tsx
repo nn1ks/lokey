@@ -35,6 +35,18 @@ export const toaster = createToaster({
 const AppContent: Component = () => {
   const { connection } = useConnection();
 
+  const isDemoConnection = () => {
+    const current = connection();
+    return current.status === "connected" && current.isDemo;
+  };
+
+  const serialConnection = () => {
+    const current = connection();
+    return current.status === "connected" && !current.isDemo
+      ? current
+      : undefined;
+  };
+
   return (
     <>
       <Switch>
@@ -54,28 +66,23 @@ const AppContent: Component = () => {
             <DemoButton />
           </StartPage>
         </Match>
-        <Match
-          when={connection().status === "connected" && connection().isDemo}
-        >
+        <Match when={isDemoConnection()}>
           <MessageManagerContext.Provider value={MessageManager.fromDemo()}>
             <DeviceCapabilitiesProvider>
               <DeviceContent />
             </DeviceCapabilitiesProvider>
           </MessageManagerContext.Provider>
         </Match>
-        <Match
-          when={connection().status === "connected" && !connection().isDemo}
-        >
-          <MessageManagerContext.Provider
-            value={MessageManager.fromWebSerial(
-              connection().writer,
-              connection().reader,
-            )}
-          >
-            <DeviceCapabilitiesProvider>
-              <DeviceContent />
-            </DeviceCapabilitiesProvider>
-          </MessageManagerContext.Provider>
+        <Match when={serialConnection()}>
+          {(conn) => (
+            <MessageManagerContext.Provider
+              value={MessageManager.fromWebSerial(conn().writer, conn().reader)}
+            >
+              <DeviceCapabilitiesProvider>
+                <DeviceContent />
+              </DeviceCapabilitiesProvider>
+            </MessageManagerContext.Provider>
+          )}
         </Match>
       </Switch>
       <Portal>
@@ -87,6 +94,11 @@ const AppContent: Component = () => {
 
 const DeviceContent: Component = () => {
   const { device } = useDeviceCapabilities();
+
+  const retrievedDevice = () => {
+    const current = device();
+    return current.status === "retrieved" ? current : undefined;
+  };
 
   return (
     <Switch>
@@ -102,21 +114,24 @@ const DeviceContent: Component = () => {
           <LoadingIndicator label="Retrieving Device ID..." />
         </StartPage>
       </Match>
-      <Match when={device().status === "retrieved"}>
-        <Switch>
-          <Match when={device().deviceId === 0x1000_0001}>
-            <FinPage />
-          </Match>
-          <Match when={true}>
-            <Header title={<DefaultHeaderTitle />} class="max-w-250" />
-            <StartPage>
-              <ErrorMessage>
-                Device with ID 0x{device().deviceId.toString(16).toUpperCase()}{" "}
-                is not supported.
-              </ErrorMessage>
-            </StartPage>
-          </Match>
-        </Switch>
+      <Match when={retrievedDevice()}>
+        {(retrieved) => (
+          <Switch>
+            <Match when={retrieved().deviceId === 0x1000_0001}>
+              <FinPage />
+            </Match>
+            <Match when={true}>
+              <Header title={<DefaultHeaderTitle />} class="max-w-250" />
+              <StartPage>
+                <ErrorMessage>
+                  Device with ID 0x
+                  {retrieved().deviceId.toString(16).toUpperCase()} is not
+                  supported.
+                </ErrorMessage>
+              </StartPage>
+            </Match>
+          </Switch>
+        )}
       </Match>
     </Switch>
   );

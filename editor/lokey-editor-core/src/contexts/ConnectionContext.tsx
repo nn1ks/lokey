@@ -21,12 +21,13 @@ export type SerialPortLike = {
 export type ConnectionState =
   | { status: "unsupported" }
   | { status: "disconnected" }
+  | { status: "connected"; isDemo: true }
   | {
       status: "connected";
+      isDemo: false;
       port: SerialPortLike;
       writer: WritableStreamDefaultWriter<Uint8Array>;
       reader: ReadableStreamDefaultReader<Uint8Array>;
-      isDemo: boolean;
     };
 
 export type ConnectionContextValue = {
@@ -76,22 +77,13 @@ export const ConnectionProvider: ParentComponent = (props) => {
   };
 
   const connectDemo = async () => {
-    const writer = {} as WritableStreamDefaultWriter<Uint8Array>;
-    const reader = {} as ReadableStreamDefaultReader<Uint8Array>;
-
-    setConnection({
-      status: "connected",
-      port: {} as SerialPortLike,
-      writer,
-      reader,
-      isDemo: true,
-    });
+    setConnection({ status: "connected", isDemo: true });
   };
 
   const disconnect = async () => {
     const current = connection();
 
-    if (current.status === "connected") {
+    if (current.status === "connected" && !current.isDemo) {
       try {
         await current.reader.cancel();
         current.writer.releaseLock();
