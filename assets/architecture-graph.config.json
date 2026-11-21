@@ -1,0 +1,83 @@
+{
+  "cargoDepgraphArgs": [
+    "--build-deps",
+    "--workspace-only",
+    "--all-features"
+  ],
+  "font": "Inter",
+  "groups": {
+    "Core": [
+      "lokey",
+      "lokey_macros"
+    ],
+    "MCU": [
+      "lokey-nrf",
+      "lokey-rp"
+    ],
+    "Transports": [
+      "lokey-ble",
+      "lokey-ble-macros",
+      "lokey-usb",
+      "lokey-usb-macros",
+      "lokey-usb-ble"
+    ],
+    "Keyboard": [
+      "lokey-keyboard",
+      "lokey-keyboard-macros",
+      "lokey-keyboard-odyn"
+    ],
+    "Mouse": [
+      "lokey-mouse"
+    ],
+    "MIDI": [
+      "lokey-midi"
+    ],
+    "LED Array": [
+      "lokey-led-array",
+      "lokey-led-array-odyn"
+    ]
+  },
+  "rows": [
+    [
+      "Core"
+    ],
+    [
+      "Transports",
+      "MCU"
+    ],
+    [
+      "Keyboard",
+      "Mouse",
+      "MIDI",
+      "LED Array",
+      "lokey-odyn",
+      "lokey-layer"
+    ]
+  ],
+  "layoutEdges": [
+    [
+      "Core",
+      "Transports"
+    ],
+    [
+      "Core",
+      "MCU"
+    ],
+    [
+      "Transports",
+      "Keyboard"
+    ],
+    [
+      "Core",
+      "Keyboard"
+    ],
+    [
+      "Core",
+      "LED Array"
+    ]
+  ],
+  "outputs": {
+    "dot": "architecture-graph.dot",
+    "png": "architecture-graph.png"
+  }
+}

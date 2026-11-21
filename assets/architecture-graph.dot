@@ -1,0 +1,127 @@
+digraph {
+    graph [
+        rankdir = TB,
+        newrank = true,
+        splines = spline,
+        nodesep = 0.5,
+        ranksep = 0.9,
+        fontname = "Inter",
+        fontsize = 12
+    ];
+    node [
+        shape = box,
+        style = "rounded,filled",
+        fillcolor = white,
+        fontname = "Inter",
+        fontsize = 11
+    ];
+    edge [ fontname = "Inter", fontsize = 9, constraint = false ];
+
+    "Core" [
+        label = <
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+                <TR><TD ALIGN="CENTER"><B>Core</B></TD></TR>
+                <HR/>
+                <TR><TD ALIGN="LEFT">lokey</TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT COLOR="green3">lokey_macros</FONT></TD></TR>
+            </TABLE>
+        >
+    ];
+    "MCU" [
+        label = <
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+                <TR><TD ALIGN="CENTER"><B>MCU</B></TD></TR>
+                <HR/>
+                <TR><TD ALIGN="LEFT">lokey-nrf</TD></TR>
+                <TR><TD ALIGN="LEFT">lokey-rp</TD></TR>
+            </TABLE>
+        >
+    ];
+    "Transports" [
+        label = <
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+                <TR><TD ALIGN="CENTER"><B>Transports</B></TD></TR>
+                <HR/>
+                <TR><TD ALIGN="LEFT">lokey-ble</TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT COLOR="green3">lokey-ble-macros</FONT></TD></TR>
+                <TR><TD ALIGN="LEFT">lokey-usb</TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT COLOR="green3">lokey-usb-macros</FONT></TD></TR>
+                <TR><TD ALIGN="LEFT">lokey-usb-ble</TD></TR>
+            </TABLE>
+        >
+    ];
+    "Keyboard" [
+        label = <
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+                <TR><TD ALIGN="CENTER"><B>Keyboard</B></TD></TR>
+                <HR/>
+                <TR><TD ALIGN="LEFT">lokey-keyboard</TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT COLOR="green3">lokey-keyboard-macros</FONT></TD></TR>
+                <TR><TD ALIGN="LEFT">lokey-keyboard-odyn</TD></TR>
+            </TABLE>
+        >
+    ];
+    "Mouse" [
+        label = <
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+                <TR><TD ALIGN="CENTER"><B>Mouse</B></TD></TR>
+                <HR/>
+                <TR><TD ALIGN="LEFT">lokey-mouse</TD></TR>
+            </TABLE>
+        >
+    ];
+    "MIDI" [
+        label = <
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+                <TR><TD ALIGN="CENTER"><B>MIDI</B></TD></TR>
+                <HR/>
+                <TR><TD ALIGN="LEFT">lokey-midi</TD></TR>
+            </TABLE>
+        >
+    ];
+    "LED Array" [
+        label = <
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+                <TR><TD ALIGN="CENTER"><B>LED Array</B></TD></TR>
+                <HR/>
+                <TR><TD ALIGN="LEFT">lokey-led-array</TD></TR>
+                <TR><TD ALIGN="LEFT">lokey-led-array-odyn</TD></TR>
+            </TABLE>
+        >
+    ];
+
+    "lokey-odyn" [ label = "lokey-odyn" ];
+    "lokey-layer" [ label = "lokey-layer" ];
+
+    { rank = same; "Transports"; "MCU"; }
+    { rank = same; "Keyboard"; "Mouse"; "MIDI"; "LED Array"; "lokey-odyn"; "lokey-layer"; }
+
+    // Invisible edges that pin the rows
+    "Core" -> "Transports" [ style = invis, constraint = true ];
+    "Core" -> "MCU" [ style = invis, constraint = true ];
+    "Transports" -> "Keyboard" [ style = invis, constraint = true ];
+    "Core" -> "Keyboard" [ style = invis, constraint = true ];
+    "Core" -> "LED Array" [ style = invis, constraint = true ];
+
+    // Required dependencies
+    "Transports" -> "Core";
+    "MCU" -> "Core";
+    "Keyboard" -> "Core";
+    "Keyboard" -> "lokey-layer";
+    "lokey-layer" -> "Core";
+    "Mouse" -> "Core";
+    "MIDI" -> "Core";
+    "LED Array" -> "Core";
+
+    // Optional / feature dependencies
+    "lokey-odyn" -> "Core" [ style = dotted, constraint = false ];
+    "lokey-odyn" -> "Transports" [ style = dotted, constraint = false ];
+    "MCU" -> "Transports" [ style = dotted, constraint = false ];
+    "Keyboard" -> "Transports" [ style = dotted, constraint = false ];
+    "Mouse" -> "Transports" [ style = dotted, constraint = false ];
+    "Mouse" -> "Keyboard" [ style = dotted, constraint = false ];
+    "MIDI" -> "Transports" [ style = dotted, constraint = false ];
+    "MIDI" -> "Keyboard" [ style = dotted, constraint = false ];
+    "LED Array" -> "Transports" [ style = dotted, constraint = false ];
+    "LED Array" -> "lokey-odyn" [ style = dotted, constraint = false ];
+}

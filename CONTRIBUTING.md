@@ -71,17 +71,21 @@ The `editor/` directory contains the source code of the Lokey Editor web app, wh
 
 ### Crate dependency graph
 
-<!--
-Picture was generated with the command:
+![Crate architecture graph](assets/architecture-graph.png)
 
-    cargo depgraph --build-deps --workspace-only --all-features | dot -Tpng > dependency-graph.png
--->
-
-![Dependency Graph](dependency-graph.png)
+The graph is an architecture-level view of the workspace dependencies.
 
 - Solid line: required dependency
-- Dotted line: optional dependency
+- Dotted line: optional/feature dependency
 - Green: build dependency
+
+> [!NOTE]
+>
+> When adding or removing crates from the workspace, or when changing dependencies between existing workspace crates, update the `assets/architecture-graph.config.json` file (if needed) and regenerate the graph with:
+> 
+> ```sh
+> node assets/generate-architecture-graph.mjs
+> ```
 
 ## Formatting and linting
 
