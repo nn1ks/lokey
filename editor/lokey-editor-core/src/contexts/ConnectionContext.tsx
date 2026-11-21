@@ -95,7 +95,11 @@ export const ConnectionProvider: ParentComponent = (props) => {
       }
     }
 
-    setConnection({ status: "disconnected" });
+    setConnection(
+      supportsWebSerial()
+        ? { status: "disconnected" }
+        : { status: "unsupported" },
+    );
   };
 
   const value: ConnectionContextValue = {
