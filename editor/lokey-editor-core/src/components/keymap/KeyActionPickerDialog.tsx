@@ -45,7 +45,7 @@ export const KeyActionPickerDialog: Component<KeyActionPickerDialogProps> = (
         <Dialog.Positioner class="fixed inset-0 z-1000 flex items-center justify-center sm:p-3">
           <Dialog.Content
             class="
-              sm:max-h-[min(90vh,48rem)] sm:min-h-[min(90vh,48rem)] h-[85vh] w-full max-w-2xl
+              sm:max-h-[min(90vh,48rem)] sm:min-h-[min(90vh,48rem)] h-[85dvh] w-full max-w-2xl
               flex flex-col
               overflow-hidden border shadow-xl sm:rounded-2xl
               border-neutral-50 bg-neutral-50
