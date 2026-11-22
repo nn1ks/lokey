@@ -35,6 +35,10 @@ declare_const_for_feature_group!(
 pub const MAX_MESSAGE_SIZE: usize = MAX_PAYLOAD_SIZE + 16;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "component", feature = "usb"),
+    derive(lokey::external::ExternalMessage)
+)]
 pub struct Message {
     pub sequence_number: u32,
     pub id: u32,
@@ -72,26 +76,6 @@ impl Message {
             id: protocol::message_id::ERROR_RESPONSE,
             payload: response,
         })
-    }
-}
-
-#[cfg(any(feature = "component", feature = "usb"))]
-impl lokey::external::Message for Message {
-    fn has_inner_message<M: lokey::external::Message>() -> bool {
-        false
-    }
-
-    fn inner_message<M: lokey::external::Message>(&self) -> Option<&M> {
-        None
-    }
-
-    fn try_from_inner_message(
-        _: &dyn core::any::Any,
-    ) -> Result<Self, lokey::external::MismatchedMessageType>
-    where
-        Self: Sized,
-    {
-        Err(lokey::external::MismatchedMessageType)
     }
 }
 
