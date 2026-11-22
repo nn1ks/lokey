@@ -22,7 +22,7 @@ use lokey_keyboard::{
     Matrix, MatrixConfig, Scanner,
 };
 use lokey_layer::LayerManager;
-use lokey_led_array::nrf52840::Pwm;
+use lokey_led_array::pwm::nrf52840::Pwm;
 use lokey_led_array::pwm::{Pwm as _, PwmChannel};
 use lokey_led_array::{HookBundle, LedArray};
 use lokey_mouse::MouseReportState;
@@ -221,7 +221,7 @@ impl<S: AnyState> ComponentSupport<Scanner<MatrixConfig, NUM_KEYS>, S> for Keybo
 }
 
 impl<S: AnyState, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for KeyboardLeft {
-    async fn enable<T>(component: LedArray<4, H>, _context: Context<Self, T, S>)
+    async fn enable<T>(component: LedArray<4, H>, context: Context<Self, T, S>)
     where
         T: Transports<Self::Mcu>,
     {
@@ -246,7 +246,7 @@ impl<S: AnyState, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for Keyboar
         let channels = channels
             .each_mut()
             .map(|channel| channel as &mut dyn PwmChannel);
-        component.run(channels).await;
+        component.run(context, channels).await;
     }
 }
 

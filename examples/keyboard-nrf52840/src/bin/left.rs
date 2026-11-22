@@ -10,7 +10,7 @@ use lokey_keyboard::action::{
 };
 use lokey_keyboard::{Key, KeyOverride, MatrixConfig, Scanner, layout};
 use lokey_layer::LayerId;
-use lokey_led_array::{BleAdvertisementHook, BleProfileHook, BootHook, LedArray};
+use lokey_led_array::{BlePairingHook, BleProfileHook, BootHook, LedArray};
 
 fn key_override() -> KeyOverride {
     KeyOverride::new(Key::LShift | Key::A, Key::E)
@@ -62,8 +62,8 @@ async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: S
 
     let scanner = Scanner::<MatrixConfig, NUM_KEYS>::new();
 
-    let hooks = (BootHook, BleAdvertisementHook, BleProfileHook);
-    let led_array = LedArray::<4, _>::new(context.as_dyn(), hooks);
+    let hooks = (BootHook, BlePairingHook, BleProfileHook);
+    let led_array = LedArray::<4, _>::new(hooks);
 
     context
         .enable_all((layout, scanner, Blink::new(), led_array))
