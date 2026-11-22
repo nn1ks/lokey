@@ -227,6 +227,7 @@ jobs:
             mcu_features: "nrf52840"
     env:
       FEATURE_COMBINATIONS: ";defmt;defmt usb ble"
+      # Use clang 21 because nrf-mpsl fails with newer clang versions
       CLANG_PATH: /usr/bin/clang-21
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
@@ -566,6 +567,7 @@ jobs:
             feature_combinations: ";defmt"
     env:
       FEATURE_COMBINATIONS: "${{ matrix.feature_combinations }}"
+      # Use clang 21 because nrf-mpsl fails with newer clang versions
       CLANG_PATH: /usr/bin/clang-21
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
