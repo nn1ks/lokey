@@ -9,7 +9,7 @@
 mod layer_manager_inner;
 
 use layer_manager_inner::{LayerManagerInner, LayerManagerTrait};
-use lokey::state::ToStateQuery;
+use lokey::state::{StateQuery, ToStateQuery};
 
 /// The ID of a layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -96,10 +96,14 @@ impl<const NUM_CONDITIONAL_LAYERS: usize> LayerManager<NUM_CONDITIONAL_LAYERS> {
     }
 }
 
-impl<const NUM_CONDITIONAL_LAYERS: usize> ToStateQuery for LayerManager<NUM_CONDITIONAL_LAYERS> {
+impl StateQuery for LayerManagerQuery<'static> {
     type Query<'a> = LayerManagerQuery<'a>;
+}
 
-    fn to_query(&self) -> Self::Query<'_> {
+impl<const NUM_CONDITIONAL_LAYERS: usize> ToStateQuery for LayerManager<NUM_CONDITIONAL_LAYERS> {
+    type Query = LayerManagerQuery<'static>;
+
+    fn to_query(&self) -> LayerManagerQuery<'_> {
         LayerManagerQuery { inner: &self.inner }
     }
 }
@@ -297,5 +301,9 @@ mod tests {
         query.push(LayerId(42));
 
         assert_eq!(query.active(), LayerId(42));
+
+        let dyn_state = lokey::state::DynState::from_ref(&state);
+        let dyn_query = dyn_state.try_query::<LayerManagerQuery>().unwrap();
+        assert_eq!(dyn_query.active(), LayerId(42));
     }
 }
