@@ -227,6 +227,8 @@ jobs:
             mcu_features: "nrf52840"
     env:
       FEATURE_COMBINATIONS: ";defmt;defmt usb ble"
+      CLANG_PATH: /usr/bin/clang-21
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - uses: actions/checkout@v4
       - name: Print rust version
@@ -564,6 +566,8 @@ jobs:
             feature_combinations: ";defmt"
     env:
       FEATURE_COMBINATIONS: "${{ matrix.feature_combinations }}"
+      CLANG_PATH: /usr/bin/clang-21
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - uses: actions/checkout@v4
       - name: Print rust version
