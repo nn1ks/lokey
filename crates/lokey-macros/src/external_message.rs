@@ -34,11 +34,11 @@ pub fn external_message_derive(item: TokenStream) -> syn::Result<TokenStream2> {
 fn external_message_derive_struct(ident: syn::Ident, crate_path: TokenStream2) -> TokenStream2 {
     quote! {
         impl #crate_path::external::Message for #ident {
-            fn has_inner_message<M: #crate_path::external::Message>() -> bool {
+            fn has_inner_message_by_id(_: ::core::any::TypeId) -> bool {
                 false
             }
 
-            fn inner_message<M: #crate_path::external::Message>(&self) -> ::core::option::Option<&M> {
+            fn inner_message_any(&self, _: ::core::any::TypeId) -> ::core::option::Option<&dyn ::core::any::Any> {
                 ::core::option::Option::None
             }
 
@@ -93,26 +93,26 @@ fn external_message_derive_enum(
 
     Ok(quote! {
         impl #crate_path::external::Message for #ident {
-            fn has_inner_message<M: #crate_path::external::Message>() -> bool {
+            fn has_inner_message_by_id(type_id: ::core::any::TypeId) -> bool {
                 false
                 #(
-                    || ::core::any::TypeId::of::<M>() == ::core::any::TypeId::of::<#variant_types>()
-                    || <#variant_types as #crate_path::external::Message>::has_inner_message::<M>()
+                    || type_id == ::core::any::TypeId::of::<#variant_types>()
+                    || <#variant_types as #crate_path::external::Message>::has_inner_message_by_id(type_id)
                 )*
             }
 
-            fn inner_message<M: #crate_path::external::Message>(&self) -> ::core::option::Option<&M> {
+            fn inner_message_any(&self, type_id: ::core::any::TypeId) -> ::core::option::Option<&dyn ::core::any::Any> {
                 #(
-                    if ::core::any::TypeId::of::<M>() == ::core::any::TypeId::of::<#variant_types>() {
+                    if type_id == ::core::any::TypeId::of::<#variant_types>() {
                         if let Self::#variant_names(v) = self {
-                            return (v as &dyn ::core::any::Any).downcast_ref();
+                            return ::core::option::Option::Some(v as &dyn ::core::any::Any);
                         }
                     }
                 )*
                 match self {
                     #(
                         Self::#variant_names(v) => {
-                            if let ::core::option::Option::Some(v) = <#variant_types as #crate_path::external::Message>::inner_message::<M>(v) {
+                            if let ::core::option::Option::Some(v) = <#variant_types as #crate_path::external::Message>::inner_message_any(v, type_id) {
                                 return ::core::option::Option::Some(v);
                             }
                         }

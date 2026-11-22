@@ -7,8 +7,10 @@ pub mod toggle;
 
 use crate::util::declare_const_for_feature_group;
 use crate::{Address, AnyState, Context, Device, McuCreator, Transports, internal, storage};
-pub use channel::{Channel, DynChannelRef, Observer, Receiver, TryObserver, TryReceiver};
-use core::any::Any;
+pub use channel::{
+    Channel, DynChannelRef, DynObserver, DynReceiver, Observer, Receiver, TryObserver, TryReceiver,
+};
+use core::any::{Any, TypeId};
 use core::future::Future;
 use derive_more::{Display, Error, From};
 /// Derive macro for [`external::Message`](crate::external::Message).
@@ -141,12 +143,32 @@ pub type DeviceTransportRxMessage<D, T> =
 
 /// Trait for messages that can be sent through external transports.
 pub trait Message: Any + Clone + Send + Sync {
+    /// Returns whether this message can contain inner messages of the type identified by `type_id`.
+    fn has_inner_message_by_id(type_id: TypeId) -> bool
+    where
+        Self: Sized;
+
     /// Returns whether this message can contain inner messages of type `M`.
-    fn has_inner_message<M: Message>() -> bool;
+    fn has_inner_message<M: Message>() -> bool
+    where
+        Self: Sized,
+    {
+        Self::has_inner_message_by_id(TypeId::of::<M>())
+    }
+
+    /// If this message contains an inner message of the type identified by `type_id`, returns a
+    /// reference to it. Otherwise, returns `None`.
+    fn inner_message_any(&self, type_id: TypeId) -> Option<&dyn Any>;
 
     /// If this message contains an inner message of type `M`, returns a reference to it. Otherwise,
     /// returns `None`.
-    fn inner_message<M: Message>(&self) -> Option<&M>;
+    fn inner_message<M: Message>(&self) -> Option<&M>
+    where
+        Self: Sized,
+    {
+        self.inner_message_any(TypeId::of::<M>())
+            .and_then(|v| v.downcast_ref::<M>())
+    }
 
     /// Tries to convert this message from an inner message of type `M` to this message type. Returns an
     /// error if this message can not contain inner messages of type `M`.
@@ -182,11 +204,11 @@ impl<T> TryFromMessage<T> for T {
 pub enum NoMessage {}
 
 impl Message for NoMessage {
-    fn has_inner_message<M: Message>() -> bool {
+    fn has_inner_message_by_id(_: TypeId) -> bool {
         false
     }
 
-    fn inner_message<M: Message>(&self) -> Option<&M> {
+    fn inner_message_any(&self, _: TypeId) -> Option<&dyn Any> {
         None
     }
 
