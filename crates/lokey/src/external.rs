@@ -1,18 +1,18 @@
 //! External communication with a host.
 
 mod channel;
+mod dyn_channel;
 pub mod empty;
 mod r#override;
 pub mod toggle;
 
 use crate::util::declare_const_for_feature_group;
 use crate::{Address, AnyState, Context, Device, McuCreator, Transports, internal, storage};
-pub use channel::{
-    Channel, DynChannelRef, DynObserver, DynReceiver, Observer, Receiver, TryObserver, TryReceiver,
-};
+pub use channel::{Channel, Observer, Receiver, TryObserver, TryReceiver};
 use core::any::{Any, TypeId};
 use core::future::Future;
 use derive_more::{Display, Error, From};
+pub use dyn_channel::{DynChannelRef, DynObserver, DynReceiver};
 /// Derive macro for [`external::Message`](crate::external::Message).
 ///
 /// This macro generates an implementation of the [`Message`] trait for structs and enums.
