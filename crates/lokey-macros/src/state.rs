@@ -78,8 +78,8 @@ pub fn state_derive(item: TokenStream) -> syn::Result<TokenStream2> {
         .iter()
         .map(|(ty, accessor)| {
             quote! {
-                impl<'a> ::lokey::state::QueryState<'a, <#ty as ::lokey::state::ToStateQuery>::Query<'a>> for #ident {
-                    fn query(&'a self) -> <#ty as ::lokey::state::ToStateQuery>::Query<'a> {
+                impl<'a> ::lokey::state::QueryState<'a, <#ty as ::lokey::state::ToStateQuery>::Query> for #ident {
+                    fn query(&'a self) -> <<#ty as ::lokey::state::ToStateQuery>::Query as ::lokey::state::StateQuery>::Query<'a> {
                         ::lokey::state::ToStateQuery::to_query(&self.#accessor)
                     }
                 }
@@ -91,12 +91,14 @@ pub fn state_derive(item: TokenStream) -> syn::Result<TokenStream2> {
         .iter()
         .map(|(ty, accessor)| {
             quote! {
-                if ::lokey::typeid::of::<T>() == ::lokey::typeid::of::<<#ty as ::lokey::state::ToStateQuery>::Query<'static>>() {
-                    let query: <#ty as ::lokey::state::ToStateQuery>::Query<'_> = ::lokey::state::ToStateQuery::to_query(&self.#accessor);
-                    let new_query = unsafe { ::core::mem::transmute_copy(&query) };
-                    #[allow(clippy::forget_non_drop)]
-                    ::core::mem::forget(query);
-                    return ::core::option::Option::Some(::lokey::state::StateQueryRef::new(new_query));
+                if type_id == ::core::any::TypeId::of::<<#ty as ::lokey::state::ToStateQuery>::Query>() {
+                    let query: <<#ty as ::lokey::state::ToStateQuery>::Query as ::lokey::state::StateQuery>::Query<'_> =
+                        ::lokey::state::ToStateQuery::to_query(&self.#accessor);
+                    unsafe {
+                        out.cast::<<<#ty as ::lokey::state::ToStateQuery>::Query as ::lokey::state::StateQuery>::Query<'_>>()
+                            .write(query);
+                    }
+                    return true;
                 }
             }
         })
@@ -136,9 +138,9 @@ pub fn state_derive(item: TokenStream) -> syn::Result<TokenStream2> {
                 ::core::option::Option::None
             }
 
-            fn try_query<T>(&self) -> ::core::option::Option<::lokey::state::StateQueryRef<'_, T>> {
+            unsafe fn try_query_raw(&self, type_id: ::core::any::TypeId, out: *mut u8) -> bool {
                 #try_query_state_branches
-                ::core::option::Option::None
+                false
             }
         }
     })

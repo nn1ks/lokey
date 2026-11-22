@@ -42,16 +42,17 @@
 //! stored type (for example, when the stored type is generic).
 //!
 //! To enable queries:
-//! 1. Implement [`ToStateQuery`] for the stored type.
-//! 2. Mark the corresponding state field with `#[state(query)]`.
-//! 3. Access the query via [`AnyState::try_query`] or [`QueryState::query`].
+//! 1. Implement [`StateQuery`] for the query type.
+//! 2. Implement [`ToStateQuery`] for the stored type.
+//! 3. Mark the corresponding state field with `#[state(query)]`.
+//! 4. Access the query via [`AnyState::try_query`], [`DynState::try_query`], or [`QueryState::query`].
 //!
 //! ## Example
 //!
 //! Here, callers access a `DebugValue<u8>` through a query type that only exposes `Debug`.
 //! ```
 //! use lokey::{AnyState, QueryState, State};
-//! use lokey::state::ToStateQuery;
+//! use lokey::state::{DynState, StateQuery, ToStateQuery};
 //!
 //! #[derive(Default)]
 //! struct DebugValue<T: core::fmt::Debug> {
@@ -63,10 +64,14 @@
 //!     value: &'a dyn core::fmt::Debug,
 //! }
 //!
-//! impl<T: core::fmt::Debug> ToStateQuery for DebugValue<T> {
-//!     type Query<'a> = DebugValueQuery<'a> where T: 'a;
+//! impl StateQuery for DebugValueQuery<'static> {
+//!     type Query<'a> = DebugValueQuery<'a>;
+//! }
 //!
-//!     fn to_query(&self) -> Self::Query<'_> {
+//! impl<T: core::fmt::Debug> ToStateQuery for DebugValue<T> {
+//!     type Query = DebugValueQuery<'static>;
+//!
+//!     fn to_query(&self) -> DebugValueQuery<'_> {
 //!         DebugValueQuery { value: &self.value }
 //!     }
 //! }
@@ -85,7 +90,12 @@
 //!
 //! // Or using the `AnyState` trait:
 //! let value = state.try_query::<DebugValueQuery>().unwrap();
-//! println!("Debug value: {:?}", *value);
+//! println!("Debug value: {:?}", value);
+//!
+//! // Or through a type-erased `DynState`:
+//! let dyn_state = DynState::from_ref(&state);
+//! let value = dyn_state.try_query::<DebugValueQuery>().unwrap();
+//! println!("Debug value: {:?}", value);
 //! ```
 
 #![cfg_attr(
@@ -93,7 +103,7 @@
     doc = "
 ```compile_fail
 use lokey::{AnyState, State};
-use lokey::state::ToStateQuery;
+use lokey::state::{StateQuery, ToStateQuery};
 
 struct Foo {}
 
@@ -101,29 +111,33 @@ struct FooQuery<'a> {
     foo: &'a Foo,
 }
 
-impl<'a> ToStateQuery for Foo {
-    type Query<'b> = FooQuery<'b> where Self: 'b;
+impl StateQuery for FooQuery<'static> {
+    type Query<'a> = FooQuery<'a>;
+}
 
-    fn to_query(&self) -> Self::Query<'_> {
+impl ToStateQuery for Foo {
+    type Query = FooQuery<'static>;
+
+    fn to_query(&self) -> FooQuery<'_> {
         FooQuery { foo: self }
     }
 }
 
 #[derive(State)]
 struct MyState {
+    #[state(query)]
     value: Foo,
 }
 
 let state = MyState { value: Foo {} };
-let query = state.try_query::<FooQuery>().unwrap();
+let foo_ref = state.try_query::<FooQuery>().unwrap().foo;
 drop(state);
-let _ = query.foo;
+let _ = foo_ref;
 ```"
 )]
 
 use core::any::{Any, TypeId};
-use core::mem::transmute;
-use core::ops::Deref;
+use core::mem::{MaybeUninit, transmute};
 
 /// Provides typed access to values stored in a state container.
 pub trait State<T> {
@@ -134,10 +148,16 @@ pub trait State<T> {
     fn get_mut(&mut self) -> &mut T;
 }
 
+/// Identifies a family of lifetime-parameterized state query views.
+pub trait StateQuery: 'static {
+    /// The query view borrowing the state for `'a`.
+    type Query<'a>;
+}
+
 /// Provides query-based access to a state container.
-pub trait QueryState<'a, T: 'a> {
+pub trait QueryState<'a, Q: StateQuery> {
     /// Returns a query value derived from the state.
-    fn query(&'a self) -> T;
+    fn query(&'a self) -> Q::Query<'a>;
 }
 
 /// Type-erased access to state values.
@@ -147,6 +167,16 @@ pub trait AnyState: 'static {
 
     /// Attempts to fetch a mutable value by [`TypeId`].
     fn try_get_mut_raw(&mut self, type_id: TypeId) -> Option<&mut dyn Any>;
+
+    /// Attempts to write a query value identified by `type_id` into `out`.
+    ///
+    /// Returns `true` if a matching query was written to `out`, or `false` if this state container
+    /// does not provide a query for `type_id`.
+    ///
+    /// # Safety
+    /// `out` must be valid for writes and properly aligned for `Q::Query<'_>` where
+    /// `TypeId::of::<Q>() == type_id`.
+    unsafe fn try_query_raw(&self, type_id: TypeId, out: *mut u8) -> bool;
 
     /// Attempts to fetch a typed immutable reference.
     fn try_get<T: 'static>(&self) -> Option<&T>
@@ -166,33 +196,16 @@ pub trait AnyState: 'static {
             .map(|v| v.downcast_mut().unwrap())
     }
 
-    /// Attempts to fetch a query value of type `T`.
-    fn try_query<T>(&self) -> Option<StateQueryRef<'_, T>>
+    /// Attempts to fetch a query value of type `Q`.
+    fn try_query<'a, Q: StateQuery>(&'a self) -> Option<Q::Query<'a>>
     where
-        Self: Sized;
-}
-
-/// Lifetime-carrying wrapper for values returned by [`AnyState::try_query`].
-pub struct StateQueryRef<'a, T> {
-    state_query: T,
-    phantom: core::marker::PhantomData<&'a ()>,
-}
-
-impl<'a, T> StateQueryRef<'a, T> {
-    /// Creates a new query wrapper.
-    pub fn new(state_query: T) -> StateQueryRef<'a, T> {
-        StateQueryRef {
-            state_query,
-            phantom: core::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a, T> Deref for StateQueryRef<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.state_query
+        Self: Sized,
+    {
+        let mut out = MaybeUninit::<Q::Query<'a>>::uninit();
+        // SAFETY: `out` is properly sized and aligned for `Q::Query<'a>`, and `try_query_raw`
+        // only initializes it when `TypeId::of::<Q>()` matches.
+        let found = unsafe { self.try_query_raw(TypeId::of::<Q>(), out.as_mut_ptr().cast()) };
+        found.then(|| unsafe { out.assume_init() })
     }
 }
 
@@ -222,6 +235,18 @@ impl DynState {
             .try_get_mut_raw(TypeId::of::<T>())
             .map(|v| v.downcast_mut().unwrap())
     }
+
+    /// Attempts to fetch a query value of type `Q`.
+    pub fn try_query<'a, Q: StateQuery>(&'a self) -> Option<Q::Query<'a>> {
+        let mut out = MaybeUninit::<Q::Query<'a>>::uninit();
+        // SAFETY: `out` is properly sized and aligned for `Q::Query<'a>`, and `try_query_raw`
+        // only initializes it when `TypeId::of::<Q>()` matches.
+        let found = unsafe {
+            self.0
+                .try_query_raw(TypeId::of::<Q>(), out.as_mut_ptr().cast())
+        };
+        found.then(|| unsafe { out.assume_init() })
+    }
 }
 
 impl<'a, S: AnyState> From<&'a S> for &'a DynState {
@@ -236,10 +261,8 @@ impl<'a, S: AnyState> From<&'a S> for &'a DynState {
 /// concrete stored type.
 pub trait ToStateQuery {
     /// Query type produced from `Self`.
-    type Query<'a>: ?Sized
-    where
-        Self: 'a;
+    type Query: StateQuery;
 
     /// Converts `self` into its query representation.
-    fn to_query(&self) -> Self::Query<'_>;
+    fn to_query(&self) -> <Self::Query as StateQuery>::Query<'_>;
 }

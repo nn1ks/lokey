@@ -127,10 +127,14 @@ use core::future::Future;
 /// #
 /// # struct GenericValueQuery { }
 /// #
-/// # impl<T> lokey::state::ToStateQuery for GenericValue<T> {
-/// #     type Query<'a> = GenericValueQuery where T: 'a;
+/// # impl lokey::state::StateQuery for GenericValueQuery {
+/// #     type Query<'a> = GenericValueQuery;
+/// # }
 /// #
-/// #     fn to_query(&self) -> Self::Query<'_> {
+/// # impl<T> lokey::state::ToStateQuery for GenericValue<T> {
+/// #     type Query = GenericValueQuery;
+/// #
+/// #     fn to_query(&self) -> GenericValueQuery {
 /// #         GenericValueQuery { }
 /// #     }
 /// # }
@@ -290,8 +294,6 @@ use state::DynState;
 pub use state::{AnyState, QueryState, State};
 #[doc(hidden)]
 pub use static_cell; // Re-exported for use in the `device` attribute macro.
-#[doc(hidden)]
-pub use typeid; // Re-exported for use in the `State` derive macro.
 
 /// Shared resources for a specific device setup.
 ///
