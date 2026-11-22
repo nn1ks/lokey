@@ -10,7 +10,7 @@ At the type level, Lokey provides three main access patterns:
 
 - [`AnyState`](https://docs.rs/lokey/latest/lokey/state/trait.AnyState.html) for type-erased lookup by type
 - [`State<T>`](https://docs.rs/lokey/latest/lokey/state/trait.State.html) for direct typed access to a specific stored type
-- [`QueryState<T>`](https://docs.rs/lokey/latest/lokey/state/trait.QueryState.html) for query-based access when callers should not depend on the exact stored type
+- [`QueryState<'a, Q>`](https://docs.rs/lokey/latest/lokey/state/trait.QueryState.html) for query-based access when callers should not depend on the exact stored type
 
 These types can be implemented for a struct using the [`State`](https://docs.rs/lokey/latest/lokey/derive.State.html) derive macro.
 
@@ -40,9 +40,10 @@ This is especially helpful for generic state entries. For example, [`LayerManage
 
 To make a field queryable:
 
-1. Implement [`ToStateQuery`](https://docs.rs/lokey/latest/lokey/state/trait.ToStateQuery.html) for the stored type.
-2. Mark the field with `#[state(query)]`.
-3. Access it via [`AnyState::try_query`](https://docs.rs/lokey/latest/lokey/state/trait.AnyState.html#method.try_query) or [`QueryState::query`](https://docs.rs/lokey/latest/lokey/state/trait.QueryState.html#tymethod.query).
+1. Implement [`StateQuery`](https://docs.rs/lokey/latest/lokey/state/trait.StateQuery.html) for the query type.
+2. Implement [`ToStateQuery`](https://docs.rs/lokey/latest/lokey/state/trait.ToStateQuery.html) for the stored type.
+3. Mark the field with `#[state(query)]`.
+4. Access it via [`AnyState::try_query`](https://docs.rs/lokey/latest/lokey/state/trait.AnyState.html#method.try_query), [`DynState::try_query`](https://docs.rs/lokey/latest/lokey/state/struct.DynState.html#method.try_query), or [`QueryState::query`](https://docs.rs/lokey/latest/lokey/state/trait.QueryState.html#tymethod.query).
 
 ```rust
 use lokey::State;
