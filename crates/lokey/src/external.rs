@@ -7,7 +7,7 @@ mod r#override;
 pub mod toggle;
 
 use crate::util::declare_const_for_feature_group;
-use crate::{Address, AnyState, Context, Device, McuCreator, Transports, internal, storage};
+use crate::{Address, AnyState, Context, McuCreator, internal, storage};
 pub use channel::{Channel, Observer, Receiver, TryObserver, TryReceiver};
 use core::any::{Any, TypeId};
 use core::future::Future;
@@ -130,17 +130,6 @@ pub enum TryObserverError {
     MaximumObserversReached(MaximumObserversReached),
 }
 
-/// Type alias for the external transport used by a device.
-pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::ExternalTransport;
-
-/// Type alias for the message type sent by the device's external transport.
-pub type DeviceTransportTxMessage<D, T> =
-    <<T as Transports<<D as Device>::Mcu>>::ExternalTransport as Transport>::TxMessage;
-
-/// Type alias for the message type received by the device's external transport.
-pub type DeviceTransportRxMessage<D, T> =
-    <<T as Transports<<D as Device>::Mcu>>::ExternalTransport as Transport>::RxMessage;
-
 /// Trait for messages that can be sent through external transports.
 pub trait Message: Any + Clone + Send + Sync {
     /// Returns whether this message can contain inner messages of the type identified by `type_id`.
@@ -250,13 +239,9 @@ pub trait Transport: Any {
     ///
     /// This drives ongoing transport work such as receiving incoming message bytes and handling
     /// transport-specific processing.
-    fn run<Device, Transports, State>(
-        &self,
-        context: Context<Device, Transports, State>,
-    ) -> impl Future<Output = ()>
+    fn run<Device, State>(&self, context: Context<Device, State>) -> impl Future<Output = ()>
     where
         Device: crate::Device<Mcu = Self::Mcu>,
-        Transports: crate::Transports<Self::Mcu>,
         State: AnyState,
         Self::Mcu: McuCreator<Device::StorageConfig>;
 

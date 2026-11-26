@@ -2,7 +2,7 @@
 #![no_std]
 
 use embassy_executor::Spawner;
-use keyboard_nrf52840::{Central, DefaultState, KEYBOARD_LEFT_ADDRESS, KeyboardLeft, NUM_KEYS};
+use keyboard_nrf52840::{DefaultState, KEYBOARD_LEFT_ADDRESS, KeyboardLeft, NUM_KEYS};
 use lokey::Context;
 use lokey_blink::Blink;
 use lokey_keyboard::action::{
@@ -17,7 +17,7 @@ fn key_override() -> KeyOverride {
 }
 
 #[lokey::device(address = KEYBOARD_LEFT_ADDRESS, message_override = key_override())]
-async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
+async fn main(context: Context<KeyboardLeft, DefaultState>, _spawner: Spawner) {
     let layout = layout!(
         // Layer 0
         [

@@ -12,7 +12,7 @@ If the device is not sending key or mouse events to the host, one of the followi
 
     ```rust
     #[lokey::device]
-    async fn main(context: Context<..., ..., MyState>) { // [!code highlight]
+    async fn main(context: Context<..., MyState>) { // [!code highlight]
         ...
     }
     ```

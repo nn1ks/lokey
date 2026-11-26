@@ -1,7 +1,7 @@
 use crate::{MAX_PAYLOAD_SIZE, Message, decode, encode, protocol};
 use lokey::external::{TryReceiverError, UnsupportedMessageType};
 use lokey::util::{error, info};
-use lokey::{AnyState, Component, Context, Device, Transports};
+use lokey::{AnyState, Component, Context, Device};
 
 pub struct OdynCore {
     pub device_id: u32,
@@ -10,13 +10,12 @@ pub struct OdynCore {
 impl Component for OdynCore {}
 
 impl OdynCore {
-    pub async fn run<D, T, S>(&self, context: Context<D, T, S>)
+    pub async fn run<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
-        // Message: TryFromMessage<<T::ExternalTransport as external::Transport>::RxMessage>,
-        // <T::ExternalTransport as external::Transport>::TxMessage: From<Message>,
+        // Message: TryFromMessage<<D::ExternalTransport as external::Transport>::RxMessage>,
+        // <D::ExternalTransport as external::Transport>::TxMessage: From<Message>,
     {
         let mut rx = match context.external_channel.try_receiver::<Message>() {
             Ok(v) => v,

@@ -16,7 +16,7 @@ use lokey::storage::flash::MultiwriteNorFlash;
 use lokey::storage::{
     self, DefaultStorage, DefaultStorageConfig, EmptyStorage, EmptyStorageConfig,
 };
-use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
+use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator};
 
 bind_interrupts!(struct Irqs {
     DMA_IRQ_0 => embassy_rp::dma::InterruptHandler<DMA_CH0>;
@@ -30,10 +30,9 @@ pub struct Rp {}
 impl Mcu for Rp {
     type Config = embassy_rp::config::Config;
 
-    async fn run<D, T, S>(_context: Context<D, T, S>)
+    async fn run<D, S>(_context: Context<D, S>)
     where
         D: Device<Mcu = Self>,
-        T: Transports<Self>,
         S: AnyState,
         Self: McuCreator<D::StorageConfig>,
     {

@@ -57,10 +57,9 @@ impl<Mcu: BleStack + 'static> internal::Transport for CentralTransport<Mcu> {
         Self { mcu }
     }
 
-    async fn run<Device, Transports, State>(&self, context: Context<Device, Transports, State>)
+    async fn run<Device, State>(&self, context: Context<Device, State>)
     where
         Device: lokey::Device<Mcu = Self::Mcu>,
-        Transports: lokey::Transports<Self::Mcu>,
         State: AnyState,
         Self::Mcu: McuCreator<Device::StorageConfig>,
     {

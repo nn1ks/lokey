@@ -26,7 +26,7 @@ For devices that do not need to communicate with a host, the [`external::empty::
 
 ```rust
 use lokey::{
-    Address, AnyState, Context, Device, McuCreator, Transports, external, internal, storage,
+    Address, AnyState, Context, Device, McuCreator, external, internal, storage,
 };
 
 struct MyTransport<Mcu> {
@@ -59,10 +59,9 @@ where
         }
     }
 
-    async fn run<Device, Transports, State>(&self, context: Context<Device, Transports, State>)
+    async fn run<Device, State>(&self, context: Context<Device, State>)
     where
         Device: lokey::Device<Mcu = Self::Mcu>,
-        Transports: lokey::Transports<Self::Mcu>,
         State: AnyState,
         Self::Mcu: McuCreator<Device::StorageConfig>,
     {

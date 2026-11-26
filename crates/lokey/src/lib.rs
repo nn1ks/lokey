@@ -192,14 +192,9 @@ pub use lokey_macros::State;
 /// # impl lokey::Device for MyDevice {
 /// #     type Mcu = lokey::DummyMcu;
 /// #     type StorageConfig = lokey::storage::EmptyStorageConfig;
-/// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
-/// # }
-/// #
-/// # struct MyTransports;
-/// #
-/// # impl lokey::Transports<lokey::DummyMcu> for MyTransports {
 /// #     type ExternalTransport = lokey::external::empty::Transport<lokey::DummyMcu>;
 /// #     type InternalTransport = lokey::internal::empty::Transport<lokey::DummyMcu>;
+/// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
 /// #     fn external_transport_config() -> <Self::ExternalTransport as lokey::external::Transport>::Config {
 /// #         lokey::external::empty::TransportConfig
 /// #     }
@@ -215,7 +210,7 @@ pub use lokey_macros::State;
 /// use lokey::Context;
 ///
 /// #[lokey::device]
-/// async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+/// async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
 ///     // ...
 /// }
 /// ```
@@ -228,14 +223,9 @@ pub use lokey_macros::State;
 /// # impl lokey::Device for MyDevice {
 /// #     type Mcu = lokey::DummyMcu;
 /// #     type StorageConfig = lokey::storage::EmptyStorageConfig;
-/// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
-/// # }
-/// #
-/// # struct MyTransports;
-/// #
-/// # impl lokey::Transports<lokey::DummyMcu> for MyTransports {
 /// #     type ExternalTransport = lokey::external::empty::Transport<lokey::DummyMcu>;
 /// #     type InternalTransport = lokey::internal::empty::Transport<lokey::DummyMcu>;
+/// #     fn storage_config() -> Self::StorageConfig { lokey::storage::EmptyStorageConfig }
 /// #     fn external_transport_config() -> <Self::ExternalTransport as lokey::external::Transport>::Config {
 /// #         lokey::external::empty::TransportConfig
 /// #     }
@@ -278,7 +268,7 @@ pub use lokey_macros::State;
 ///     external_transport_config = |config| { /* ... */ },
 ///     message_override = MyOverride::new(),
 /// )]
-/// async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+/// async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
 ///     // ...
 /// }
 /// ```
@@ -306,10 +296,9 @@ pub use static_cell; // Re-exported for use in the `device` attribute macro.
 ///
 /// The type parameters bind the context to a concrete device (`D`), transport setup (`T`), and
 /// state type (`S`).
-pub struct Context<D, T, S>
+pub struct Context<D, S>
 where
     D: Device,
-    T: Transports<D::Mcu>,
     S: AnyState,
     D::Mcu: McuCreator<D::StorageConfig>,
 {
@@ -320,17 +309,16 @@ where
     /// Reference to the storage.
     pub storage: &'static <D::Mcu as McuCreator<D::StorageConfig>>::Storage,
     /// Channel used to send and receive internal messages.
-    pub internal_channel: &'static internal::Channel<internal::DeviceTransport<D, T>>,
+    pub internal_channel: &'static internal::Channel<D::InternalTransport>,
     /// Channel used to send and receive external messages.
-    pub external_channel: &'static external::Channel<external::DeviceTransport<D, T>>,
+    pub external_channel: &'static external::Channel<D::ExternalTransport>,
     /// The application state.
     pub state: &'static S,
 }
 
-impl<D, T, S> Context<D, T, S>
+impl<D, S> Context<D, S>
 where
     D: Device,
-    T: Transports<D::Mcu>,
     S: AnyState,
 {
     /// Converts this strongly typed context into a dynamically typed [`DynContext`].
@@ -353,7 +341,7 @@ where
         C: Component,
         D: ComponentSupport<C, S>,
     {
-        D::enable::<T>(component, *self).await
+        D::enable(component, *self).await
     }
 
     /// Enables all passed components concurrently.
@@ -361,16 +349,15 @@ where
     /// This requires the device `D` to implement [`ComponentSupport`] for all passed component types.
     pub async fn enable_all<C>(&self, components: C)
     where
-        C: ComponentCollection<D, T, S>,
+        C: ComponentCollection<D, S>,
     {
         components.enable_all(*self).await
     }
 }
 
-impl<D, T, S> Clone for Context<D, T, S>
+impl<D, S> Clone for Context<D, S>
 where
     D: Device,
-    T: Transports<D::Mcu>,
     S: AnyState,
 {
     fn clone(&self) -> Self {
@@ -378,10 +365,9 @@ where
     }
 }
 
-impl<D, T, S> Copy for Context<D, T, S>
+impl<D, S> Copy for Context<D, S>
 where
     D: Device,
-    T: Transports<D::Mcu>,
     S: AnyState,
 {
 }
@@ -391,7 +377,7 @@ where
 /// This can be useful when passing a context to an Embassy task without knowing its exact concrete
 /// type, since Embassy tasks cannot have generic parameters.
 ///
-/// An instance of [`DynContext`] can be created from any `Context<D, T, S>` using
+/// An instance of [`DynContext`] can be created from any `Context<D, S>` using
 /// [`Context::as_dyn`] or [`DynContext::from`].
 #[derive(Clone, Copy)]
 pub struct DynContext {
@@ -407,13 +393,12 @@ pub struct DynContext {
     pub state: &'static DynState,
 }
 
-impl<D, T, S> From<Context<D, T, S>> for DynContext
+impl<D, S> From<Context<D, S>> for DynContext
 where
     D: Device,
-    T: Transports<D::Mcu>,
     S: AnyState,
 {
-    fn from(context: Context<D, T, S>) -> Self {
+    fn from(context: Context<D, S>) -> Self {
         context.as_dyn()
     }
 }
@@ -440,21 +425,12 @@ pub trait Device: Sized {
 
     /// Returns the storage configuration used during device initialization.
     fn storage_config() -> Self::StorageConfig;
-}
 
-/// Defines the transport backends used by a device.
-///
-/// A transport setup provides one external and one internal transport implementation, plus their
-/// corresponding configuration values.
-///
-/// If either transport is not needed, use the corresponding empty transport:
-/// [`external::empty::Transport`] or [`internal::empty::Transport`].
-pub trait Transports<M> {
     /// External transport implementation.
-    type ExternalTransport: external::Transport<Mcu = M>;
+    type ExternalTransport: external::Transport<Mcu = Self::Mcu>;
 
     /// Internal transport implementation.
-    type InternalTransport: internal::Transport<Mcu = M>;
+    type InternalTransport: internal::Transport<Mcu = Self::Mcu>;
 
     /// Returns the configuration used to initialize [`Self::ExternalTransport`].
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config;
@@ -469,20 +445,17 @@ pub trait Component {}
 /// Trait for adding support of a component to a device.
 pub trait ComponentSupport<C: Component, S: AnyState>: Device {
     /// Enables the specified component for this device.
-    fn enable<T>(component: C, context: Context<Self, T, S>) -> impl Future<Output = ()>
-    where
-        T: Transports<Self::Mcu>;
+    fn enable(component: C, context: Context<Self, S>) -> impl Future<Output = ()>;
 }
 
 /// Trait for enabling multiple components concurrently.
-pub trait ComponentCollection<D, T, S>
+pub trait ComponentCollection<D, S>
 where
     D: Device,
-    T: Transports<D::Mcu>,
     S: AnyState,
 {
     /// Enables all components in this collection concurrently.
-    fn enable_all(self, context: Context<D, T, S>) -> impl Future<Output = ()>;
+    fn enable_all(self, context: Context<D, S>) -> impl Future<Output = ()>;
 }
 
 macro_rules! impl_component_collection_for_tuples {
@@ -493,14 +466,13 @@ macro_rules! impl_component_collection_for_tuples {
     };
     (@ $num:literal) => {
         seq!(N in 0..$num {
-            impl<D, T, S, #(C~N,)*> ComponentCollection<D, T, S> for (#(C~N,)*)
+            impl<D, S, #(C~N,)*> ComponentCollection<D, S> for (#(C~N,)*)
             where
                 D: Device #(+ ComponentSupport<C~N, S>)*,
-                T: Transports<D::Mcu>,
                 S: AnyState,
                 #(C~N: Component,)*
             {
-                async fn enable_all(self, #[allow(unused_variables)] context: Context<D, T, S>) {
+                async fn enable_all(self, #[allow(unused_variables)] context: Context<D, S>) {
                     futures_util::join!(
                         #(context.enable(self.N),)*
                     );

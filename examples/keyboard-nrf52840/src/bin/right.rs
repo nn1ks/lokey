@@ -2,15 +2,13 @@
 #![no_std]
 
 use embassy_executor::Spawner;
-use keyboard_nrf52840::{
-    DefaultState, KEYBOARD_RIGHT_ADDRESS, KeyboardRight, NUM_KEYS, Peripheral,
-};
+use keyboard_nrf52840::{DefaultState, KEYBOARD_RIGHT_ADDRESS, KeyboardRight, NUM_KEYS};
 use lokey::Context;
 use lokey_blink::Blink;
 use lokey_keyboard::{DirectPinsConfig, Scanner};
 
 #[lokey::device(address = KEYBOARD_RIGHT_ADDRESS)]
-async fn main(context: Context<KeyboardRight, Peripheral, DefaultState>, _spawner: Spawner) {
+async fn main(context: Context<KeyboardRight, DefaultState>, _spawner: Spawner) {
     let scanner = Scanner::<DirectPinsConfig, NUM_KEYS>::new();
 
     context.enable_all((scanner, Blink::new())).await;

@@ -1,4 +1,4 @@
-use crate::{Address, AnyState, Context, Device, Transports, storage};
+use crate::{Address, AnyState, Context, Device, storage};
 use core::any::Any;
 
 /// Creates an MCU together with its storage backend.
@@ -39,10 +39,9 @@ pub trait Mcu: Any {
     /// the device.
     ///
     /// This function must be called only once per concrete MCU type.
-    fn run<D, T, S>(context: Context<D, T, S>) -> impl Future<Output = ()>
+    fn run<D, S>(context: Context<D, S>) -> impl Future<Output = ()>
     where
         D: Device<Mcu = Self>,
-        T: Transports<Self>,
         S: AnyState,
         Self: Sized + McuCreator<D::StorageConfig>;
 }
@@ -60,10 +59,9 @@ mod dummy {
     impl Mcu for DummyMcu {
         type Config = ();
 
-        async fn run<D, T, S>(_context: Context<D, T, S>)
+        async fn run<D, S>(_context: Context<D, S>)
         where
             D: Device<Mcu = Self>,
-            T: Transports<Self>,
             S: AnyState,
             Self: McuCreator<D::StorageConfig>,
         {

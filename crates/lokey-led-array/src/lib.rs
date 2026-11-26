@@ -17,7 +17,7 @@ use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
 use generic_array::GenericArray;
 use lokey::util::{unwrap, warn};
-use lokey::{Address, AnyState, Component, Context, Device, DynContext, Transports, internal};
+use lokey::{Address, AnyState, Component, Context, Device, DynContext, internal};
 #[cfg(feature = "odyn")]
 pub use odyn::OdynLedArray;
 use portable_atomic::AtomicU32;
@@ -425,13 +425,12 @@ impl<const NUM_LEDS: usize, Hooks: HookBundle> LedArray<NUM_LEDS, Hooks> {
         self
     }
 
-    pub async fn run<D, T, S>(
+    pub async fn run<D, S>(
         mut self,
-        context: Context<D, T, S>,
+        context: Context<D, S>,
         pwm_channels: [&mut dyn PwmChannel; NUM_LEDS],
     ) where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let run_hooks = self.hook_bundle.run_all::<NUM_LEDS>(context.as_dyn());

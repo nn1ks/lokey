@@ -5,7 +5,7 @@ use embassy_futures::join::join3;
 use lokey::external::UnsupportedMessageType;
 use lokey::storage::{ReadTransaction, Storage, WriteTransaction};
 use lokey::util::error;
-use lokey::{AnyState, Component, Context, Device, Transports};
+use lokey::{AnyState, Component, Context, Device};
 use lokey_led_array_odyn::protocol;
 use lokey_odyn::MAX_PAYLOAD_SIZE;
 
@@ -236,13 +236,12 @@ impl<const NUM_LEDS: usize, Hooks: OdynHookBundle> OdynLedArray<NUM_LEDS, Hooks>
         };
     }
 
-    pub async fn run<D, T, S>(
+    pub async fn run<D, S>(
         self,
-        context: Context<D, T, S>,
+        context: Context<D, S>,
         pwm_channels: [&mut dyn PwmChannel; NUM_LEDS],
     ) where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let run_hooks = self.hook_bundle.run_all::<NUM_LEDS>(context.as_dyn());

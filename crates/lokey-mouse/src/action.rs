@@ -6,15 +6,14 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use lokey::util::error;
-use lokey::{AnyState, Context, Device, Transports};
+use lokey::{AnyState, Context, Device};
 use lokey_keyboard::Action;
 use portable_atomic::AtomicBool;
 
 impl Action for MouseButton {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let Some(report) = context.state.try_get::<MouseReportState>() else {
@@ -27,10 +26,9 @@ impl Action for MouseButton {
         let _ = context.external_channel.try_send(report).await;
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let Some(report) = context.state.try_get::<MouseReportState>() else {
@@ -44,13 +42,9 @@ impl Action for MouseButton {
     }
 }
 
-async fn send_mouse_report<D, T, S, F>(
-    context: Context<D, T, S>,
-    interval: Duration,
-    update_report: F,
-) where
+async fn send_mouse_report<D, S, F>(context: Context<D, S>, interval: Duration, update_report: F)
+where
     D: Device,
-    T: Transports<D::Mcu>,
     S: AnyState,
     F: Fn(&mut MouseReport),
 {
@@ -106,10 +100,9 @@ impl MoveMouseX {
 }
 
 impl Action for MoveMouseX {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
@@ -126,10 +119,9 @@ impl Action for MoveMouseX {
         self.stop_signal.reset();
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.stop_signal.signal(());
@@ -173,10 +165,9 @@ impl MoveMouseY {
 }
 
 impl Action for MoveMouseY {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
@@ -193,10 +184,9 @@ impl Action for MoveMouseY {
         self.stop_signal.reset();
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.stop_signal.signal(());
@@ -240,10 +230,9 @@ impl ScrollX {
 }
 
 impl Action for ScrollX {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
@@ -260,10 +249,9 @@ impl Action for ScrollX {
         self.stop_signal.reset();
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.stop_signal.signal(());
@@ -307,10 +295,9 @@ impl ScrollY {
 }
 
 impl Action for ScrollY {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if self.is_active.load(Ordering::SeqCst) {
@@ -327,10 +314,9 @@ impl Action for ScrollY {
         self.stop_signal.reset();
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.stop_signal.signal(());

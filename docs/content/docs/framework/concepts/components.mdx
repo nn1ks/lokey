@@ -20,15 +20,11 @@ That design gives strong compile-time guarantees: if a device does not support a
 The following example implements support for the component `MyComponent` for the device `MyDevice`:
 
 ```rust
-use lokey::{AnyState, ComponentSupport, Context, Transports};
+use lokey::{AnyState, ComponentSupport, Context};
 
 // Implement ComponentSupport for MyComponent and any state type
 impl<S: AnyState> ComponentSupport<MyComponent, S> for MyDevice {
-    // The enable function is generic over transports that are valid for the device MCU
-    async fn enable<T>(component: MyComponent, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: MyComponent, context: Context<Self, S>) {
         // Let's assume MyComponent has a run method that takes a context
         component.run(context).await;
     }
@@ -48,7 +44,7 @@ Many components run indefinitely, so awaiting one component directly can prevent
 
 ```rust
 #[lokey::device]
-async fn main(context: Context<MyDevice, MyTransport, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     context.enable(ExampleComponent1).await; // [!code error]
     context.enable(ExampleComponent2).await; // Never reached if the first component runs indefinitely. // [!code error]
 }
@@ -58,7 +54,7 @@ Instead, join the futures:
 
 ```rust
 #[lokey::device]
-async fn main(context: Context<MyDevice, MyTransport, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     let future1 = context.enable(ExampleComponent1);
     let future2 = context.enable(ExampleComponent2);
 
@@ -70,7 +66,7 @@ Alternatively, the [`enable_all`](https://docs.rs/lokey/latest/lokey/struct.Cont
 
 ```rust
 #[lokey::device]
-async fn main(context: Context<MyDevice, MyTransport, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     context
         .enable_all((ExampleComponent1, ExampleComponent2))
         .await;
@@ -81,18 +77,18 @@ Another option is to run the components in separate Embassy tasks:
 
 ```rust
 #[lokey::device]
-async fn main(context: Context<MyDevice, MyTransport, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     spawner.spawn(enable_example_component1(context).unwrap());
     spawner.spawn(enable_example_component2(context).unwrap());
 }
 
 #[embassy_executor::task]
-async fn enable_example_component1(context: Context<MyDevice, MyTransport, MyState>) {
+async fn enable_example_component1(context: Context<MyDevice, MyState>) {
     context.enable(ExampleComponent1).await;
 }
 
 #[embassy_executor::task]
-async fn enable_example_component2(context: Context<MyDevice, MyTransport, MyState>) {
+async fn enable_example_component2(context: Context<MyDevice, MyState>) {
     context.enable(ExampleComponent2).await;
 }
 ```

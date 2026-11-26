@@ -6,7 +6,7 @@ A [`Context`](https://docs.rs/lokey/latest/lokey/struct.Context.html) is the cen
 
 ## Fields
 
-A `Context<D, T, S>` carries the following fields:
+A `Context<D, S>` carries the following fields:
 
 - **`address`** – The unique [`Address`](https://docs.rs/lokey/latest/lokey/struct.Address.html) of this device.
 - **`mcu`** – A reference to the initialized [MCU](./mcus) instance.
@@ -17,10 +17,9 @@ A `Context<D, T, S>` carries the following fields:
 
 ## Type parameters
 
-The three type parameters bind a context to a concrete setup:
+The two type parameters bind a context to a concrete setup:
 
-- **`D: Device`** – The device type, which defines the MCU and storage backend. See [Devices](./devices).
-- **`T: Transports`** – The external and internal transport implementations. See [External Transports](./external-transports) and [Internal Transports](./internal-transports).
+- **`D: Device`** – The device type, which defines the MCU, storage backend, and the external and internal transports. See [Devices](./devices).
 - **`S: AnyState`** – The application state container. See [State](./state).
 
 ## Usage in `main`
@@ -32,7 +31,7 @@ use embassy_executor::Spawner;
 use lokey::Context;
 
 #[lokey::device]
-async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     context.enable(MyComponent).await;
 }
 ```
@@ -42,13 +41,10 @@ async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawne
 Components receive the context via their `enable` implementation:
 
 ```rust
-use lokey::{AnyState, ComponentSupport, Context, Transports};
+use lokey::{AnyState, ComponentSupport, Context};
 
 impl<S: AnyState> ComponentSupport<MyComponent, S> for MyDevice {
-    async fn enable<T>(component: MyComponent, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: MyComponent, context: Context<Self, S>) {
         // ...
     }
 }
@@ -56,13 +52,13 @@ impl<S: AnyState> ComponentSupport<MyComponent, S> for MyDevice {
 
 ## Type-erased context
 
-When you want to have an Embassy task that will work with any context, you are not able to be generic over the device, transports, and state types as Embassy tasks do not support generic parameters. In this case, you can use [`Context::as_dyn`](https://docs.rs/lokey/latest/lokey/struct.Context.html#method.as_dyn) to convert the context to a [`DynContext`](https://docs.rs/lokey/latest/lokey/struct.DynContext.html), which uses dynamic dispatch and does not have generic parameters.
+When you want to have an Embassy task that will work with any context, you are not able to be generic over the device and state types as Embassy tasks do not support generic parameters. In this case, you can use [`Context::as_dyn`](https://docs.rs/lokey/latest/lokey/struct.Context.html#method.as_dyn) to convert the context to a [`DynContext`](https://docs.rs/lokey/latest/lokey/struct.DynContext.html), which uses dynamic dispatch and does not have generic parameters.
 
 ```rust
 use lokey::{Context, DynContext};
 
 #[lokey::device]
-async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     spawner.spawn(my_task(context.as_dyn())).unwrap();
 }
 

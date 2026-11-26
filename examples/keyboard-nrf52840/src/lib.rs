@@ -12,9 +12,7 @@ use embassy_sync::mutex::Mutex;
 use embassy_time::Duration;
 use lokey::external::NoMessage;
 use lokey::storage::DefaultStorageConfig;
-use lokey::{
-    Address, AnyState, ComponentSupport, Context, Device, State, Transports, external, internal,
-};
+use lokey::{Address, AnyState, ComponentSupport, Context, Device, State, external, internal};
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
@@ -44,11 +42,19 @@ pub struct DefaultState {
     pub mouse_report: MouseReportState,
 }
 
-pub struct Central;
+pub struct KeyboardLeft;
 
-impl Transports<Nrf> for Central {
+impl Device for KeyboardLeft {
+    type Mcu = Nrf;
+    type StorageConfig = DefaultStorageConfig;
     type ExternalTransport = lokey_ble::external::Transport<Nrf, KeyboardReport, NoMessage>;
     type InternalTransport = internal::empty::Transport<Nrf>;
+
+    fn storage_config() -> Self::StorageConfig {
+        DefaultStorageConfig {
+            flash_page_range: 0xF0..0x100,
+        }
+    }
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         // lokey_usb::external::TransportConfig {
@@ -83,43 +89,8 @@ impl Transports<Nrf> for Central {
     }
 }
 
-pub struct Peripheral;
-
-impl Transports<Nrf> for Peripheral {
-    type ExternalTransport = external::empty::Transport<Nrf>;
-    type InternalTransport = internal::empty::Transport<Nrf>;
-    // type InternalTransport = internal::ble::Transport<Nrf>;
-
-    fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
-        external::empty::TransportConfig
-    }
-
-    fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
-        internal::empty::TransportConfig
-        // internal::ble::TransportConfig::Peripheral {
-        //     central_address: KeyboardLeft::DEFAULT_ADDRESS,
-        // }
-    }
-}
-
-pub struct KeyboardLeft;
-
-impl Device for KeyboardLeft {
-    type Mcu = Nrf;
-    type StorageConfig = DefaultStorageConfig;
-
-    fn storage_config() -> Self::StorageConfig {
-        DefaultStorageConfig {
-            flash_page_range: 0xF0..0x100,
-        }
-    }
-}
-
 impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardLeft {
-    async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Blink, _context: Context<Self, S>) {
         let pin = unsafe { embassy_nrf::peripherals::P0_17::steal() };
         let led = Output::new(pin, Level::Low, OutputDrive::Standard);
         component.run(led).await;
@@ -129,19 +100,13 @@ impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardLeft {
 impl<S: AnyState, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
     for KeyboardLeft
 {
-    async fn enable<T>(component: Layout<A>, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Layout<A>, context: Context<Self, S>) {
         component.run(context).await;
     }
 }
 
 impl<S: AnyState> ComponentSupport<Scanner<MatrixConfig, NUM_KEYS>, S> for KeyboardLeft {
-    async fn enable<T>(component: Scanner<MatrixConfig, NUM_KEYS>, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Scanner<MatrixConfig, NUM_KEYS>, context: Context<Self, S>) {
         let matrix = unsafe {
             Matrix::new::<NUM_KEYS>(
                 [
@@ -221,10 +186,7 @@ impl<S: AnyState> ComponentSupport<Scanner<MatrixConfig, NUM_KEYS>, S> for Keybo
 }
 
 impl<S: AnyState, H: HookBundle> ComponentSupport<LedArray<4, H>, S> for KeyboardLeft {
-    async fn enable<T>(component: LedArray<4, H>, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: LedArray<4, H>, context: Context<Self, S>) {
         let pwm1 = unsafe { embassy_nrf::peripherals::PWM1::steal() };
         let ch0 = unsafe { embassy_nrf::peripherals::P1_11::steal().into::<AnyPin>() };
         let ch1 = unsafe { embassy_nrf::peripherals::P0_05::steal().into::<AnyPin>() };
@@ -255,19 +217,30 @@ pub struct KeyboardRight;
 impl Device for KeyboardRight {
     type Mcu = Nrf;
     type StorageConfig = DefaultStorageConfig;
+    type ExternalTransport = external::empty::Transport<Nrf>;
+    type InternalTransport = internal::empty::Transport<Nrf>;
+    // type InternalTransport = internal::ble::Transport<Nrf>;
 
     fn storage_config() -> Self::StorageConfig {
         DefaultStorageConfig {
             flash_page_range: 0xF0..0x100,
         }
     }
+
+    fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
+        external::empty::TransportConfig
+    }
+
+    fn internal_transport_config() -> <Self::InternalTransport as internal::Transport>::Config {
+        internal::empty::TransportConfig
+        // internal::ble::TransportConfig::Peripheral {
+        //     central_address: KeyboardLeft::DEFAULT_ADDRESS,
+        // }
+    }
 }
 
 impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardRight {
-    async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Blink, _context: Context<Self, S>) {
         let pin = unsafe { embassy_nrf::peripherals::P0_17::steal() };
         let led = Output::new(pin, Level::Low, OutputDrive::Standard);
         component.run(led).await;
@@ -275,10 +248,7 @@ impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardRight {
 }
 
 impl<S: AnyState> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardRight {
-    async fn enable<T>(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, S>) {
         let input_pins = unsafe {
             [Input::new(P1_11::steal().into::<AnyPin>(), Pull::Up).into_active_low_switch()]
         };
@@ -301,19 +271,17 @@ impl LedAction {
 }
 
 impl lokey_keyboard::Action for LedAction {
-    async fn on_press<D, T, S>(&self, _context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, _context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.pin.lock().await.set_high();
     }
 
-    async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.pin.lock().await.set_low();

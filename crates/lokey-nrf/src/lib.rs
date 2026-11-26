@@ -24,7 +24,7 @@ use lokey::storage::{
     self, DefaultStorage, DefaultStorageConfig, EmptyStorage, EmptyStorageConfig,
 };
 use lokey::util::unwrap;
-use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
+use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator};
 use nrf_mpsl::{Flash, MultiprotocolServiceLayer, SessionMem};
 use static_cell::StaticCell;
 
@@ -46,10 +46,9 @@ pub struct Nrf {
 impl Mcu for Nrf {
     type Config = embassy_nrf::config::Config;
 
-    async fn run<D, T, S>(_context: Context<D, T, S>)
+    async fn run<D, S>(_context: Context<D, S>)
     where
         D: Device<Mcu = Self>,
-        T: Transports<Self>,
         S: AnyState,
         Self: McuCreator<D::StorageConfig>,
     {

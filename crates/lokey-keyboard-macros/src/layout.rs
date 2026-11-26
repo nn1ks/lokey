@@ -86,14 +86,13 @@ pub fn layout(item: TokenStream) -> syn::Result<TokenStream2> {
         impl<#(#struct_generics: ::lokey_keyboard::Action),*> ::lokey_keyboard::ActionContainer for __LayoutActionContainer<#(#struct_generics),*> {
             type NumChildren = ::lokey_keyboard::typenum::#num_children_typenum;
 
-            async fn child_on_press<D, T, S>(
+            async fn child_on_press<D, S>(
                 &self,
                 child_index: usize,
-                context: ::lokey::Context<D, T, S>,
+                context: ::lokey::Context<D, S>,
             ) -> ::core::result::Result<(), ::lokey_keyboard::action::InvalidChildActionIndex>
             where
                 D: ::lokey::Device,
-                T: ::lokey::Transports<D::Mcu>,
                 S: ::lokey::AnyState
             {
                 match child_index {
@@ -105,14 +104,13 @@ pub fn layout(item: TokenStream) -> syn::Result<TokenStream2> {
                 }
             }
 
-            async fn child_on_release<D, T, S>(
+            async fn child_on_release<D, S>(
                 &self,
                 child_index: usize,
-                context: ::lokey::Context<D, T, S>,
+                context: ::lokey::Context<D, S>,
             ) -> ::core::result::Result<(), ::lokey_keyboard::action::InvalidChildActionIndex>
             where
                 D: ::lokey::Device,
-                T: ::lokey::Transports<D::Mcu>,
                 S: ::lokey::AnyState
             {
                 match child_index {

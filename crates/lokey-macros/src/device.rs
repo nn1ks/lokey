@@ -20,9 +20,9 @@ const INVALID_ARGUMENT_TYPE_ERROR: &str = "Unexpected generic argument, expected
 
 fn parse_context_generic_arguments(
     v: &syn::AngleBracketedGenericArguments,
-) -> syn::Result<(syn::TypePath, syn::TypePath, syn::TypePath)> {
-    if v.args.len() != 3 {
-        return Err(syn::Error::new(v.args.span(), "Expected 3 type arguments"));
+) -> syn::Result<(syn::TypePath, syn::TypePath)> {
+    if v.args.len() != 2 {
+        return Err(syn::Error::new(v.args.span(), "Expected 2 type arguments"));
     }
     let mut iter = v.args.iter();
     let a = match iter.next().unwrap() {
@@ -37,13 +37,7 @@ fn parse_context_generic_arguments(
             return Err(syn::Error::new(v.span(), INVALID_ARGUMENT_TYPE_ERROR));
         }
     };
-    let c = match iter.next().unwrap() {
-        syn::GenericArgument::Type(syn::Type::Path(path)) => path.clone(),
-        _ => {
-            return Err(syn::Error::new(v.span(), INVALID_ARGUMENT_TYPE_ERROR));
-        }
-    };
-    Ok((a, b, c))
+    Ok((a, b))
 }
 
 pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2> {
@@ -62,7 +56,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
         ));
     };
 
-    let (device_type_path, transports_type_path, state_type_path) = match &context_param {
+    let (device_type_path, state_type_path) = match &context_param {
         syn::FnArg::Typed(pattern) => match &*pattern.ty {
             syn::Type::Path(v) => {
                 let last_segment = &v.path.segments.last().unwrap();
@@ -114,7 +108,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
         Some(v) => quote! { #v },
         None => {
             let tx_message_type = quote! {
-                <::lokey::external::DeviceTransport<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::TxMessage
+                <<#device_type_path as ::lokey::Device>::ExternalTransport as ::lokey::external::Transport>::TxMessage
             };
             quote! { ::lokey::external::IdentityOverride::<#tx_message_type>::new() }
         }
@@ -136,13 +130,13 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             }
 
             fn __modify_internal_transport_config(
-                __config: &mut <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::Config
+                __config: &mut <<#device_type_path as ::lokey::Device>::InternalTransport as ::lokey::internal::Transport>::Config
             ) {
                 #modify_internal_transport_config
             }
 
             fn __modify_external_transport_config(
-                __config: &mut <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::Config
+                __config: &mut <<#device_type_path as ::lokey::Device>::ExternalTransport as ::lokey::external::Transport>::Config
             ) {
                 #modify_external_transport_config
             }
@@ -158,11 +152,11 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             __modify_storage_config(&mut storage_config);
 
             // Get internal transport config
-            let mut internal_transport_config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::internal_transport_config();
+            let mut internal_transport_config = <#device_type_path as ::lokey::Device>::internal_transport_config();
             __modify_internal_transport_config(&mut internal_transport_config);
 
             // Get external transport config
-            let mut external_transport_config = <#transports_type_path as ::lokey::Transports<<#device_type_path as ::lokey::Device>::Mcu>>::external_transport_config();
+            let mut external_transport_config = <#device_type_path as ::lokey::Device>::external_transport_config();
             __modify_external_transport_config(&mut external_transport_config);
 
             // Create MCU and storage
@@ -177,12 +171,12 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             let internal_channel = {
                 static CHANNEL: ::lokey::static_cell::StaticCell<
                     ::lokey::internal::Channel<
-                        ::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path>
+                        <#device_type_path as ::lokey::Device>::InternalTransport
                     >
                 > = ::lokey::static_cell::StaticCell::new();
                 CHANNEL.init(
                     ::lokey::internal::Channel::new(
-                        <::lokey::internal::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::internal::Transport>::create(
+                        <<#device_type_path as ::lokey::Device>::InternalTransport as ::lokey::internal::Transport>::create(
                             internal_transport_config,
                             address,
                             mcu,
@@ -196,12 +190,12 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
             let external_channel = {
                 static CHANNEL: ::lokey::static_cell::StaticCell<
                     ::lokey::external::Channel<
-                        ::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path>
+                        <#device_type_path as ::lokey::Device>::ExternalTransport
                     >
                 > = ::lokey::static_cell::StaticCell::new();
                 CHANNEL.init(
                     ::lokey::external::Channel::new(
-                        <::lokey::external::DeviceTransport::<#device_type_path, #transports_type_path> as ::lokey::external::Transport>::create(
+                        <<#device_type_path as ::lokey::Device>::ExternalTransport as ::lokey::external::Transport>::create(
                             external_transport_config,
                             address,
                             mcu,
@@ -218,7 +212,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
                 STATE.init(<#state_type_path as ::core::default::Default>::default())
             };
 
-            let context = ::lokey::Context {
+            let context = ::lokey::Context::<#device_type_path, #state_type_path> {
                 address,
                 mcu,
                 storage,
@@ -229,7 +223,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
 
             #[::embassy_executor::task]
             async fn __run_mcu(
-                context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>
+                context: ::lokey::Context<#device_type_path, #state_type_path>
             ) {
                 ::lokey::Mcu::run(context).await;
             }
@@ -237,7 +231,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
 
             #[::embassy_executor::task]
             async fn __run_internal_channel(
-                context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>,
+                context: ::lokey::Context<#device_type_path, #state_type_path>,
             ) {
                 context.internal_channel.run(context).await;
             }
@@ -245,7 +239,7 @@ pub fn device(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2>
 
             #[::embassy_executor::task]
             async fn __run_external_channel(
-                context: ::lokey::Context<#device_type_path, #transports_type_path, #state_type_path>,
+                context: ::lokey::Context<#device_type_path, #state_type_path>,
             ) {
                 let message_override = #message_override;
                 context.external_channel.run(context, message_override).await;

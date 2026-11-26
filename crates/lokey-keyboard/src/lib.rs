@@ -36,7 +36,7 @@ pub use key::{HidReportByte, Key};
 pub use key_override::KeyOverride;
 use lokey::external::ExternalMessage;
 use lokey::util::{debug, error, unwrap};
-use lokey::{AnyState, Component, Context, Device, DynContext, Transports, internal};
+use lokey::{AnyState, Component, Context, Device, DynContext, internal};
 /// Macro for building a [`Layout`].
 ///
 /// The arguments must be arrays where the type of the items must be either an [`Action`] or the
@@ -112,13 +112,12 @@ impl<A: ActionContainer> Layout<A> {
         Self { actions }
     }
 
-    async fn run_action_worker<D, T, S, const N: usize>(
+    async fn run_action_worker<D, S, const N: usize>(
         &self,
         queue: &Channel<CriticalSectionRawMutex, Message, N>,
-        context: Context<D, T, S>,
+        context: Context<D, S>,
     ) where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         loop {
@@ -146,10 +145,9 @@ impl<A: ActionContainer> Layout<A> {
         }
     }
 
-    pub async fn run<D, T, S>(&self, context: Context<D, T, S>)
+    pub async fn run<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         const ACTION_QUEUE_SIZE: usize = 32;

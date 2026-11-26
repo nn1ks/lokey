@@ -4,7 +4,7 @@ mod channel;
 pub mod empty;
 
 use crate::util::declare_const_for_feature_group;
-use crate::{Address, AnyState, Context, Device, McuCreator, Transports, storage};
+use crate::{Address, AnyState, Context, McuCreator, storage};
 pub use channel::{Channel, DynChannelRef, Receiver};
 use core::any::Any;
 use core::future::Future;
@@ -63,9 +63,6 @@ pub const MAX_MESSAGE_SIZE_WITH_TAG: usize = MAX_MESSAGE_SIZE + MESSAGE_TAG_SIZE
 #[display("The maximum number of receivers ({}) was reached", RECEIVER_SLOTS)]
 pub struct MaximumReceiversReached;
 
-/// Type alias for the internal transport used by a device.
-pub type DeviceTransport<D, T> = <T as Transports<<D as Device>::Mcu>>::InternalTransport;
-
 /// Trait for messages that can be sent through internal transports.
 pub trait Message: Send + 'static {
     /// The length of the byte array that this message is serialized to, excluding the tag.
@@ -109,13 +106,9 @@ pub trait Transport: Any {
     ///
     /// This drives ongoing transport work such as receiving incoming message bytes and handling
     /// transport-specific processing.
-    fn run<Device, Transports, State>(
-        &self,
-        context: Context<Device, Transports, State>,
-    ) -> impl Future<Output = ()>
+    fn run<Device, State>(&self, context: Context<Device, State>) -> impl Future<Output = ()>
     where
         Device: crate::Device<Mcu = Self::Mcu>,
-        Transports: crate::Transports<Self::Mcu>,
         State: AnyState,
         Self::Mcu: McuCreator<Device::StorageConfig>;
 

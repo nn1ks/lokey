@@ -10,7 +10,7 @@ use embassy_time::{Duration, Timer, WithTimeout};
 use generic_array::{ArrayLength, GenericArray};
 use lokey::external::toggle;
 use lokey::util::{error, unwrap, warn};
-use lokey::{Address, AnyState, Context, Device, Transports};
+use lokey::{Address, AnyState, Context, Device};
 use lokey_layer::{LayerId, LayerManagerEntry, LayerManagerQuery};
 use portable_atomic::AtomicBool;
 use seq_macro::seq;
@@ -26,40 +26,36 @@ pub struct InvalidChildActionIndex {
 pub trait ActionContainer: Send + Sync + 'static {
     type NumChildren: ArrayLength;
 
-    fn child_on_press<D, T, S>(
+    fn child_on_press<D, S>(
         &self,
         child_index: usize,
-        context: Context<D, T, S>,
+        context: Context<D, S>,
     ) -> impl Future<Output = Result<(), InvalidChildActionIndex>>
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState;
 
-    fn child_on_release<D, T, S>(
+    fn child_on_release<D, S>(
         &self,
         child_index: usize,
-        context: Context<D, T, S>,
+        context: Context<D, S>,
     ) -> impl Future<Output = Result<(), InvalidChildActionIndex>>
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState;
 }
 
 pub trait ConcurrentActionContainer: Send + Sync + 'static {
     type NumChildren: ArrayLength;
 
-    fn all_on_press<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    fn all_on_press<D, S>(&self, context: Context<D, S>) -> impl Future<Output = ()>
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState;
 
-    fn all_on_release<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    fn all_on_release<D, S>(&self, context: Context<D, S>) -> impl Future<Output = ()>
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState;
 }
 
@@ -77,15 +73,14 @@ macro_rules! impl_action_container_for_tuples {
             {
                 type NumChildren = seq!(M in $num..=$num { typenum::U~M });
 
-                async fn child_on_press<D, T, S>(
+                async fn child_on_press<D, S>(
                     &self,
                     child_index: usize,
                     #[allow(unused_variables)]
-                    context: Context<D, T, S>,
+                    context: Context<D, S>,
                 ) -> Result<(), InvalidChildActionIndex>
                 where
                     D: Device,
-                    T: Transports<D::Mcu>,
                     S: AnyState,
                 {
                     match child_index {
@@ -94,15 +89,14 @@ macro_rules! impl_action_container_for_tuples {
                     }
                 }
 
-                async fn child_on_release<D, T, S>(
+                async fn child_on_release<D, S>(
                     &self,
                     child_index: usize,
                     #[allow(unused_variables)]
-                    context: Context<D, T, S>,
+                    context: Context<D, S>,
                 ) -> Result<(), InvalidChildActionIndex>
                 where
                     D: Device,
-                    T: Transports<D::Mcu>,
                     S: AnyState,
                 {
                     match child_index {
@@ -118,27 +112,25 @@ macro_rules! impl_action_container_for_tuples {
             {
                 type NumChildren = seq!(M in $num..=$num { typenum::U~M });
 
-                async fn all_on_press<D, T, S>(
+                async fn all_on_press<D, S>(
                     &self,
                     #[allow(unused_variables)]
-                    context: Context<D, T, S>
+                    context: Context<D, S>
                 )
                 where
                     D: Device,
-                    T: Transports<D::Mcu>,
                     S: AnyState,
                 {
                     futures_util::join!( #(self.N.on_press(context),)* );
                 }
 
-                async fn all_on_release<D, T, S>(
+                async fn all_on_release<D, S>(
                     &self,
                     #[allow(unused_variables)]
-                    context: Context<D, T, S>
+                    context: Context<D, S>
                 )
                 where
                     D: Device,
-                    T: Transports<D::Mcu>,
                     S: AnyState,
                 {
                     futures_util::join!( #(self.N.on_release(context),)* );
@@ -151,16 +143,14 @@ macro_rules! impl_action_container_for_tuples {
 impl_action_container_for_tuples!(16);
 
 pub trait Action: Send + Sync + 'static {
-    fn on_press<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    fn on_press<D, S>(&self, context: Context<D, S>) -> impl Future<Output = ()>
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState;
 
-    fn on_release<D, T, S>(&self, context: Context<D, T, S>) -> impl Future<Output = ()>
+    fn on_release<D, S>(&self, context: Context<D, S>) -> impl Future<Output = ()>
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState;
 }
 
@@ -168,18 +158,16 @@ pub trait Action: Send + Sync + 'static {
 pub struct NoOp;
 
 impl Action for NoOp {
-    async fn on_press<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_press<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
     }
@@ -196,19 +184,17 @@ impl<A> Unordered<A> {
 }
 
 impl<A: ConcurrentActionContainer> Action for Unordered<A> {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.action_container.all_on_press(context).await;
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.action_container.all_on_release(context).await;
@@ -226,10 +212,9 @@ impl<A> Ordered<A> {
 }
 
 impl<A: ActionContainer> Action for Ordered<A> {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         for i in 0..A::NumChildren::USIZE {
@@ -237,10 +222,9 @@ impl<A: ActionContainer> Action for Ordered<A> {
         }
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         for i in (0..A::NumChildren::USIZE).rev() {
@@ -250,10 +234,9 @@ impl<A: ActionContainer> Action for Ordered<A> {
 }
 
 impl Action for Key {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let report = match context.state.try_get::<KeyboardReportState>() {
@@ -271,10 +254,9 @@ impl Action for Key {
         }
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let report = match context.state.try_get::<KeyboardReportState>() {
@@ -308,10 +290,9 @@ impl Layer {
 }
 
 impl Action for Layer {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if let Some(entry) = self.layer_manager_entry.lock().await.take() {
@@ -329,10 +310,9 @@ impl Action for Layer {
         }
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if let Some(entry) = self.layer_manager_entry.lock().await.take()
@@ -360,10 +340,9 @@ impl<A: ActionContainer> PerLayer<A> {
 }
 
 impl<A: ActionContainer> Action for PerLayer<A> {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if let Some(layer_manager) = context.state.try_query::<LayerManagerQuery>() {
@@ -379,10 +358,9 @@ impl<A: ActionContainer> Action for PerLayer<A> {
         }
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if let Some(index) = *self.active_action_index.lock().await {
@@ -406,10 +384,9 @@ impl<A: Action> Toggle<A> {
 }
 
 impl<A: Action> Action for Toggle<A> {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let active = self.active.load(Ordering::SeqCst);
@@ -421,10 +398,9 @@ impl<A: Action> Action for Toggle<A> {
         self.active.store(!active, Ordering::SeqCst);
     }
 
-    async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
     }
@@ -461,10 +437,9 @@ impl<A: Action> Sticky<A> {
 }
 
 impl<A: Action> Action for Sticky<A> {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let previous_keyboard_report = match context.state.try_get::<KeyboardReportState>() {
@@ -496,10 +471,9 @@ impl<A: Action> Action for Sticky<A> {
         }
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.is_held.store(false, Ordering::SeqCst);
@@ -536,10 +510,9 @@ impl<Hold: Action, Tap: Action> HoldTap<Hold, Tap> {
 }
 
 impl<Hold: Action, Tap: Action> Action for HoldTap<Hold, Tap> {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         self.activated_hold.store(false, Ordering::SeqCst);
@@ -552,10 +525,9 @@ impl<Hold: Action, Tap: Action> Action for HoldTap<Hold, Tap> {
         }
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         if self.activated_hold.load(Ordering::SeqCst) {
@@ -572,10 +544,9 @@ impl<Hold: Action, Tap: Action> Action for HoldTap<Hold, Tap> {
 pub struct ToggleExternalTransport(pub Address);
 
 impl Action for ToggleExternalTransport {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         context
@@ -584,10 +555,9 @@ impl Action for ToggleExternalTransport {
             .await;
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
     }
@@ -596,10 +566,9 @@ impl Action for ToggleExternalTransport {
 pub struct ActivateExternalTransport(pub Address);
 
 impl Action for ActivateExternalTransport {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         context
@@ -608,10 +577,9 @@ impl Action for ActivateExternalTransport {
             .await;
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
     }
@@ -620,10 +588,9 @@ impl Action for ActivateExternalTransport {
 pub struct DeactivateExternalTransport(pub Address);
 
 impl Action for DeactivateExternalTransport {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         context
@@ -632,10 +599,9 @@ impl Action for DeactivateExternalTransport {
             .await;
     }
 
-    async fn on_release<D, T, S>(&self, _: Context<D, T, S>)
+    async fn on_release<D, S>(&self, _: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
     }
@@ -656,10 +622,9 @@ mod ble {
     pub struct BleDisconnectActive;
 
     impl Action for BleDisconnectActive {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -668,10 +633,9 @@ mod ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -680,10 +644,9 @@ mod ble {
     pub struct BleClear(pub u8);
 
     impl Action for BleClear {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -694,10 +657,9 @@ mod ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -706,19 +668,17 @@ mod ble {
     pub struct BleClearActive;
 
     impl Action for BleClearActive {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context.internal_channel.send(Message::ClearActive).await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -727,19 +687,17 @@ mod ble {
     pub struct BleClearAll;
 
     impl Action for BleClearAll {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context.internal_channel.send(Message::ClearAll).await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -748,10 +706,9 @@ mod ble {
     pub struct BleSelectProfile(pub u8);
 
     impl Action for BleSelectProfile {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -760,10 +717,9 @@ mod ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -772,10 +728,9 @@ mod ble {
     pub struct BleNextProfile;
 
     impl Action for BleNextProfile {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -784,10 +739,9 @@ mod ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -796,10 +750,9 @@ mod ble {
     pub struct BlePreviousProfile;
 
     impl Action for BlePreviousProfile {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -808,10 +761,9 @@ mod ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -820,10 +772,9 @@ mod ble {
     pub struct BleInternalCentralClear(pub Address);
 
     impl Action for BleInternalCentralClear {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -832,10 +783,9 @@ mod ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -844,10 +794,9 @@ mod ble {
     pub struct BleInternalPeripheralClear(pub Address);
 
     impl Action for BleInternalPeripheralClear {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -856,10 +805,9 @@ mod ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -881,10 +829,9 @@ mod usb_ble {
     pub struct SwitchToUsb;
 
     impl Action for SwitchToUsb {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -893,10 +840,9 @@ mod usb_ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }
@@ -909,10 +855,9 @@ mod usb_ble {
     pub struct SwitchToBle;
 
     impl Action for SwitchToBle {
-        async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+        async fn on_press<D, S>(&self, context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
             context
@@ -921,10 +866,9 @@ mod usb_ble {
                 .await;
         }
 
-        async fn on_release<D, T, S>(&self, _context: Context<D, T, S>)
+        async fn on_release<D, S>(&self, _context: Context<D, S>)
         where
             D: Device,
-            T: Transports<D::Mcu>,
             S: AnyState,
         {
         }

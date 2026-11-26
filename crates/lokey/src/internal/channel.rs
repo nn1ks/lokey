@@ -48,10 +48,9 @@ impl<Transport: internal::Transport> Channel<Transport> {
     }
 
     /// Runs the internal channel background task, handling incoming and outgoing messages.
-    pub async fn run<Device, Transports, State>(&self, context: Context<Device, Transports, State>)
+    pub async fn run<Device, State>(&self, context: Context<Device, State>)
     where
-        Device: crate::Device<Mcu = Transport::Mcu>,
-        Transports: crate::Transports<Transport::Mcu, InternalTransport = Transport>,
+        Device: crate::Device<Mcu = Transport::Mcu, InternalTransport = Transport>,
         State: AnyState,
         Transport::Mcu: McuCreator<Device::StorageConfig>,
     {

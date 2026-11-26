@@ -34,17 +34,16 @@ impl Device for MyDevice {
 
 ```rust
 use lokey::storage::{EmptyStorage, EmptyStorageConfig};
-use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator, Transports};
+use lokey::{Address, AnyState, Context, Device, Mcu, McuCreator};
 
 pub struct MyMcu;
 
 impl Mcu for MyMcu {
 	type Config = (); // Define the MCU-specific configuration type
 
-	async fn run<D, T, S>(&'static self, context: Context<D, T, S>)
+	async fn run<D, S>(context: Context<D, S>)
 	where
 		D: Device<Mcu = Self>,
-		T: Transports<Self>,
 		S: AnyState,
 	{
 		// Run MCU background tasks here (if needed)

@@ -49,13 +49,12 @@ where
     }
 
     /// Runs the external channel background task, handling incoming and outgoing messages.
-    pub async fn run<Device, Transports, State, Override>(
+    pub async fn run<Device, State, Override>(
         &self,
-        context: Context<Device, Transports, State>,
+        context: Context<Device, State>,
         mut message_override: Override,
     ) where
-        Device: crate::Device<Mcu = Transport::Mcu>,
-        Transports: crate::Transports<Transport::Mcu, ExternalTransport = Transport>,
+        Device: crate::Device<Mcu = Transport::Mcu, ExternalTransport = Transport>,
         State: AnyState,
         Transport::Mcu: McuCreator<Device::StorageConfig>,
         Override: external::Override,

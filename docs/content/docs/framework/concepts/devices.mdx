@@ -12,9 +12,11 @@ A device type defines the hardware-specific foundation used by the rest of the f
 
 - **Microcontroller:** The microcontroller type and its configuration.
 - **Storage:** The storage configuration used for persistent storage. The storage type itself is determined by the MCU's [`McuCreator`](https://docs.rs/lokey/latest/lokey/trait.McuCreator.html) implementation for that configuration.
+- **External transport:** The external transport implementation and its configuration. See [External Transports](./external-transports).
+- **Internal transport:** The internal transport implementation and its configuration. See [Internal Transports](./internal-transports).
 
 <Callout title="INFO" type="info">
-  While the device should provide sensible defaults for microcontroller configuration and storage configuration, these values can still be overridden through the [`lokey::device`](https://docs.rs/lokey/latest/lokey/attr.device.html) macro when needed.
+  While the device should provide sensible defaults for microcontroller, storage, and transport configuration, these values can still be overridden through the [`lokey::device`](https://docs.rs/lokey/latest/lokey/attr.device.html) macro when needed.
 </Callout>
 
 Additionally, a device type defines which components it supports and provides each component with the required hardware resources through the [`ComponentSupport`](https://docs.rs/lokey/latest/lokey/trait.ComponentSupport.html) trait. For example, when adding support for [`lokey_keyboard::Scanner`](https://docs.rs/lokey-keyboard/latest/lokey_keyboard/struct.Scanner.html), the implementation provides the microcontroller pins connected to the keys.
@@ -24,11 +26,18 @@ See the [next chapter](./components) for more information about components and t
 ## Example
 
 ```rust
+use lokey::Device;
+use lokey::external::NoMessage;
+use lokey::storage::DefaultStorageConfig;
+use lokey_nrf::Nrf;
+
 pub struct MyDevice;
 
 impl Device for MyDevice {
     type Mcu = Nrf;
     type StorageConfig = lokey::storage::DefaultStorageConfig;
+    type ExternalTransport = lokey_usb::external::Transport<Nrf, MyMessage, NoMessage>;
+    type InternalTransport = lokey::internal::empty::Transport<Nrf>;
 
     // Optional
     fn mcu_config() -> embassy_nrf::config::Config {
@@ -39,6 +48,14 @@ impl Device for MyDevice {
         DefaultStorageConfig {
             flash_page_range: 0xF0..0x100,
         }
+    }
+
+    fn external_transport_config() -> <Self::ExternalTransport as lokey::external::Transport>::Config {
+        Default::default()
+    }
+
+    fn internal_transport_config() -> <Self::InternalTransport as lokey::internal::Transport>::Config {
+        lokey::internal::empty::TransportConfig
     }
 }
 ```

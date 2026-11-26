@@ -1,5 +1,5 @@
 use crate::{CableNumber, MidiMessage};
-use lokey::{AnyState, Context, Device, Transports};
+use lokey::{AnyState, Context, Device};
 use lokey_keyboard::Action;
 use wmidi::{Channel, Note, Velocity};
 
@@ -27,10 +27,9 @@ impl MidiNote {
 }
 
 impl Action for MidiNote {
-    async fn on_press<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_press<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let message = wmidi::MidiMessage::NoteOn(self.channel, self.note, self.velocity);
@@ -38,10 +37,9 @@ impl Action for MidiNote {
         let _ = context.external_channel.try_send(message).await;
     }
 
-    async fn on_release<D, T, S>(&self, context: Context<D, T, S>)
+    async fn on_release<D, S>(&self, context: Context<D, S>)
     where
         D: Device,
-        T: Transports<D::Mcu>,
         S: AnyState,
     {
         let message = wmidi::MidiMessage::NoteOff(self.channel, self.note, self.velocity);

@@ -9,7 +9,7 @@ use embassy_rp::peripherals::PIN_0;
 use embassy_time::Duration;
 use lokey::external::{self, NoMessage};
 use lokey::storage::DefaultStorageConfig;
-use lokey::{AnyState, ComponentSupport, Context, Device, State, Transports, internal};
+use lokey::{AnyState, ComponentSupport, Context, Device, State, internal};
 use lokey_blink::Blink;
 use lokey_keyboard::switch::IntoSwitch;
 use lokey_keyboard::{
@@ -27,11 +27,19 @@ struct DefaultState {
     keyboard_report: KeyboardReport,
 }
 
-struct Central;
+struct KeyboardLeft;
 
-impl Transports<Rp> for Central {
+impl Device for KeyboardLeft {
+    type Mcu = Rp;
+    type StorageConfig = DefaultStorageConfig;
     type ExternalTransport = lokey_usb::external::Transport<Rp, KeyboardReport, NoMessage>;
     type InternalTransport = internal::empty::Transport<Rp>;
+
+    fn storage_config() -> Self::StorageConfig {
+        DefaultStorageConfig {
+            flash_page_range: 0x0..0x10,
+        }
+    }
 
     fn external_transport_config() -> <Self::ExternalTransport as external::Transport>::Config {
         lokey_usb::external::TransportConfig {
@@ -47,24 +55,8 @@ impl Transports<Rp> for Central {
     }
 }
 
-struct KeyboardLeft;
-
-impl Device for KeyboardLeft {
-    type Mcu = Rp;
-    type StorageConfig = DefaultStorageConfig;
-
-    fn storage_config() -> Self::StorageConfig {
-        DefaultStorageConfig {
-            flash_page_range: 0x0..0x10,
-        }
-    }
-}
-
 impl<S: AnyState> ComponentSupport<Blink, S> for KeyboardLeft {
-    async fn enable<T>(component: Blink, _context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Blink, _context: Context<Self, S>) {
         let pin = unsafe { embassy_rp::peripherals::PIN_16::steal() };
         let led = Output::new(pin, Level::Low);
         component.run(led).await;
@@ -75,10 +67,7 @@ const NUM_KEYS: usize = 1;
 pub type NumKeys = <typenum::Const<NUM_KEYS> as typenum::ToUInt>::Output;
 
 impl<S: AnyState> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for KeyboardLeft {
-    async fn enable<T>(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Scanner<DirectPinsConfig, NUM_KEYS>, context: Context<Self, S>) {
         let input_pins = unsafe {
             [Input::new(PIN_0::steal().into::<AnyPin>(), Pull::Up).into_active_low_switch()]
         };
@@ -91,16 +80,13 @@ impl<S: AnyState> ComponentSupport<Scanner<DirectPinsConfig, NUM_KEYS>, S> for K
 impl<S: AnyState, A: ActionContainer<NumChildren = NumKeys>> ComponentSupport<Layout<A>, S>
     for KeyboardLeft
 {
-    async fn enable<T>(component: Layout<A>, context: Context<Self, T, S>)
-    where
-        T: Transports<Self::Mcu>,
-    {
+    async fn enable(component: Layout<A>, context: Context<Self, S>) {
         component.run(context).await
     }
 }
 
 #[lokey::device]
-async fn main(context: Context<KeyboardLeft, Central, DefaultState>, _spawner: Spawner) {
+async fn main(context: Context<KeyboardLeft, DefaultState>, _spawner: Spawner) {
     let layout = layout!(
         // Layer 0
         [Key::A],

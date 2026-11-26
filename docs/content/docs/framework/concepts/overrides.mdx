@@ -28,7 +28,7 @@ fn my_override() -> MyOverride {
 }
 
 #[lokey::device(message_override = my_override())]
-async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     // ...
 }
 ```
@@ -62,7 +62,7 @@ To use it:
 
 ```rust
 #[lokey::device(message_override = LoggingOverride<MyMessage>)]
-async fn main(context: Context<MyDevice, MyTransports, MyState>, spawner: Spawner) {
+async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
     // ...
 }
 ```
