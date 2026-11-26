@@ -1,21 +1,23 @@
-@import 'tailwindcss';
-@import 'fumadocs-ui/css/black.css';
-@import 'fumadocs-ui/css/preset.css';
+@import "tailwindcss";
+@import "fumadocs-ui/css/black.css";
+@import "fumadocs-ui/css/preset.css";
 
 @font-face {
-  font-family: 'Libre Baskerville';
+  font-family: "Libre Baskerville";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/Libre_Baskerville/LibreBaskerville-Regular.ttf') format('truetype');
+  src: url("/fonts/Libre_Baskerville/LibreBaskerville-Regular.ttf")
+    format("truetype");
 }
 
 @font-face {
-  font-family: 'Libre Baskerville';
+  font-family: "Libre Baskerville";
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/Libre_Baskerville/LibreBaskerville-Italic.ttf') format('truetype');
+  src: url("/fonts/Libre_Baskerville/LibreBaskerville-Italic.ttf")
+    format("truetype");
 }
 
 html {
@@ -59,7 +61,10 @@ main.contents .prose {
   margin-bottom: calc(var(--spacing) * 6);
 }
 
-.prose :where(a:not([data-card])):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose
+  :where(a:not([data-card])):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  ) {
   color: var(--color-fd-primary);
 }
 
@@ -89,7 +94,11 @@ figure.shiki div.max-h-\[600px\] {
 }
 
 .shiki .line-warning {
-  background-color: color-mix(in srgb, var(--color-fd-warning) 20%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--color-fd-warning) 20%,
+    transparent
+  );
   border-inline-start: 2px solid var(--color-fd-warning);
 }
 
@@ -109,13 +118,12 @@ aside#nd-sidebar > div > div > div > p:not(:nth-child(1)) {
   padding: calc(var(--spacing) * 4);
 }
 
-.custom-callout > div:nth-child(1) {
-  /* Hide vertical line */
-  display: none;
+.custom-callout.type-info {
+  --callout-color: var(--color-fd-muted-foreground) !important;
 }
 
-.custom-callout > svg:nth-child(2) {
-  /* Hide icon */
+.custom-callout > div:nth-child(1) {
+  /* Hide vertical line */
   display: none;
 }
 
@@ -141,7 +149,6 @@ figure.shiki .text-\[0\.8125rem\] {
     border-left: none;
     border-right: none;
   }
-
 
   .prose .mermaid-diagram {
     margin-right: calc(var(--spacing) * -4);
