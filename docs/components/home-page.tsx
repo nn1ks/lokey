@@ -173,11 +173,11 @@ const exampleCode = `#![no_main]
 
 use embassy_executor::Spawner;
 use lokey::Context;
+use lokey_device_foo::{Foo, DefaultState};
 use lokey_keyboard::{Key, Scanner, layout};
-use lokey_my_device::{MyDevice, MyState};
 
 #[lokey::device]
-async fn main(context: Context<MyDevice, MyState>, spawner: Spawner) {
+async fn main(context: Context<Foo, DefaultState>, spawner: Spawner) {
     let scanner = Scanner::new();
     let layout = layout!([Key::A, Key::B, Key::C]);
     context.enable_all((scanner, layout)).await;
