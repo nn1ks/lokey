@@ -71,7 +71,7 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = (props) => {
   const hasSelectedLayer = () => props.selected !== undefined;
 
   return (
-    <div class="flex w-full min-w-0 items-center gap-1.5 overflow-x-scroll px-3 py-2">
+    <div class="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto px-3 py-2">
       <LayerSelectorActionButton
         label="Move selected layer left"
         tooltip="Move layer up"
@@ -101,7 +101,7 @@ export const LayerSelectorBar: Component<LayerSelectorBarProps> = (props) => {
       />
 
       <div
-        class="flex flex-none items-center gap-1.5 overflow-x-scroll"
+        class="flex flex-none items-center gap-1.5"
         role="list"
         aria-label="Layers"
       >
