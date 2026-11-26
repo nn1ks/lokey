@@ -1,5 +1,38 @@
 ---
-title: '[TODO] Introduction'
+title: Introduction
 ---
 
-TODO
+Support for MIDI controller-related functionality is provided by the [`lokey-midi`](https://docs.rs/lokey-midi) crate.
+
+<Callout title="INFO" type="info">
+  The `lokey-midi` crate currently contains limited functionality. More functionality will be added in the future.
+</Callout>
+
+## MIDI Message
+
+The [`MidiMessage`](https://docs.rs/lokey-midi/latest/lokey_midi/struct.MidiMessage.html) type can be sent via an external channel to send MIDI messages to the host. It supports USB and BLE (Bluetooth Low Energy) transports, which can be enabled with the `usb` and `ble` crate features, respectively.
+
+## Keyboard Actions
+
+The [`lokey-midi`](https://docs.rs/lokey-midi) crate provides actions that can be used in keyboard layouts from [`lokey-keyboard`](https://docs.rs/lokey-keyboard) to send MIDI messages. This requires enabling the `keyboard-actions` crate feature.
+
+**Available actions:**
+
+- [`MidiNote`](https://docs.rs/lokey-midi/latest/lokey_midi/action/struct.MidiNote.html) - Sends a MIDI note on/off message
+
+**Example:**
+
+```rust
+use lokey_keyboard::layout;
+use lokey_midi::action::MidiNote;
+use wmidi::{Channel, Note, Velocity};
+
+let layout = layout!(
+    // Layer 1
+    [
+        // Sends a note on message when the key is pressed and a note off
+        // message when it is released.
+        MidiNote::new(Channel::Ch1, Note::C4, Velocity::MAX),
+    ],
+);
+```
