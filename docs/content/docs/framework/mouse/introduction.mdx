@@ -4,6 +4,10 @@ title: Introduction
 
 Support for mouse-related functionality is provided by the [`lokey-mouse`](https://docs.rs/lokey-mouse) crate.
 
+<Callout title="INFO" type="info">
+  The `lokey-mouse` crate does not yet provide a component for reading mouse movement, but support for this is planned for a future release.
+</Callout>
+
 ## Mouse Report
 
 The [`MouseReport`](https://docs.rs/lokey-mouse/latest/lokey_mouse/struct.MouseReport.html) type can be sent via an external channel to report mouse actions to the host. It supports USB and BLE (Bluetooth Low Energy) transports, which can be enabled with the `usb` and `ble` crate features, respectively.
